@@ -1,0 +1,21 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block navigation %}
+    <div class="navitem"><a href="{% url 'memorabilia:create_collectible' collection.id %}">Add</a></div>
+    <div class="navitem"><a href="{% url 'memorabilia:edit_collection' collection.id %}">Edit</a></div>
+    <div class="navitem"><a href="{% url 'memorabilia:delete_collection' collection.id %}">Delete</a></div>
+{% endblock navigation %}
+
+{% block breadcrumb %}
+<div class="crumb"><a href="{% url 'memorabilia:index' %}">Home</a></div>
+{% endblock breadcrumb %}
+
+{% block content %}
+    <p>
+        {{ collection.title }}
+    </p>
+    {% for collectible in collection.collectible_set.all %}
+        <li><a href="{% url 'memorabilia:collectible' collection.id collectible.id %}">{{ collectible.title }}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock content %}

@@ -1,0 +1,40 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block navigation %}
+<button onclick="history.back()">Go Back</button>
+{% endblock navigation %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+<form method="post" enctype="multipart/form-data" novalidate>
+	{% csrf_token %}
+	{{ form.as_p }}
+    <!-- {{ image_form.as_p }} -->
+    <!-- <select class="form-control" id="league" name='selected_league'>
+        {% for league in leagues %}
+            <option value='{{league.key}}'>{{ league.name }}</option>
+        {% endfor %}
+    </select> -->
+    <!-- {% for image_field in form.get_image_fields %}
+        {{ image_field }}
+    {% endfor %} -->
+
+	<input type="submit" value="Save" />
+</form>
+
+<script>
+    $('.image-list-new').on('input', function() {
+        let $this = $(this)
+        let $clone = $this.clone()
+        let name = $clone.attr('name')
+        let n = parseInt(name.split('_')[1]) + 1
+        name = 'image_' + n
+        $clone.val('')
+        $clone.attr('name', name)
+        $clone.appendTo($this.parent())
+        $this.removeClass('image-list-new')
+        $this.off('input', arguments.callee)
+        $clone.on('input', arguments.callee)
+    })
+</script>
+{% endblock content %}

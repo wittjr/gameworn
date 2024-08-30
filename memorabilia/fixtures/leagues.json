@@ -1,0 +1,114 @@
+[
+    {
+        "model": "memorabilia.league",
+        "pk": "NHL",
+        "fields": {
+            "name": "National Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "OHL",
+        "fields": {
+            "name": "Ontario Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "WHL",
+        "fields": {
+            "name": "Western Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "ECHL",
+        "fields": {
+            "name": "East Coast Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "AHL",
+        "fields": {
+            "name": "American Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "SPHL",
+        "fields": {
+            "name": "Southern Professional Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "QMJHL",
+        "fields": {
+            "name": "Quebec Maritimes Junior Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "NCAA",
+        "fields": {
+            "name": "National Collegiate Athletic Association"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "PWHL",
+        "fields": {
+            "name": "Professional Women's Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "KHL",
+        "fields": {
+            "name": "Kontinental Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "ICE",
+        "fields": {
+            "name": "ICE Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "LIIGA",
+        "fields": {
+            "name": "Liiga"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "DEL",
+        "fields": {
+            "name": "Deutsche Eishockey Liga"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "SHL",
+        "fields": {
+            "name": "Swedish Hockey League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "SWISS",
+        "fields": {
+            "name": "Swiss League"
+        }
+    },
+    {
+        "model": "memorabilia.league",
+        "pk": "EIHL",
+        "fields": {
+            "name": "Elite Ice Hockey League"
+        }
+    }
+]

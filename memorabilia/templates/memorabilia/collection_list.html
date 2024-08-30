@@ -1,0 +1,14 @@
+{% extends 'memorabilia/base.html' %}
+	
+{% block content %}
+    <ul>
+        {% for collection in object_list %}
+            <li><a href="{% url 'memorabilia:collection' collection.id %}">{{ collection.title }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock content %}
+
+{% block navigation %}
+    <div class="navitem"><a href="{% url 'memorabilia:create_collection' %}">Add</a></div>
+{% endblock navigation %}
+

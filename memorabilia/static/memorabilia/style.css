@@ -1,0 +1,33 @@
+li a {
+    color: green;
+}
+
+/* body {
+    background: white url("images/background.png") no-repeat;
+} */
+
+.navbar {
+    display: flex;
+    flex-direction: row;
+    
+}
+
+.navitem {
+    margin: 5px 10px;
+}
+
+.breadcrumb {
+    display: flex;
+    flex-direction: row;
+    font-size: smaller;
+    line-height: .75rem;
+    margin: 5px 8px;
+}
+
+.crumb {
+    margin: 0px 2px;
+}
+
+img {
+    width: 250px;
+}

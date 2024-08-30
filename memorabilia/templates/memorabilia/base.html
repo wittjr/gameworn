@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{% if title %} {{title}} {% else %} Memorabilia {% endif %}</title>
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}">
+    </head>
+    <head>
+    </head>
+    
+    <body>
+        <div class="navbar">
+            {% block navigation %}
+            {% endblock %}
+        </div>
+        <div class="breadcrumb">
+            {% block breadcrumb %}
+            {% endblock %}
+        </div>
+
+        {% block content %}
+        {% endblock %}
+
+    </body>
+</html>

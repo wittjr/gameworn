@@ -1,0 +1,56 @@
+[
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "GU",
+        "fields": {
+            "name": "Game Used"
+        }
+    },
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "GI",
+        "fields": {
+            "name": "Game Issued"
+        }
+    },    {
+        "model": "memorabilia.usagetype",
+        "pk": "TI",
+        "fields": {
+            "name": "Team Issued"
+        }
+    },
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "RTLMC",
+        "fields": {
+            "name": "Retail - MiC"
+        }
+    },
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "PRC",
+        "fields": {
+            "name": "Practice"
+        }
+    },    {
+        "model": "memorabilia.usagetype",
+        "pk": "RTLA",
+        "fields": {
+            "name": "Retail - Authentic"
+        }
+    },
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "RTL",
+        "fields": {
+            "name": "Retail"
+        }
+    },
+    {
+        "model": "memorabilia.usagetype",
+        "pk": "WU",
+        "fields": {
+            "name": "Warm Up"
+        }
+    }
+]

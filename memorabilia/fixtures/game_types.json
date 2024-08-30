@@ -1,0 +1,44 @@
+[
+    {
+        "model": "memorabilia.gametype",
+        "pk": "PRE",
+        "fields": {
+            "name": "Preseason"
+        }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "REG",
+        "fields": {
+            "name": "Regular Season"
+        }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "PLY",
+        "fields": {
+            "name": "Playoff"
+        }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "ODR",
+        "fields": {
+            "name": "Outdoor"
+        }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "WC",
+        "fields": {
+            "name": "Winter Classic"
+        }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "HC",
+        "fields": {
+            "name": "Heritage Classic"
+        }
+    }
+]

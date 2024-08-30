@@ -1,0 +1,65 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block navigation %}
+    <div class="navitem"><a href="{% url 'memorabilia:edit_collectible' object.collection.id object.id %}">Edit</a></div>
+    <div class="navitem"><a href="{% url 'memorabilia:delete_collectible' object.collection.id object.id %}">Delete</a></div>
+    <div class="navitem"><a href="{% url 'memorabilia:create_photo_match' object.collection.id object.id %}">Add Photo Match</a></div>
+{% endblock navigation %}
+
+{% block breadcrumb %}
+<div class="crumb"><a href="{% url 'memorabilia:index' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:collection' object.collection.id %}">{{ object.collection }}</a></div>
+{% endblock breadcrumb %}
+
+{% block content %}
+
+    <h1>{{ object.title }}</h1>
+
+    {% if object.images|length > 0 %}
+    <img src='{{ MEDIA_URL }}{{ object.image }}'></img>
+    {% endif %}
+
+    {% for image in object.images.all %}
+    <img src='{{ MEDIA_URL }}{{ image.image }}'></img>
+    {% endfor %}
+
+    <p>{{ object.league }}</p>
+    <p>{{ object.brand }}</p>
+    <p>{{ object.size }}</p>
+    <p>{{ object.player }}</p>
+    <p>{{ object.season }}</p>
+    <p>{{ object.description }}</p>
+    <p>{{ object.usage_type }}</p>
+    <p>{{ object.game_type }}</p>
+    <p>{{ object.collection }}</p>
+    <p>{{ object.for_sale }}</p>
+    <p>{{ object.for_trade }}</p>
+    <p>{{ object.asking_price }}</p>
+    <p>{{ object.looking_for }}</p>
+    <ul>
+    {% for photomatch in object.photomatch_set.all %}
+        <li><a href="{% url 'memorabilia:photo_match' object.collection.id object.id photomatch.id %}">{{ photomatch }}</a></li>
+    {% empty %}
+        <p>No photo matches</p>
+    {% endfor %}
+    </ul>
+    <!-- <form action="" method="post">
+        {% csrf_token %}
+        <fieldset>
+            <legend><h1>{{ collectible.title }}</h1></legend>
+            {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+            <label for="league">League</label><br>
+            <input type="text" name="leage" id="league" value="{{ collectible.league }}">
+        </fieldset>
+        <input type="submit" value="Vote">
+    </form>
+    <table>
+        <tbody>
+        {% for item in object_list %}
+          <tr>
+            <td>{{ item }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+    </table> -->
+
+{% endblock content %}

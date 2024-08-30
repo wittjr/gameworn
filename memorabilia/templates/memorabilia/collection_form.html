@@ -1,0 +1,14 @@
+{% extends 'memorabilia/base.html' %}
+	
+{% block navigation %}
+<button onclick="history.back()">Go Back</button>
+{% endblock navigation %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+<form method="post" novalidate>
+	{% csrf_token %}
+	{{ form.as_p }}
+	<input type="submit" value="Save" />
+</form>
+{% endblock content %}
