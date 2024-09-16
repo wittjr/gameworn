@@ -1,4 +1,4 @@
-{% extends 'memorabilia/base.html' %}
+{% extends "memorabilia/base.html" %}
 	
 {% block content %}
     <ul>
@@ -8,7 +8,14 @@
     </ul>
 {% endblock content %}
 
-{% block navigation %}
-    <div class="navitem"><a href="{% url 'memorabilia:create_collection' %}">Add</a></div>
-{% endblock navigation %}
+{% block page_navigation %}
+    {% if user.is_authenticated %}
+        {% url 'memorabilia:create_collection' as the_url %}
+        {% include "memorabilia/navitem.html" with link=the_url label="Add" %}
+    {% endif %}
+{% endblock page_navigation %}
+
+{% block breadcrumb %}
+    <div class="navitem"><a href="{% url 'memorabilia:home' %}">Home</a></div>
+{% endblock breadcrumb %}
 

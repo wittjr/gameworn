@@ -1,27 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{% if title %} {{title}} {% else %} Memorabilia {% endif %}</title>
-        {% load static %}
-        <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}">
-    </head>
-    <head>
-    </head>
+{% extends "allauth/layouts/base.html" %}
+{% load static %}
+
+{% block css %}
+    <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}">
+    <script src="{% static 'fontawesomefree/js/fontawesome.js' %}"></script>
+    <script src="{% static 'fontawesomefree/js/solid.js' %}"></script>
+    <script src="{% static 'fontawesomefree/js/brands.js' %}"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin&display=swap">
+{% endblock css %}
+
+
+{% block navigation %}
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'memorabilia:list_collections' %}">Collections</a>
+    </li>
+{% endblock navigation %}
+{% block usernav %}
+{% endblock usernav%}
+
+{% block body %}
+        <main>
+            <div class="breadcrumb">
+                {% block breadcrumb %}
+                {% endblock %}
+            </div>
     
-    <body>
-        <div class="navbar">
-            {% block navigation %}
-            {% endblock %}
-        </div>
-        <div class="breadcrumb">
-            {% block breadcrumb %}
-            {% endblock %}
-        </div>
-
-        {% block content %}
-        {% endblock %}
-
-    </body>
-</html>
+            {% block content %}
+            {% endblock %}    
+        </main>
+        
+        <footer>
+            <div>
+                <ul>
+                    <li>Resources</li>
+                    <li>Contact</li>
+                </ul>
+            </div>
+        </footer>
+{% endblock body %}

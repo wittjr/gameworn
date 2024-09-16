@@ -1,12 +1,19 @@
 {% extends 'memorabilia/base.html' %}
 
-{% block navigation %}
-    <div class="navitem"><a href="{% url 'memorabilia:edit_photo_match' object.collectible.collection.id object.collectible.id object.id %}">Edit</a></div>
-    <div class="navitem"><a href="{% url 'memorabilia:delete_photo_match' object.collectible.collection.id object.collectible.id object.id %}">Delete</a></div>
-{% endblock navigation %}
+{% block page_navigation %}
+    {% if user.is_authenticated %}
+        {% if user.id == object.collectible.collection.owner_uid or user.is_superuser %}
+            {% url 'memorabilia:edit_photo_match' object.collectible.collection.id object.collectible.id object.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Edit" %}
+
+            {% url 'memorabilia:delete_photo_match' object.collectible.collection.id object.collectible.id object.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Delete" %}
+        {% endif %}
+    {% endif %}
+{% endblock page_navigation %}
 
 {% block breadcrumb %}
-<div class="crumb"><a href="{% url 'memorabilia:index' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:collection' object.collectible.collection.id %}">{{ object.collectible.collection }}</a></div>><div class="crumb"><a href="{% url 'memorabilia:collectible' object.collectible.collection.id object.collectible.id %}">{{ object.collectible }}</a></div>
+<div class="crumb"><a href="{% url 'memorabilia:home' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:list_collections' %}">Collections</a></div>><div class="crumb"><a href="{% url 'memorabilia:collection' object.collectible.collection.id %}">{{ object.collectible.collection }}</a></div>><div class="crumb"><a href="{% url 'memorabilia:collectible' object.collectible.collection.id object.collectible.id %}">{{ object.collectible }}</a></div>
 {% endblock breadcrumb %}
 
 

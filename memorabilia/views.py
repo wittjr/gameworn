@@ -1,16 +1,25 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views import generic
 from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage
 from .forms import CollectibleForm, CollectionForm, PhotoMatchForm
 from django.forms import inlineformset_factory
-
+from django.contrib.auth.decorators import user_passes_test, login_required
+from rules.contrib.views import permission_required, objectgetter
 
 # Create your views here.
+
+def home(request):
+    return render(request, 'memorabilia/index.html')
+
+
 class IndexView(generic.ListView):
     model = Collection
 
+
+@login_required
+@permission_required('memorabilia.create_collection')
 def create_collection(request):
     if request.method == "POST":
         # create a form instance and populate it with data from the request:
@@ -29,6 +38,8 @@ def create_collection(request):
     return render(request, 'memorabilia/collection_form.html', {'form': form, 'title': 'New Collection'})
 
 
+@login_required
+@permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def edit_collection(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     if request.method == "POST":
@@ -37,12 +48,15 @@ def edit_collection(request, collection_id):
             collection.title = form.cleaned_data['owner_uid']
             collection.title = form.cleaned_data['title']
             collection.save()
-            return HttpResponseRedirect('/memorabilia/')
+            return redirect('memorabilia:collection', pk=collection_id)
     else:
         form = CollectionForm(instance = collection)
 
     return render(request, 'memorabilia/collection_form.html', {'form': form, 'title': 'Edit Collection'})
 
+
+@login_required
+@permission_required('memorabilia.delete_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def delete_collection(request, collection_id):
     Collection.objects.filter(pk=collection_id).delete()
     return HttpResponseRedirect('/memorabilia/')
@@ -86,9 +100,20 @@ class CollectibleView(generic.DetailView):
         context['object'].league = League.objects.get(pk=context['object'].league)
         context['object'].game_type = GameType.objects.get(pk=context['object'].game_type)
         context['object'].usage_type = UsageType.objects.get(pk=context['object'].usage_type)
+        primary_image_filter = context['object'].images.filter(primary=True)
+        if len(primary_image_filter) >= 1:
+            primary_image = primary_image_filter[0].image
+            context['object'].primary_image = primary_image
+        else:
+            images = context['object'].images.all()
+            if len(images) >= 1:
+                primary_image = images[0].image
+                context['object'].primary_image = primary_image
         return context
 
-# TODO
+
+@login_required
+@permission_required('memorabilia.create_collectible', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def create_collectible(request, collection_id):
     # CollectibleImageFormSet = inlineformset_factory(Collectible, CollectibleImage, exclude=[], can_delete=False, extra=2)
     # collectible = Collectible()
@@ -121,6 +146,8 @@ def create_collectible(request, collection_id):
     return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'New Collectible'})
 
 
+@login_required
+@permission_required('memorabilia.update_collectible', fn=objectgetter(Collectible, 'collectible_id'), raise_exception=True)
 def edit_collectible(request, collection_id, collectible_id):
     collectible = get_object_or_404(Collectible, pk=collectible_id)
     if request.method == "POST":
@@ -145,7 +172,7 @@ def edit_collectible(request, collection_id, collectible_id):
             # collectible.looking_for = form.cleaned_data['looking_for']
             # collectible.save()
             form.save()
-            return HttpResponseRedirect(f'/memorabilia/collection/{collection_id}')
+            return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible_id)
         else:
             print('ERROR')
     else:
@@ -153,11 +180,15 @@ def edit_collectible(request, collection_id, collectible_id):
 
     return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'Edit Collectible'})
 
+
+@login_required
+@permission_required('memorabilia.delete_collectible', fn=objectgetter(Collectible, 'collectible_id'), raise_exception=True)
 def delete_collectible(request, collection_id, collectible_id):
     Collectible.objects.filter(pk=collectible_id).delete()
     return HttpResponseRedirect(f'/memorabilia/collection/{collection_id}')
 
 
+@login_required
 def create_photo_match(request, collection_id, collectible_id):
     if request.method == "POST":
         form = PhotoMatchForm(request.POST, request.FILES)
@@ -171,6 +202,7 @@ def create_photo_match(request, collection_id, collectible_id):
     return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'New Photo Match'})
 
 
+@login_required
 def edit_photo_match(request, collection_id, collectible_id, photo_match_id):
     photomatch = get_object_or_404(PhotoMatch, pk=photo_match_id)
     if request.method == "POST":
@@ -187,6 +219,7 @@ def edit_photo_match(request, collection_id, collectible_id, photo_match_id):
     return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'Edit Photo Match'})
 
 
+@login_required
 def delete_photo_match(request, collection_id, collectible_id, photo_match_id):
     PhotoMatch.objects.filter(pk=photo_match_id).delete()
     return HttpResponseRedirect(f'/memorabilia/collection/{collection_id}/collectible/{collectible_id}')

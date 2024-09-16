@@ -126,6 +126,7 @@ class CollectibleForm(ModelForm):
                     collectible=collectible,
                     image=image,
                 )
+        self.instance.save()
 
     def get_image_fields(self):
         for field_name in self.fields:

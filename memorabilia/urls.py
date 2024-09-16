@@ -1,10 +1,12 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = "memorabilia"
 urlpatterns = [
-    path("", views.IndexView.as_view(), name="index"),
-    path("create", views.create_collection, name="create_collection"),
+    path("", views.home, name="home"),
+    path('accounts/', include('allauth.urls')),
+    path("collection/create", views.create_collection, name="create_collection"),
+    path("collection/", views.IndexView.as_view(), name="list_collections"),
     path("collection/<int:pk>/", views.CollectionView.as_view(), name="collection"),
     path("collection/<int:collection_id>/edit", views.edit_collection, name="edit_collection"),
     path("collection/<int:collection_id>/delete", views.delete_collection, name="delete_collection"),

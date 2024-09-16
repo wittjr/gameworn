@@ -19,11 +19,19 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from debug_toolbar.toolbar import debug_toolbar_urls
+from allauth.account.decorators import secure_admin_login
+from django.views.generic.base import TemplateView
+
+admin.site.login = secure_admin_login(admin.site.login)
 
 urlpatterns = [
     # path("polls/", include("django_polls.urls")),
-    path("memorabilia/", include("memorabilia.urls")),
-    path('admin/', admin.site.urls)
+    path("", include("memorabilia.urls")),
+    # path("memorabilia/", include("memorabilia.urls")),
+    path("accounts/", include("allauth.urls")),
+    path("accounts/profile/", TemplateView.as_view(template_name="profile.html")),
+    path('admin/', admin.site.urls),
+    path("i18n/", include("django.conf.urls.i18n")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if not settings.TESTING:

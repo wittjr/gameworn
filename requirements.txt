@@ -1,0 +1,7 @@
+Django==5.0.7
+python-dotenv==1.0.1
+django-allauth==64.2.0
+fontawesomefree==6.6.0
+requests==2.32.3
+requests-oauthlib==2.0.0
+rules==3.5
