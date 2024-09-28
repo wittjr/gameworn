@@ -1,21 +1,26 @@
 {% extends "memorabilia/base.html" %}
-	
-{% block content %}
-    <ul>
-        {% for collection in object_list %}
-            <li><a href="{% url 'memorabilia:collection' collection.id %}">{{ collection.title }}</a></li>
-        {% endfor %}
-    </ul>
-{% endblock content %}
+{% load static %}
 
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'memorabilia/collection.css' %}">
+{% endblock page_css %}
+	
 {% block page_navigation %}
     {% if user.is_authenticated %}
         {% url 'memorabilia:create_collection' as the_url %}
-        {% include "memorabilia/navitem.html" with link=the_url label="Add" %}
+        {% include 'memorabilia/navitem.html' with link=the_url label="Add" %}
     {% endif %}
 {% endblock page_navigation %}
 
 {% block breadcrumb %}
-    <div class="navitem"><a href="{% url 'memorabilia:home' %}">Home</a></div>
+    {% include 'memorabilia/breadcrumb.html' with label="Collections" %}
 {% endblock breadcrumb %}
 
+{% block content %}
+    <div class="collection-list-container">
+        {% for collection in collection_list %}
+            {% url 'memorabilia:collection' collection.id as the_url %}
+            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=collection.image description=collection.description owner=collection.owner_email %}        
+        {% endfor %}
+    </div>
+{% endblock content %}

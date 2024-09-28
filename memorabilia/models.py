@@ -23,6 +23,8 @@ def is_collectible_owner(self, user, collectible):
 class Collection(RulesModel):
     owner_uid = models.IntegerField()
     title = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='images', blank=True, null=True)
+    image_link = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         rules_permissions = {
@@ -78,6 +80,19 @@ class Collectible(RulesModel):
             'delete': rules.is_authenticated & is_collectible_owner
         }
 
+
+    def get_primary_image(self):
+        print(vars(self.images))
+        primary_image_filter = self.images.filter(primary=True)
+        if len(primary_image_filter) >= 1:
+            primary_image = primary_image_filter[0].image
+            return primary_image
+        else:
+            images = self.images.all()
+            if len(images) >= 1:
+                primary_image = images[0].image
+                return primary_image
+        return None
 
     def __str__(self):
         return self.title

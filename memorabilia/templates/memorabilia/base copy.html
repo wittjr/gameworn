@@ -1,0 +1,44 @@
+{% extends "allauth/layouts/base.html" %}
+{% load static tailwind_tags %}
+{% load static %}
+
+{% block css %}
+    {% tailwind_css %}
+    <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}">
+    <script src="{% static 'fontawesomefree/js/fontawesome.js' %}"></script>
+    <script src="{% static 'fontawesomefree/js/solid.js' %}"></script>
+    <script src="{% static 'fontawesomefree/js/brands.js' %}"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin&display=swap">
+    {% block page_css %}
+    {% endblock page_css %}
+{% endblock css %}
+
+
+{% block navigation %}
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'memorabilia:list_collections' %}">Collections</a>
+    </li>
+{% endblock navigation %}
+{% block usernav %}
+{% endblock usernav%}
+
+{% block body %}
+        <main>
+            <div class="breadcrumb">
+                {% block breadcrumb %}
+                {% endblock %}
+            </div>
+    
+            {% block content %}
+            {% endblock %}    
+        </main>
+        
+        <footer>
+            <div>
+                <ul>
+                    <li>Resources</li>
+                    <li>Contact</li>
+                </ul>
+            </div>
+        </footer>
+{% endblock body %}

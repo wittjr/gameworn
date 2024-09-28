@@ -43,7 +43,7 @@ class CollectionTest(TestCase):
         self.assertEqual(collection.owner_uid, user.id)
         self.assertEqual(collection.title, 'create test collection')
         collection.owner_uid = self.testuser.id
-        self.assertEqual(collection.owner_uid, u.id)
+        self.assertEqual(collection.owner_uid, self.testuser.id)
 
     def test_delete_owned_collection(self):
         pass

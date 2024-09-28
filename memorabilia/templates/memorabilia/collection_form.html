@@ -6,7 +6,7 @@
 
 {% block content %}
 <h2>{{ title }}</h2>
-<form method="post" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate>
 	{% csrf_token %}
 	{{ form.as_p }}
 	<input type="submit" value="Save" />

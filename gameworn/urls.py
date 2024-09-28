@@ -32,6 +32,7 @@ urlpatterns = [
     path("accounts/profile/", TemplateView.as_view(template_name="profile.html")),
     path('admin/', admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
+    path("__reload__/", include("django_browser_reload.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if not settings.TESTING:

@@ -1,16 +1,21 @@
 {% extends 'memorabilia/base.html' %}
+{% load static %}
+
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'memorabilia/collection-detail.css' %}">
+{% endblock page_css %}
 
 {% block page_navigation %}
     {% if user.is_authenticated %}
         {% if user.id == collection.owner_uid or user.is_superuser %}
-            {% url 'memorabilia:create_collectible' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Add" %}
-
             {% url 'memorabilia:edit_collection' collection.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Edit" %}
 
             {% url 'memorabilia:delete_collection' collection.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Delete" %}
+
+            {% url 'memorabilia:create_collectible' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Add" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}
@@ -20,11 +25,16 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-    <p>
-        {{ collection.title }}
-    </p>
-    {% for collectible in collection.collectible_set.all %}
-        <li><a href="{% url 'memorabilia:collectible' collection.id collectible.id %}">{{ collectible.title }}</a></li>
-    {% endfor %}
-    </ul>
+    <div class="collection-header-container">
+        <div class="collection-header">
+            <img src="{{ MEDIA_URL }}{{ collection.image }}" />
+        </div>    
+        <div class="collection-title">{{ collection.title }}</div>
+    </div>
+    <div>
+        {% for collectible in collection.collectible_set.all %}
+            {% url 'memorabilia:collectible' collection.id collectible.id as the_url %}
+            {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=collectible.get_primary_image %}
+        {% endfor %}
+    </div>
 {% endblock content %}

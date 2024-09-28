@@ -29,8 +29,47 @@ class CollectionForm(ModelForm):
         model = Collection
         fields = [
             'owner_uid',
-            'title'
+            'title',
+            'image',
+            'image_link'
         ]
+
+
+    # def clean(self):
+        # self.cleaned_data = super().clean()
+        # if self.cleaned_data['image']:
+        #     self.cleaned_data['image_link'] = settings.MEDIA_URL + self.cleaned_data['image'].name
+
+
+    # def save(self):
+    #     collection = self.instance
+    #     # print(vars(self))
+    #     # print(collection.image)
+    #     # print(vars(collection))
+    #     # print(self.instance)
+    #     # print(vars(self.instance))
+    #     # print(self.changed_data)
+    #     # print(self.cleaned_data)
+    #     if self.cleaned_data['image']:
+    #         self.instance.image_link = settings.MEDIA_URL + self.cleaned_data['image'].name
+    #     # current_images = set()
+    #     # for o in self.cleaned_data['images']:
+    #     #     if type(o) == File:
+    #     #         current_images.add(o.name)
+    #     # for image in list(collection.images.values()):
+    #     #     file_path = os.path.join(settings.MEDIA_URL, image['image'])
+    #     #     if file_path not in current_images:
+    #     #         default_storage.delete(image['image'])
+    #     #         CollectibleImage.objects.get(image = image['image']).delete()
+
+    #     # for image in self.cleaned_data['images']:
+    #     #     # print(image)
+    #     #     if isinstance(image, InMemoryUploadedFile):
+    #     #         CollectibleImage.objects.create(
+    #     #             collectible=collectible,
+    #     #             image=image,
+    #     #         )
+    #     self.instance.save()
 
 
 class CollectibleForm(ModelForm):

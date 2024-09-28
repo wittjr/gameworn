@@ -50,6 +50,11 @@ INSTALLED_APPS = [
     'memorabilia.apps.MemorabiliaConfig',
     'fontawesomefree',
     'rules',
+    'tailwind',
+    'theme',
+    'django_browser_reload',
+    'compressor',
+    'django_gravatar',
 ]
 
 MIDDLEWARE = [
@@ -61,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_browser_reload.middleware.BrowserReloadMiddleware',
 ]
 
 if not TESTING:
@@ -180,3 +186,15 @@ INTERNAL_IPS = [
 MEDIA_URL = '/media/'
 # Path where media is stored
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
+TAILWIND_APP_NAME = 'theme'
+
+COMPRESS_ROOT = os.path.join(BASE_DIR, 'static')
+
+COMPRESS_ENABLED = True
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
+]

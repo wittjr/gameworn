@@ -7,6 +7,11 @@ from .forms import CollectibleForm, CollectionForm, PhotoMatchForm
 from django.forms import inlineformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
 from rules.contrib.views import permission_required, objectgetter
+from django_gravatar.helpers import get_gravatar_url, has_gravatar, get_gravatar_profile_url, calculate_gravatar_hash
+from django.contrib.auth.models import User
+from django.db.models import OuterRef, Subquery
+from django.conf import settings
+
 
 # Create your views here.
 
@@ -17,16 +22,25 @@ def home(request):
 class IndexView(generic.ListView):
     model = Collection
 
+    def get_context_data(self, **kwargs):
+        context = super(IndexView, self).get_context_data(**kwargs)
+        user_subquery = User.objects.filter(id=OuterRef('owner_uid'))
+        context['collection_list'] = context['collection_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
+        return context
+
+
 
 @login_required
 @permission_required('memorabilia.create_collection')
 def create_collection(request):
     if request.method == "POST":
         # create a form instance and populate it with data from the request:
-        form = CollectionForm(request.POST)
+        form = CollectionForm(request.POST, request.FILES)
         # check whether it's valid:
         if form.is_valid():
             # process the data in form.cleaned_data as required
+            if form.cleaned_data['image']:
+                form.cleaned_data['image_link'] = settings.MEDIA_URL + form.cleaned_data['image']
             form.save()
             # redirect to a new URL:
             return HttpResponseRedirect("/memorabilia/")
@@ -43,11 +57,19 @@ def create_collection(request):
 def edit_collection(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     if request.method == "POST":
-        form = CollectionForm(request.POST)
+        form = CollectionForm(request.POST, request.FILES, instance = collection)
+        # print(form.is_valid())
+        # print(vars(form.cleaned_data['image']))
         if form.is_valid():
-            collection.title = form.cleaned_data['owner_uid']
-            collection.title = form.cleaned_data['title']
-            collection.save()
+            # collection.owner_uid = form.cleaned_data['owner_uid']
+            # collection.title = form.cleaned_data['title']
+            # collection.image = form.cleaned_data['image']
+            # collection.save()
+            # print(vars(form))
+            # print(form.cleaned_data)
+            # print(form.instance)
+
+            form.save()
             return redirect('memorabilia:collection', pk=collection_id)
     else:
         form = CollectionForm(instance = collection)
@@ -60,6 +82,7 @@ def edit_collection(request, collection_id):
 def delete_collection(request, collection_id):
     Collection.objects.filter(pk=collection_id).delete()
     return HttpResponseRedirect('/memorabilia/')
+
 
 class CollectionView(generic.DetailView):
     model = Collection
@@ -92,7 +115,6 @@ class CollectibleView(generic.DetailView):
     #     # with POST data. This prevents data from being posted twice if a
     #     # user hits the Back button.
     #     return HttpResponseRedirect(reverse("polls:results", args=(question.id,)))
-
 
     def get_context_data(self, **kwargs):
         context = super(CollectibleView, self).get_context_data(**kwargs)
