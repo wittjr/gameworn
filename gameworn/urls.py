@@ -22,7 +22,8 @@ from debug_toolbar.toolbar import debug_toolbar_urls
 from allauth.account.decorators import secure_admin_login
 from django.views.generic.base import TemplateView
 
-admin.site.login = secure_admin_login(admin.site.login)
+admin.autodiscover()
+# admin.site.login = secure_admin_login(admin.site.login)
 
 urlpatterns = [
     # path("polls/", include("django_polls.urls")),

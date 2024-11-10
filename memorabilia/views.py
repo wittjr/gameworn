@@ -7,7 +7,6 @@ from .forms import CollectibleForm, CollectionForm, PhotoMatchForm
 from django.forms import inlineformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
 from rules.contrib.views import permission_required, objectgetter
-from django_gravatar.helpers import get_gravatar_url, has_gravatar, get_gravatar_profile_url, calculate_gravatar_hash
 from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery
 from django.conf import settings
@@ -39,8 +38,8 @@ def create_collection(request):
         # check whether it's valid:
         if form.is_valid():
             # process the data in form.cleaned_data as required
-            if form.cleaned_data['image']:
-                form.cleaned_data['image_link'] = settings.MEDIA_URL + form.cleaned_data['image']
+            # if form.cleaned_data['image']:
+            #     form.cleaned_data['image_link'] = settings.MEDIA_URL + form.cleaned_data['image']
             form.save()
             # redirect to a new URL:
             return HttpResponseRedirect("/memorabilia/")

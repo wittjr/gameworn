@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.discord',
     'memorabilia.apps.MemorabiliaConfig',
+    'django_flowbite_widgets',
     'fontawesomefree',
     'rules',
     'tailwind',
@@ -88,6 +89,8 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'memorabilia.context_processors.user_avatar',
+                'memorabilia.context_processors.site_name',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -99,6 +102,13 @@ TEMPLATES = [
     },
 ]
 
+# EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+# EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
     'rules.permissions.ObjectPermissionBackend',
@@ -108,6 +118,10 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_ONLY = True
+LOGIN_REDIRECT_URL = '/'
+
 # Provider specific settings
 SOCIALACCOUNT_PROVIDERS = {
     'discord': {
@@ -115,9 +129,9 @@ SOCIALACCOUNT_PROVIDERS = {
         # (``socialaccount`` app) containing the required client
         # credentials, or list them here:
         'APP': {
-            'client_id': '1281068554493628498',
-            'secret': 'CeRyUntMPU9xCuCRabQqreyEXkyVltBN',
-            'key': 'c1046b581b595127d00ee64f5bd9e037333a39e86bdb8050c47692197754f5da'
+            'client_id': os.environ.get('DISCORD_CLIENT'),
+            'secret': os.environ.get('DISCORD_SECRET'),
+            'key': os.environ.get('DISCORD_KEY')
             # https://discord.com/oauth2/authorize?client_id=1281068554493628498&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2F&scope=identify+email+openid
         }
     }
@@ -198,3 +212,5 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'compressor.finders.CompressorFinder',
 ]
+
+SITE_NAME = 'Game Used'

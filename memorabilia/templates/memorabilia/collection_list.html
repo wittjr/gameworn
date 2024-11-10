@@ -6,10 +6,10 @@
 {% endblock page_css %}
 	
 {% block page_navigation %}
-    {% if user.is_authenticated %}
+    <!-- {% if user.is_authenticated %}
         {% url 'memorabilia:create_collection' as the_url %}
         {% include 'memorabilia/navitem.html' with link=the_url label="Add" %}
-    {% endif %}
+    {% endif %} -->
 {% endblock page_navigation %}
 
 {% block breadcrumb %}
@@ -20,7 +20,7 @@
     <div class="collection-list-container">
         {% for collection in collection_list %}
             {% url 'memorabilia:collection' collection.id as the_url %}
-            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=collection.image description=collection.description owner=collection.owner_email %}        
+            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=collection.image description=collection.description owner=collection.owner_email owner_username=collection.owner_username %}
         {% endfor %}
     </div>
 {% endblock content %}

@@ -1,40 +1,36 @@
-{% extends 'memorabilia/base.html' %}
-
-{% block page_navigation %}
-<button onclick="history.back()">Go Back</button>
-{% endblock page_navigation %}
-
-{% block content %}
-<h2>{{ title }}</h2>
-<form method="post" enctype="multipart/form-data" novalidate>
-	{% csrf_token %}
-	{{ form.as_p }}
-    <!-- {{ image_form.as_p }} -->
-    <!-- <select class="form-control" id="league" name='selected_league'>
-        {% for league in leagues %}
-            <option value='{{league.key}}'>{{ league.name }}</option>
-        {% endfor %}
-    </select> -->
-    <!-- {% for image_field in form.get_image_fields %}
-        {{ image_field }}
-    {% endfor %} -->
-
-	<input type="submit" value="Save" />
-</form>
-
+{% extends 'memorabilia/base.html' %} {% block page_navigation %} {% endblock page_navigation %} {% block content %}
+<h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
+<div class="container mx-auto max-w-96">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %} {{ form }}
+        <div class="mx-auto flex">
+            <button
+                type="submit"
+                class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                Save
+            </button>
+            <button
+                type="button"
+                class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                onclick="history.back()">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
 <script>
-    $('.image-list-new').on('input', function() {
-        let $this = $(this)
-        let $clone = $this.clone()
-        let name = $clone.attr('name')
-        let n = parseInt(name.split('_')[1]) + 1
-        name = 'image_' + n
-        $clone.val('')
-        $clone.attr('name', name)
-        $clone.appendTo($this.parent())
-        $this.removeClass('image-list-new')
-        $this.off('input', arguments.callee)
-        $clone.on('input', arguments.callee)
-    })
+    $(".image-list-new").on("input", function () {
+        let $this = $(this);
+        let $clone = $this.clone();
+        let name = $clone.attr("name");
+        let n = parseInt(name.split("_")[1]) + 1;
+        name = "image_" + n;
+        $clone.val("");
+        $clone.attr("name", name);
+        $clone.appendTo($this.parent());
+        $this.removeClass("image-list-new");
+        $this.off("input", arguments.callee);
+        $clone.on("input", arguments.callee);
+    });
 </script>
 {% endblock content %}

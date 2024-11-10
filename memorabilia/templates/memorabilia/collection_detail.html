@@ -1,5 +1,6 @@
 {% extends 'memorabilia/base.html' %}
 {% load static %}
+{% load memorabilia_extras %}
 
 {% block page_css %}
     <link rel="stylesheet" href="{% static 'memorabilia/collection-detail.css' %}">
@@ -9,32 +10,44 @@
     {% if user.is_authenticated %}
         {% if user.id == collection.owner_uid or user.is_superuser %}
             {% url 'memorabilia:edit_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Edit" %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Edit Collection" %}
 
             {% url 'memorabilia:delete_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Delete" %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Delete Collection" %}
 
             {% url 'memorabilia:create_collectible' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Add" %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}
 
 {% block breadcrumb %}
-<div class="crumb"><a href="{% url 'memorabilia:home' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:list_collections' %}">Collections</a></div>
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% include 'memorabilia/breadcrumb.html' with label=collection.title %}
 {% endblock breadcrumb %}
 
 {% block content %}
-    <div class="collection-header-container">
-        <div class="collection-header">
-            <img src="{{ MEDIA_URL }}{{ collection.image }}" />
-        </div>    
-        <div class="collection-title">{{ collection.title }}</div>
-    </div>
-    <div>
+    {% getmediaurl collection.image as image_url %}
+    <section style="background-image: url('{{ image_url }}');" class="rounded-lg bg-center bg-cover bg-no-repeat bg-gray-500 bg-blend-multiply">
+        <div class="px-4 mx-auto max-w-screen-xl text-center py-24 lg:py-56">
+            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl">{{ collection.title }}</h1>
+            <p class="mb-8 text-lg font-normal text-gray-300 lg:text-xl sm:px-16 lg:px-48">{{ collection.description }}</p>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
         {% for collectible in collection.collectible_set.all %}
             {% url 'memorabilia:collectible' collection.id collectible.id as the_url %}
-            {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=collectible.get_primary_image %}
+            <!-- {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=collectible.get_primary_image %} -->
+            {% getmediaurl collectible.get_primary_image as image_url %}
+            <!-- http://127.0.0.1:8000/media/images/gostisbehere.png -->
+            <div class="mx-auto">
+                <a href="{{ the_url }}">
+                    <img class="h-auto max-w-full w-72 rounded-lg" src="{{ image_url }}" alt="{{ collectible.title }}">
+                </a>
+            </div>
         {% endfor %}
-    </div>
+    </div>    
+
 {% endblock content %}

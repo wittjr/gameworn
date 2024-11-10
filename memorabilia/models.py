@@ -62,6 +62,7 @@ class Collectible(RulesModel):
     brand = models.CharField(max_length=25)
     size = models.CharField(max_length=5)
     player = models.CharField(max_length=100)
+    number = models.IntegerField(blank=True, null=True)
     season = models.CharField(max_length=10)
     game_type = models.CharField(max_length=5)
     description = models.CharField(max_length=500)

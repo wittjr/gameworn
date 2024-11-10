@@ -1,3 +1,5 @@
+{% load memorabilia_extras %}
+
 <div class="max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
     <a href="{{ link }}">
         {% if image %}
@@ -10,10 +12,18 @@
             </svg>
         </div>
         {% endif %}
-        <div class="p-5">
-                <h5 class="mb-2 text-center text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ label }}</h5>
-            <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ description }}</p>
-            <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ owner }}</p>
-        </div>
     </a>
+    <div class="p-5">
+        <a href="{{ link }}">
+            <h5 class="mb-2 text-center text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ label }}</h5>
+            <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ description }}</p>
+        </a>
+        <div class="flex justify-end gap-4">
+            <div class="font-medium dark:text-white">
+                <div>owned by {{owner_username}}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400"></div>
+            </div>
+            <img class="w-10 h-10 rounded-full" src="{% get_user_avatar_url collection.owner_email %}" alt="">
+        </div>
+    </div>
 </div>
