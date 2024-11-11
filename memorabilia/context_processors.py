@@ -9,7 +9,7 @@ def user_avatar(request):
     if user.is_authenticated:
         social_info = SocialAccount.objects.filter(user=request.user, provider='discord')
         if len(social_info) > 0:
-            return {'user_avatar_url':f'https://cdn.discordapp.com/avatars/{social_info[0].extra_data['id']}/{social_info[0].extra_data['avatar']}'}
+            return {'user_avatar_url':f"https://cdn.discordapp.com/avatars/{social_info[0].extra_data['id']}/{social_info[0].extra_data['avatar']}"}
         
         #  Use gravatar
         url = get_gravatar_url(user.email, size=32)
