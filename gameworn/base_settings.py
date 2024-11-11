@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'fontawesomefree',
     'rules',
     'theme',
-    'compressor',
     'django_gravatar',
 ]
 
@@ -188,17 +187,5 @@ INTERNAL_IPS = [
 MEDIA_URL = '/media/'
 # Path where media is stored
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-
-TAILWIND_APP_NAME = 'theme'
-
-COMPRESS_ROOT = os.path.join(BASE_DIR, 'static')
-
-COMPRESS_ENABLED = True
-
-STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder',
-]
 
 SITE_NAME = 'Game Used'
