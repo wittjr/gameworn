@@ -32,7 +32,7 @@ urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-if settings.DEBUG == 'True':
+if settings.DEBUG:
     from debug_toolbar.toolbar import debug_toolbar_urls
     urlpatterns = [
         *urlpatterns,

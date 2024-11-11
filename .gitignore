@@ -3,7 +3,11 @@ venv
 **__pycache__**
 **/migrations/
 db.sqlite3
-django-*
+django-memorabilia
+django-polls
 .DS_Store
 .env
 **/CACHE/css
+**/static/debug_toolbar
+**/static/django-browser-reload
+
