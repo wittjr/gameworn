@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.discord',
     'memorabilia.apps.MemorabiliaConfig',
+    'tailwind',
     'django_flowbite_widgets',
     'fontawesomefree',
     'rules',

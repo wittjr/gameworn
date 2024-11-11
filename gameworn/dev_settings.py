@@ -2,7 +2,6 @@ from .base_settings import *
 
 INSTALLED_APPS = [
     *INSTALLED_APPS,
-    'tailwind',
     'django_browser_reload',
     'debug_toolbar',
     'compressor',
