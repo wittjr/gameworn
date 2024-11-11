@@ -10,9 +10,12 @@
       <meta name="description" content="" />
       <title>{% block head_title %}{% endblock head_title %}</title>
 
-      {% compress css %} {% endcompress %} {% block css %} {% tailwind_css %}
+      <!-- {% compress css %} {% endcompress %} -->
+      {% block css %}
+      {% tailwind_css %}
       <!-- <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}"> -->
-      {% block page_css %} {% endblock page_css %} {% endblock css %}
+      {% block page_css %} {% endblock page_css %}
+      {% endblock css %}
       <script src="{% static 'fontawesomefree/js/fontawesome.js' %}"></script>
       <script src="{% static 'fontawesomefree/js/solid.js' %}"></script>
       <script src="{% static 'fontawesomefree/js/brands.js' %}"></script>
