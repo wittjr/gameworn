@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 DEBUG = os.environ.get('DJANGO_DEBUG', '')
 
 ALLOWED_HOSTS = [
-    os.environ.get('HOSTNAME', '')
+    os.environ.get('HOSTNAME')
 ]
 
 
