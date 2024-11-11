@@ -25,18 +25,16 @@ admin.autodiscover()
 # admin.site.login = secure_admin_login(admin.site.login)
 
 urlpatterns = [
-    # path("polls/", include("django_polls.urls")),
     path("", include("memorabilia.urls")),
-    # path("memorabilia/", include("memorabilia.urls")),
     path("accounts/", include("allauth.urls")),
     path("accounts/profile/", TemplateView.as_view(template_name="profile.html")),
     path('admin/', admin.site.urls),
     path("i18n/", include("django.conf.urls.i18n")),
-    path("__reload__/", include("django_browser_reload.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
     from debug_toolbar.toolbar import debug_toolbar_urls
     urlpatterns = [
         *urlpatterns,
+        path("__reload__/", include("django_browser_reload.urls")),
     ] + debug_toolbar_urls()
