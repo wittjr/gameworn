@@ -14,8 +14,6 @@ from pathlib import Path
 import sys, os
 from dotenv import load_dotenv
 
-TESTING = "test" in sys.argv
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

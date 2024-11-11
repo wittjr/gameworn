@@ -5,3 +5,4 @@ fontawesomefree==6.6.0
 requests==2.32.3
 requests-oauthlib==2.0.0
 rules==3.5
+django-gravatar==1.4.5
