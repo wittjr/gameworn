@@ -1,7 +1,6 @@
 venv
 **/media/images/**
 **__pycache__**
-**/migrations/
 db.sqlite3
 django-memorabilia
 django-polls
