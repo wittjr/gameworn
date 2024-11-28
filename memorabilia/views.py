@@ -10,6 +10,7 @@ from rules.contrib.views import permission_required, objectgetter
 from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery
 from django.conf import settings
+from django.urls import reverse
 
 
 # Create your views here.
@@ -40,9 +41,10 @@ def create_collection(request):
             # process the data in form.cleaned_data as required
             # if form.cleaned_data['image']:
             #     form.cleaned_data['image_link'] = settings.MEDIA_URL + form.cleaned_data['image']
-            form.save()
-            # redirect to a new URL:
-            return HttpResponseRedirect("/memorabilia/")
+            obj = form.save(commit=False)
+            obj.owner_uid = request.user.id
+            obj.save()
+            return HttpResponseRedirect(f'/collection/{obj.id}')
 
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -80,7 +82,7 @@ def edit_collection(request, collection_id):
 @permission_required('memorabilia.delete_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def delete_collection(request, collection_id):
     Collection.objects.filter(pk=collection_id).delete()
-    return HttpResponseRedirect('/memorabilia/')
+    return HttpResponseRedirect('/collection/')
 
 
 class CollectionView(generic.DetailView):

@@ -47,7 +47,6 @@ class CollectionForm(ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean(self):
-        print(vars(self))
         self.cleaned_data = super().clean()
 
     # def save(self):
