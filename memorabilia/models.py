@@ -83,7 +83,6 @@ class Collectible(RulesModel):
 
 
     def get_primary_image(self):
-        print(vars(self.images))
         primary_image_filter = self.images.filter(primary=True)
         if len(primary_image_filter) >= 1:
             primary_image = primary_image_filter[0].image

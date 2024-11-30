@@ -28,8 +28,6 @@ def get_user_avatar_url(email):
 
 @register.simple_tag(takes_context=True)
 def getmediaurl(context, image):
-    # print(context)
-    print(image)
     if image:
         return image.url
         return context.request.build_absolute_uri(image.url)

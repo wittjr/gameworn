@@ -1,4 +1,34 @@
-{% extends 'memorabilia/base.html' %} {% block page_navigation %} {% endblock page_navigation %} {% block content %}
+{% extends 'memorabilia/base.html' %}
+{% block page_navigation %}
+    {% if user.is_authenticated %}
+        {% if user.id == collection.owner_uid or user.is_superuser %}
+            {% url 'memorabilia:edit_collection' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Edit Collection" %}
+
+            {% url 'memorabilia:delete_collection' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Delete Collection" %}
+
+            {% url 'memorabilia:create_collectible' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
+        {% endif %}
+    {% endif %}
+{% endblock page_navigation %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% if collectible %}
+        {% url 'memorabilia:collection' collectible.collection.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.collection.title %}
+        {% url 'memorabilia:collectible' collection_id=collectible.collection.id pk=collectible.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.title %}
+    {% else %}
+        {% url 'memorabilia:collection' collection.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=collection.title %}
+    {% endif %}
+{% endblock breadcrumb %}
+
+{% block content %}
 <h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
 <div class="container mx-auto max-w-96">
     <form method="post" enctype="multipart/form-data" novalidate>

@@ -7,6 +7,7 @@ import os
 from django.core.files.storage import default_storage
 from .widgets import SpecifyImageWidget
 from django_flowbite_widgets import flowbite_widgets
+from django.core.exceptions import PermissionDenied
 
 
 class MultipleFileInput(ClearableFileInput):
@@ -117,7 +118,9 @@ class CollectibleForm(ModelForm):
             "description": flowbite_widgets.FlowbiteTextarea(),
         }
 
+
     def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         collectible = self.instance
         image_count = 0
@@ -140,6 +143,8 @@ class CollectibleForm(ModelForm):
         # create an extra blank field
         field_name = "image_%s" % (image_count,)
         self.fields[field_name] = FileField(widget=flowbite_widgets.FlowbiteImageDropzone, required=False)
+        self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        
 
     def clean(self):
         self.cleaned_data = super().clean()
@@ -163,20 +168,24 @@ class CollectibleForm(ModelForm):
         for o in self.cleaned_data["images"]:
             if type(o) == File:
                 current_images.add(o.name)
-        for image in list(collectible.images.values()):
-            file_path = os.path.join(settings.MEDIA_URL, image["image"])
-            if file_path not in current_images:
-                default_storage.delete(image["image"])
-                CollectibleImage.objects.get(image=image["image"]).delete()
+        if collectible.id:
+            for image in list(collectible.images.values()):
+                file_path = os.path.join(settings.MEDIA_URL, image["image"])
+                if file_path not in current_images:
+                    default_storage.delete(image["image"])
+                    CollectibleImage.objects.get(image=image["image"]).delete()
 
         for image in self.cleaned_data["images"]:
-            # print(image)
             if isinstance(image, InMemoryUploadedFile):
                 CollectibleImage.objects.create(
                     collectible=collectible,
                     image=image,
                 )
-        self.instance.save()
+        model = self.instance
+        if self.current_user.has_perm(collectible.get_perm('add'), model.collection):
+            self.instance.save()
+        else:
+            raise PermissionDenied()
 
     def get_image_fields(self):
         for field_name in self.fields:

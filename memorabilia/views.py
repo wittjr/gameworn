@@ -156,17 +156,17 @@ def create_collectible(request, collection_id):
     # return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_form': form2, 'title': 'New Collectible'})
 
     if request.method == "POST":
-        form = CollectibleForm(request.POST, request.FILES)
+        form = CollectibleForm(request.POST, request.FILES, current_user=request.user)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(f'/memorabilia/collection/{collection_id}')
+            return redirect('memorabilia:collection', pk=collection_id)
         else:
-            print(form.errors)
+            collection = get_object_or_404(Collection, pk=collection_id)
     else:
         collection = get_object_or_404(Collection, pk=collection_id)
-        form = CollectibleForm(initial={'collection':collection})
+        form = CollectibleForm(initial={'collection':collection}, current_user=request.user)
 
-    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'New Collectible'})
+    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'New Collectible', 'collection': collection})
 
 
 @login_required
@@ -201,14 +201,15 @@ def edit_collectible(request, collection_id, collectible_id):
     else:
         form = CollectibleForm(instance = collectible)
 
-    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'Edit Collectible'})
+    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'Edit Collectible', 'collectible': collectible})
+
 
 
 @login_required
 @permission_required('memorabilia.delete_collectible', fn=objectgetter(Collectible, 'collectible_id'), raise_exception=True)
 def delete_collectible(request, collection_id, collectible_id):
     Collectible.objects.filter(pk=collectible_id).delete()
-    return HttpResponseRedirect(f'/memorabilia/collection/{collection_id}')
+    return redirect('memorabilia:collection', pk=collection_id)
 
 
 @login_required
