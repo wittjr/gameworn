@@ -199,7 +199,7 @@ def edit_collectible(request, collection_id, collectible_id):
         else:
             print('ERROR')
     else:
-        form = CollectibleForm(instance = collectible)
+        form = CollectibleForm(instance = collectible, current_user=request.user)
 
     return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'Edit Collectible', 'collectible': collectible})
 
