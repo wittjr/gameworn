@@ -174,7 +174,7 @@ def create_collectible(request, collection_id):
 def edit_collectible(request, collection_id, collectible_id):
     collectible = get_object_or_404(Collectible, pk=collectible_id)
     if request.method == "POST":
-        form = CollectibleForm(request.POST, request.FILES, instance = collectible)
+        form = CollectibleForm(request.POST, request.FILES, instance = collectible, current_user=request.user)
         # uploaded_images = request.FILES.getlist('images')
         # print(uploaded_images)
         if form.is_valid():
@@ -196,8 +196,6 @@ def edit_collectible(request, collection_id, collectible_id):
             # collectible.save()
             form.save()
             return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible_id)
-        else:
-            print('ERROR')
     else:
         form = CollectibleForm(instance = collectible, current_user=request.user)
 
