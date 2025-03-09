@@ -11,3 +11,18 @@ document.addEventListener("DOMContentLoaded", () => {
    // console.log(options)
    // new Dropzone(className, options)
 });
+
+
+// $(".image-list-new").on("input", function () {
+//     let $this = $(this);
+//     let $clone = $this.clone();
+//     let name = $clone.attr("name");
+//     let n = parseInt(name.split("_")[1]) + 1;
+//     name = "image_" + n;
+//     $clone.val("");
+//     $clone.attr("name", name);
+//     $clone.appendTo($this.parent());
+//     $this.removeClass("image-list-new");
+//     $this.off("input", arguments.callee);
+//     $clone.on("input", arguments.callee);
+// });

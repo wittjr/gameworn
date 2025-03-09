@@ -1,11 +1,14 @@
-from django.forms import ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField
+from django import forms
+from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
+
+from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
 from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import os
 from django.core.files.storage import default_storage
-from .widgets import SpecifyImageWidget
+from .widgets import FlickrAlbumWidget, ImageGallery
 from django_flowbite_widgets import flowbite_widgets
 from django.core.exceptions import PermissionDenied
 
@@ -50,36 +53,6 @@ class CollectionForm(ModelForm):
     def clean(self):
         self.cleaned_data = super().clean()
 
-    # def save(self):
-    #     collection = self.instance
-    #     # print(vars(self))
-    #     # print(collection.image)
-    #     # print(vars(collection))
-    #     # print(self.instance)
-    #     # print(vars(self.instance))
-    #     # print(self.changed_data)
-    #     # print(self.cleaned_data)
-    #     if self.cleaned_data['image']:
-    #         self.instance.image_link = settings.MEDIA_URL + self.cleaned_data['image'].name
-    #     # current_images = set()
-    #     # for o in self.cleaned_data['images']:
-    #     #     if type(o) == File:
-    #     #         current_images.add(o.name)
-    #     # for image in list(collection.images.values()):
-    #     #     file_path = os.path.join(settings.MEDIA_URL, image['image'])
-    #     #     if file_path not in current_images:
-    #     #         default_storage.delete(image['image'])
-    #     #         CollectibleImage.objects.get(image = image['image']).delete()
-
-    #     # for image in self.cleaned_data['images']:
-    #     #     # print(image)
-    #     #     if isinstance(image, InMemoryUploadedFile):
-    #     #         CollectibleImage.objects.create(
-    #     #             collectible=collectible,
-    #     #             image=image,
-    #     #         )
-    #     self.instance.save()
-
 
 class CollectibleForm(ModelForm):
     league = ModelChoiceField(
@@ -95,15 +68,11 @@ class CollectibleForm(ModelForm):
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
-    # images = MultipleFileField()
-
     class Meta:
         model = Collectible
         fields = "__all__"
-        # exclude = ['images']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
         widgets = {
-            "for_sale": CheckboxInput(),
-            "for_trade": CheckboxInput(),
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
             "size": flowbite_widgets.FlowbiteTextInput(),
@@ -122,70 +91,8 @@ class CollectibleForm(ModelForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        collectible = self.instance
-        image_count = 0
-        if collectible.id != None:
-            images = collectible.images.values()
-            # images = Collectible.objects.filter(pk=collectible.id)
-            image_count = images.count()
-            i = 0
-            for image in images:
-                field_name = "image_%s" % (i,)
-                self.fields[field_name] = ImageField(required=False)
-                try:
-                    file_path = os.path.join(settings.MEDIA_ROOT, image["image"])
-                    self.fields[field_name].initial = File(open(file_path))
-                    self.fields[field_name].initial.name = default_storage.url(image["image"])
-                    self.fields[field_name].initial.url = default_storage.url(image["image"])
-                except (IndexError, FileNotFoundError):
-                    self.initial[field_name] = ""
-                i += 1
-        # create an extra blank field
-        field_name = "image_%s" % (image_count,)
-        self.fields[field_name] = FileField(widget=flowbite_widgets.FlowbiteImageDropzone, required=False)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
         
-
-    def clean(self):
-        self.cleaned_data = super().clean()
-        images = set()
-        i = 0
-        field_name = "image_%s" % (i)
-        while field_name in self.cleaned_data:
-            image = self.cleaned_data[field_name]
-            if image:
-                if image in images:
-                    self.add_error(field_name, "Duplicate")
-                else:
-                    images.add(image)
-            i += 1
-            field_name = "image_%s" % (i,)
-        self.cleaned_data["images"] = images
-
-    def save(self):
-        collectible = self.instance
-        current_images = set()
-        for o in self.cleaned_data["images"]:
-            if type(o) == File:
-                current_images.add(o.name)
-        if collectible.id:
-            for image in list(collectible.images.values()):
-                file_path = os.path.join(settings.MEDIA_URL, image["image"])
-                if file_path not in current_images:
-                    default_storage.delete(image["image"])
-                    CollectibleImage.objects.get(image=image["image"]).delete()
-
-        for image in self.cleaned_data["images"]:
-            if isinstance(image, InMemoryUploadedFile):
-                CollectibleImage.objects.create(
-                    collectible=collectible,
-                    image=image,
-                )
-        model = self.instance
-        if self.current_user.has_perm(collectible.get_perm('add'), model.collection):
-            self.instance.save()
-        else:
-            raise PermissionDenied()
 
     def get_image_fields(self):
         for field_name in self.fields:
@@ -206,17 +113,89 @@ class CollectibleForm(ModelForm):
 
 
 class CollectibleImageForm(ModelForm):
+
+    # images = ImageGallery(required=False)
+
     class Meta:
         model = CollectibleImage
-        fields = fields = "__all__"
+        fields = "__all__"
+        widgets = {
+            # "image": flowbite_widgets.FlowbiteTextInput(),
+            "link": flowbite_widgets.FlowbiteTextInput(),
+            "primary": flowbite_widgets.FlowbiteCheckboxInput(),
+            "flickrObject": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+
+class CustomCollectibleImageFormSet(BaseInlineFormSet):
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs.update({'empty_permitted': False})
+        return kwargs
+    
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        if self.can_delete:
+            form.fields['DELETE'].widget = flowbite_widgets.FlowbiteCheckboxInput(attrs={
+                'data-index': index,
+            })
+
+
+CollectibleImageFormSet = inlineformset_factory(
+    Collectible, 
+    CollectibleImage, 
+    form=CollectibleImageForm,
+    formset=CustomCollectibleImageFormSet,
+    extra=0,
+    can_delete=True,
+    # min_num=0,
+    # validate_min=True,
+    # max_num=10,
+    # validate_max=True
+)
 
 
 class PhotoMatchForm(ModelForm):
+
+    photo = FlowbiteImageDropzoneField(
+        label="Photo",
+        help_text="Enter an image URL or upload a file",
+        # required=False,
+        # max_file_size=5*1024*1024,  # 2MB
+        # allowed_extensions=['jpg', 'jpeg', 'png']
+        file_field_name='image',
+        url_field_name='link'
+    )
+
+
     class Meta:
         model = PhotoMatch
-        fields = ["collectible", "game_date", "image"]
+        fields = ["collectible", "game_date", "description"]
         widgets = {
             "collectible": flowbite_widgets.FlowbiteSelectInput(),
             "game_date": flowbite_widgets.FlowbiteTextInput(),
-            "image": flowbite_widgets.FlowbiteImageDropzone(),
+            # "image": flowbite_widgets.FlowbiteImageDropzone(),
+            # "link": flowbite_widgets.FlowbiteTextInput(),
+            "description": flowbite_widgets.FlowbiteTextarea(),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        # self.fields['photomatch'].queryset = PhotoMatch.objects.filter(owner_uid=self.current_user.id)
+
+
+    def save(self, commit=True):
+        pm = super().save(commit=False)
+
+        file_value, url_value = self.cleaned_data['photo']
+        if file_value:
+            pm.image = file_value
+        elif url_value:
+            pm.link = url_value
+        else:
+            return 
+        
+        if commit:
+            pm.save()
+        

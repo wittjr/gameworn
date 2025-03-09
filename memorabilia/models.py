@@ -4,6 +4,8 @@ from django.utils.translation import gettext_lazy as _
 from rules.contrib.models import RulesModel
 import rules
 
+from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
+
 
 # Create your models here.
 @rules.predicate(bind=True)
@@ -16,6 +18,8 @@ def is_collection_owner(self, user, collection):
 @rules.predicate(bind=True)
 def is_collectible_owner(self, user, collectible):
     if self.context.args:
+        # print(user.id)
+        # print(collectible.collection.owner_uid)
         return user.id == collectible.collection.owner_uid
     return False
 
@@ -84,9 +88,13 @@ class Collectible(RulesModel):
 
     def get_primary_image(self):
         primary_image_filter = self.images.filter(primary=True)
+        # print(primary_image_filter)
         if len(primary_image_filter) >= 1:
-            primary_image = primary_image_filter[0].image
-            return primary_image
+            # print(primary_image_filter[0])
+            if primary_image_filter[0].image:
+                return primary_image_filter[0].image
+            elif primary_image_filter[0].link:
+                return primary_image_filter[0].link
         else:
             images = self.images.all()
             if len(images) >= 1:
@@ -99,15 +107,26 @@ class Collectible(RulesModel):
 
 
 class CollectibleImage(RulesModel):
-    image = models.ImageField(upload_to='images')
     collectible = models.ForeignKey(Collectible, on_delete=models.CASCADE, related_name='images')
     primary = models.BooleanField(blank=True, null=True)
+    image = models.ImageField(upload_to='images', blank=True, null=True)
+    link = models.CharField(max_length=255, blank=True, null=True)
+    flickrObject = models.TextField(blank=True, null=True)
 
 
 class PhotoMatch(RulesModel):
-    image = models.ImageField(upload_to='images')
+    image = models.ImageField(upload_to='images', blank=True, null=True)
+    link = models.CharField(max_length=255, blank=True, null=True)
+    description = models.CharField(max_length=500, blank=True, null=True)
     game_date = models.DateField()
     collectible = models.ForeignKey(Collectible, on_delete=models.CASCADE, related_name='photomatches')
+
+    class Meta:
+        rules_permissions = {
+            'create': rules.is_authenticated & is_collectible_owner,
+            'update': rules.is_authenticated & is_collectible_owner,
+            'delete': rules.is_authenticated & is_collectible_owner
+        }
 
     def __str__(self):
         return '%s %s' % (self.collectible.title, self.game_date)

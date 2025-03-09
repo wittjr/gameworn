@@ -18,4 +18,6 @@ urlpatterns = [
     path("collection/<int:collection_id>/collectible/<int:collectible_id>/photoMatch/<int:pk>", views.PhotoMatchView.as_view(), name="photo_match"),
     path("collection/<int:collection_id>/collectible/<int:collectible_id>/photoMatch/<int:photo_match_id>/edit", views.edit_photo_match, name="edit_photo_match"),
     path("collection/<int:collection_id>/collectible/<int:collectible_id>/photoMatch/<int:photo_match_id>/delete", views.delete_photo_match, name="delete_photo_match"),
+    path("external/flickr/album", views.get_flickr_album, name="get_flickr_album"),
+    path("external/flickr/albums/<str:username>/<str:album>", views.get_flickr_albums, name="get_flickr_albums"),
 ]

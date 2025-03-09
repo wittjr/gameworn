@@ -1,14 +1,53 @@
 {% extends 'memorabilia/base.html' %}
 
+{% block head_title %}
+    {{ title }}
+{% endblock head_title %}
+
 {% block page_navigation %}
+    {% if user.is_authenticated %}
+        {% if user.id == form.instance.collectible.collection.owner_uid or user.is_superuser %}
+            {% url 'memorabilia:delete_photo_match' collection_id=photomatch.collectible.collection.id collectible_id=photomatch.collectible.id photo_match_id=photomatch.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Delete Photo Match" %}
+        {% endif %}
+    {% endif %}
 {% endblock page_navigation %}
 
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% if photomatch %}
+        {% url 'memorabilia:collection' pk=photomatch.collectible.collection.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch.collectible.collection.title %}
+        {% url 'memorabilia:collectible' collection_id=photomatch.collectible.collection.id pk=photomatch.collectible.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch.collectible.title %}
+        {% url 'memorabilia:photo_match' collection_id=photomatch.collectible.collection.id collection_id=photomatch.collectible.id pk=photomatch.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch %}
+    {% else %}
+		{% url 'memorabilia:collection' pk=collectible.collection.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.collection.title %}
+        {% url 'memorabilia:collectible' collection_id=collectible.collection.id pk=collectible.id as the_url %}
+        {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.title %}
+    {% endif %}
+{% endblock breadcrumb %}
+
 {% block content %}
-<h2>{{ title }}</h2>
+<h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
 <form enctype="multipart/form-data" method="post" novalidate>
 	{% csrf_token %}
-	{{ form.as_p }}
-	<input type="submit" value="Save" />
-   <button type="button" class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" onclick="history.back()">Cancel</button> 
+	{{ form }}
+	<div class="mx-auto flex">
+		<button
+			type="submit"
+			class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+			Save
+		</button>
+		<button
+			type="button"
+			class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+			onclick="history.back()">
+			Cancel
+		</button>
+	</div>
 </form>
 {% endblock content %}

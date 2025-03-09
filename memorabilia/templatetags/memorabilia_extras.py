@@ -3,6 +3,10 @@ from django_gravatar.helpers import get_gravatar_url, has_gravatar, get_gravatar
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
 from django.templatetags.static import static
+from django.db.models.fields.files import ImageFieldFile
+from memorabilia.models import PhotoMatch
+
+from memorabilia.models import CollectibleImage
 
 register = template.Library()
 
@@ -28,9 +32,24 @@ def get_user_avatar_url(email):
 
 @register.simple_tag(takes_context=True)
 def getmediaurl(context, image):
+    # print(image)
     if image:
-        return image.url
-        return context.request.build_absolute_uri(image.url)
-    # return context.request.build_absolute_uri(static('memorabilia/placeholder.svg'))
+        if type(image) == str:
+            return image
+        elif type(image) is ImageFieldFile:
+            return image.url
+        elif type(image) is CollectibleImage:
+            if image.link:
+                return image.link
+            else:
+                return image.image.url
+        elif type(image) is PhotoMatch:
+            if image.link:
+                return image.link
+            else:
+                return image.image.url
     return static('memorabilia/placeholder.svg')
-    # return 'https://placehold.co/600x400/svg?text=Game+Used&font=Roboto'
+
+@register.simple_tag(takes_context=True)
+def test(context, input):
+    print(vars(input))

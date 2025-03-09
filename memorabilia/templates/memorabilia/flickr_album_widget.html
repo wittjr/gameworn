@@ -1,0 +1,137 @@
+{{ formset.management_form }}
+{% load memorabilia_extras %}
+
+<div class="mb-4 border-b border-gray-200 dark:border-gray-700">
+    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="default-tab"
+        data-tabs-toggle="#default-tab-content" role="tablist">
+        <li class="me-2" role="presentation">
+            <button class="inline-block p-4 border-b-2 rounded-t-lg" id="flickr-tab" data-tabs-target="#flickr"
+                type="button" role="tab" aria-controls="flickr" aria-selected="false">Flickr Album</button>
+        </li>
+        <li class="me-2" role="presentation">
+            <button
+                class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                id="link-tab" data-tabs-target="#link" type="button" role="tab" aria-controls="link"
+                aria-selected="false">Image Link</button>
+        </li>
+        <li role="presentation">
+            <button
+                class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                id="upload-tab" data-tabs-target="#upload" type="button" role="tab" aria-controls="upload"
+                aria-selected="false">Upload Image</button>
+        </li>
+    </ul>
+</div>
+<div id="default-tab-content">
+    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="flickr" role="tabpanel"
+        aria-labelledby="flickr-tab">
+        <input type="text" id="flickrAlbum" value="https://www.flickr.com/photos/201912407@N04/albums/72177720322281002"
+            name="flickrAlbum"></input>
+        <button type="button" onclick="queryFlickr()"
+            class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+            Query Flickr
+        </button>
+    </div>
+    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="link" role="tabpanel" aria-labelledby="link-tab">
+        <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
+                class="font-medium text-gray-800 dark:text-white">Dashboard tab's associated content</strong>. Clicking
+            another tab will toggle the visibility of this one for the next. The tab JavaScript swaps classes to control
+            the content visibility and styling.</p>
+    </div>
+    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="upload" role="tabpanel"
+        aria-labelledby="upload-tab">
+        <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
+                class="font-medium text-gray-800 dark:text-white">Contacts tab's associated content</strong>. Clicking
+            another tab will toggle the visibility of this one for the next. The tab JavaScript swaps classes to control
+            the content visibility and styling.</p>
+    </div>
+</div>
+<div id="album" class="flex flex-row gap-4 w-full h-full flex-wrap ">
+    {% for image_form in formset %}
+        <!-- {% for field in image_form %}
+        <div class="form-group">
+            {% if field.errors %}
+            <div class="errors">
+                {% for error in field.errors %}
+                <span class="error">{{ field.label_tag }} {{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %} -->
+        <div class="image-form">
+            {{ image_form.id }}
+            {% if image_form.link %}
+                <div class="form-group">
+                    <div class="hidden">
+                        {{ image_form.link }}
+                    </div>
+                    {% getmediaurl image_form.link.value as image_url %}
+                    <img src="{{ image_url }}" />
+                </div>
+            {% elif image_form.image %}
+                <div class="form-group">
+                    {{ image_form.image.label_tag }}
+                    {{ image_form.image }}
+                </div>
+            {% endif %}
+            <div class="form-group">
+                {{ image_form.primary.label_tag }}
+                {{ image_form.primary }}
+            </div>
+            <div class="form-group">
+                {{ image_form.DELETE.label_tag }}
+                {{ image_form.DELETE }}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+    function queryFlickr() {
+        var albumUrl = document.getElementById('flickrAlbum').value
+        var username = albumUrl.split('/')[4]
+        var album = albumUrl.split('/')[6]
+        var url = "{% url 'memorabilia:get_flickr_album' %}" + "?username=" + username + "&album=" + album
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((response) => {
+                return response.json(); //converts response to json
+            })
+            .then((data) => {
+                console.log(data)
+                var photos_div = document.getElementById('album')
+                var photo_html = ''
+                var idx = parseInt({{ formset.total_form_count }})
+                for (var i = 0; i < data['photos'].length; i++) {
+                    const key = Object.keys(data['photos'][i])[0]
+                    console.log(idx)
+                    var form = '{{ formset.empty_form|escapejs }}'
+                    form = form.replace(/__prefix__/g, idx)
+                    var new_image_form = document.createElement('div')
+                    new_image_form.innerHTML = form
+                    if (i == 0) {
+                        new_image_form.querySelector(`input#id_images-${idx}-primary`).checked = true
+                    }
+                    new_image_form.querySelector(`input#id_images-${idx}-link`).value = data['photos'][i][key]['large_1024']
+                    var nodes = new_image_form.querySelectorAll('div')
+                    console.log(nodes)
+                    nodes.forEach((node)=> {node.style.display = 'none'})
+                    new_image_form.querySelector(`textarea#id_images-${idx}-flickrObject`).value = JSON.stringify(data['photos'][i][key])
+                    console.log(new_image_form)
+                    var image_tag = document.createElement('img')
+                    image_tag.src = data['photos'][i][key]['square_150']
+                    console.log(image_tag)
+                    new_image_form.appendChild(image_tag)
+                    document.getElementById('album').append(new_image_form)
+                    idx++
+                    document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS').value = idx
+                }
+            })
+    }
+</script>

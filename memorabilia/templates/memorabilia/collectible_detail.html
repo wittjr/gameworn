@@ -29,16 +29,17 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
     <div class="grid gap-4 w-full">
         <div class="mx-auto">
-            {% getmediaurl collectible.primary_image as image_url %}
-            <img class="h-auto max-h-screen max-w-full rounded-lg" src="{{ image_url }}" alt="">
+            <img class="h-auto w-screen max-h-screen max-w-full rounded-lg" src="{{ collectible.primary_image }}" alt="">
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for image in object.images.all %}
-                {% getmediaurl image.image as image_url %}
-                <div class="mx-auto">
-                    <img class="h-auto max-w-36 max-h-36 rounded-lg" src="{{ image_url }}" alt="">
-                </div>
-                {% endfor %}
+                {% if image.primary == False %}
+                    {% getmediaurl image as image_url %}
+                    <div>
+                        <img class="h-auto max-w-36 max-h-36 rounded-lg" src="{{ image_url }}" alt="">
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
     <div class="w-full relative overflow-x-auto">
@@ -53,9 +54,9 @@
                 {% include 'memorabilia/tablerow.html' with label='Description' value=collectible.description %}
                 {% include 'memorabilia/tablerow.html' with label='Usage Type' value=collectible.usage_type %}
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=collectible.game_type %}
-                {% include 'memorabilia/tablerow.html' with label='Collection' value=collectible.collection %}
-                {% include 'memorabilia/tablerow.html' with label='For Sale' value=collectible.for_sale %}
-                {% include 'memorabilia/tablerow.html' with label='For Trade' value=collectible.for_trade %}
+                <!-- {% include 'memorabilia/tablerow.html' with label='Collection' value=collectible.collection %} -->
+                <!-- {% include 'memorabilia/tablerow.html' with label='For Sale' value=collectible.for_sale %} -->
+                <!-- {% include 'memorabilia/tablerow.html' with label='For Trade' value=collectible.for_trade %} -->
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=collectible.asking_price %}
                 {% endif %}
@@ -72,20 +73,26 @@
 <h2 class="mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
 <div class="container flex flex-row gap-4 w-full h-80 justify-start">
     {% for image in object.photomatches.all %}
-        {% getmediaurl image.image as image_url %}
+        {% getmediaurl image as image_url %}
 
-        <div class="max-w-72 w-full h-full bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
-            <div class="w-full h-3/4">
-                <img class="mb-auto rounded-t-lg w-full h-auto max-w-full max-h-full object-scale-down" src="{{ image_url }}" alt="" />
-            </div>
-            <div class="p-2">
-                <h5 class="mb-2 text-center text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ image.game_date }}</h5>
-                <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ image.description }}</p>
-            </div>
-        </div>
+        {% if request.user.id == object.collection.owner_uid or request.user.is_superuser %}
+            {% url 'memorabilia:edit_photo_match' object.collection.id object.id image.id as edit_match_url %}
+            <a href="{{ edit_match_url }}">
+        {% endif %}
+                <div class="max-w-72 w-full h-full bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+                    <div class="w-full h-3/4">
+                        <img class="mb-auto rounded-t-lg w-full h-auto max-w-full max-h-full object-scale-down" src="{{ image_url }}" alt="" />
+                    </div>
+                    <div class="p-2">
+                        <h5 class="mb-2 text-center text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ image.game_date }}</h5>
+                        <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ image.description }}</p>
+                    </div>
+                </div>
+        {% if request.user.id == object.collection.owner_uid or request.user.is_superuser %}
+            </a>
+        {% endif %}
     {% endfor %}
 </div>
 {% endif %}
-<a id='NEx3xX5aRvFHO__Tn__t0g' class='gie-single' href='http://www.gettyimages.com/detail/2148764338' target='_blank' style='color:#a7a7a7;text-decoration:none;font-weight:normal !important;border:none;display:inline-block;'>Embed from Getty Images</a><script>window.gie=window.gie||function(c){(gie.q=gie.q||[]).push(c)};gie(function(){gie.widgets.load({id:'NEx3xX5aRvFHO__Tn__t0g',sig:'qb5GqocqWKmyzTREF6adLbtHoodmF4FGWLG7aflY5nc=',w:'594px',h:'408px',items:'2148764338',caption: true ,tld:'com',is360: false })});</script><script src='//embed-cdn.gettyimages.com/widgets.js' charset='utf-8' async></script>
 
 {% endblock content %}

@@ -1,5 +1,14 @@
 {% extends 'memorabilia/base.html' %}
-{% block page_navigation %}
+
+{% block head_title %}
+    {{ title }}
+{% endblock head_title %}
+
+{% block extrahead %}
+    {{ image_formset.media }}
+{% endblock extrahead %}
+
+{% block navigation %}
     {% if user.is_authenticated %}
         {% if user.id == collection.owner_uid or user.is_superuser %}
             {% url 'memorabilia:edit_collection' collection.id as the_url %}
@@ -12,7 +21,7 @@
             {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
         {% endif %}
     {% endif %}
-{% endblock page_navigation %}
+{% endblock navigation %}
 
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
@@ -32,7 +41,9 @@
 <h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
 <div class="container mx-auto max-w-96">
     <form method="post" enctype="multipart/form-data" novalidate>
-        {% csrf_token %} {{ form }}
+        {% csrf_token %}
+        {{ form }}
+        {% include 'memorabilia/flickr_album_widget.html' with formset=image_formset %}
         <div class="mx-auto flex">
             <button
                 type="submit"
@@ -48,19 +59,4 @@
         </div>
     </form>
 </div>
-<script>
-    $(".image-list-new").on("input", function () {
-        let $this = $(this);
-        let $clone = $this.clone();
-        let name = $clone.attr("name");
-        let n = parseInt(name.split("_")[1]) + 1;
-        name = "image_" + n;
-        $clone.val("");
-        $clone.attr("name", name);
-        $clone.appendTo($this.parent());
-        $this.removeClass("image-list-new");
-        $this.off("input", arguments.callee);
-        $clone.on("input", arguments.callee);
-    });
-</script>
 {% endblock content %}

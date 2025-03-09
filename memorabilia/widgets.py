@@ -1,7 +1,9 @@
+import pickle
 from django import forms
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 from django.conf.urls.static import static
+from django_flowbite_widgets import flowbite_widgets
 import json
 
 class SpecifyImageWidget(forms.widgets.FileInput):
@@ -66,3 +68,38 @@ class SpecifyImageWidget(forms.widgets.FileInput):
     #         forms.FileInput(attrs=attrs),
     #     ]
     #     super(SpecifyImageWidget, self).__init__(widgets, attrs)
+
+
+class FlickrAlbumWidget(forms.MultiWidget):
+    template_name = 'memorabilia/flickr_album_widget.html'
+
+    class Media:
+      css = {}
+    #   js = ['memorabilia/js/dynamic_inline.js']
+
+
+    def __init__(self, attrs=None, options={}):
+        self.options = options
+        widgets = [flowbite_widgets.FlowbiteTextInput(),
+                   flowbite_widgets.FlowbiteImageDropzone()]
+        super(FlickrAlbumWidget, self).__init__(widgets, attrs)
+
+    def decompress(self, value):
+        if value:
+            return pickle.loads(value)
+        else:
+            return ['', '']
+
+
+class ImageGallery(forms.fields.MultiValueField):
+    widget = FlickrAlbumWidget
+
+    def __init__(self, *args, **kwargs):
+        list_fields = [forms.fields.CharField(max_length=31),
+                       forms.fields.CharField(max_length=31)]
+        super().__init__(list_fields, *args, **kwargs)
+
+    def compress(self, values):
+        ## compress list to single object                                               
+        ## eg. date() >> u'31/12/2012'                                                  
+        return pickle.dumps(values)

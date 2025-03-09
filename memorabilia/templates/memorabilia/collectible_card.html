@@ -1,10 +1,10 @@
-<div class="collectible-card">
+<div class="mx-auto">
     <a href="{{ link }}">
-         {% if image %}
-        <img src="{{ MEDIA_URL }}{{ image }}" />
+        {% if image %}
+        <img class="h-auto max-w-full w-72 rounded-lg" alt="{{ label }}"" src="{{ image }}" />
         {% endif %}
         <div>
-            <div class="collectible-card-title outlined">{{ label }}</div>
+            <div class="text-2xl font-medium text-center text-gray-800">{{ label }}</div>
         </div>
     </a>
 </div>

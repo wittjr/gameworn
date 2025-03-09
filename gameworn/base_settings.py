@@ -179,3 +179,5 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 SITE_NAME = 'Game Used'
+
+FLICKR_KEY = os.environ.get('FLICKR_KEY', '')

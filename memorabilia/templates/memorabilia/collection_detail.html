@@ -39,14 +39,8 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
         {% for collectible in collection.collectible_set.all %}
             {% url 'memorabilia:collectible' collection.id collectible.id as the_url %}
-            <!-- {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=collectible.get_primary_image %} -->
             {% getmediaurl collectible.get_primary_image as image_url %}
-            <!-- http://127.0.0.1:8000/media/images/gostisbehere.png -->
-            <div class="mx-auto">
-                <a href="{{ the_url }}">
-                    <img class="h-auto max-w-full w-72 rounded-lg" src="{{ image_url }}" alt="{{ collectible.title }}">
-                </a>
-            </div>
+            {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url %}
         {% endfor %}
     </div>    
 

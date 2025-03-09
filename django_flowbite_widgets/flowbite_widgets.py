@@ -80,59 +80,45 @@ class FlowbiteTextarea(forms.widgets.Textarea):
         )
 
 
-class FlowbiteImageDropzone(forms.widgets.FileInput):
+class FlowbiteImageDropzone(forms.MultiWidget):
     template_name = "django_flowbite_widgets/image_dropzone.html"
 
     class Media:
         css = {}
-        js = ["django_flowbite_widgets/image_dropzone.js"]
-
-    def __init__(self, attrs=None, options={}):
-        self.options = options
-        super().__init__(attrs)
-
-    def get_context(self, name, value, attrs):
-        current_class = attrs.get("class")
-        custom_class = "custom-dropzone-widget-" + name
-
-        if current_class:
-            attrs["class"] = current_class + " " + custom_class
-        else:
-            attrs["class"] = custom_class
-
-        context = super(FlowbiteImageDropzone, self).get_context(name, value, attrs)
-        context["label"] = "Test"
-        context["name"] = name
-        #   attrs = self.build_attrs(attrs, name=name)
-        self.options.update({"class": custom_class, "paramName": name})
-
-        context["widget"] = {
-            "name": name,
-            "attrs": self.build_attrs(extra_attrs=attrs, base_attrs=attrs),
+        # js = ["django_flowbite_widgets/image_dropzone.js"]
+        css = {
+            # 'all': ('css/image_url_widget.css',)
         }
+        # js = ('js/image_url_widget.js',)
 
-        context["options"] = json.dumps(self.options)
-        #   context['options'] = self.options
-        return context
 
-    # def render(self, name, value, attrs={}):
-    #     context = self.get_context(name, value, attrs)
-    #     return mark_safe(render_to_string(self.template_name, context))
+    def __init__(self, attrs=None):
+        widgets = [
+            forms.ClearableFileInput(attrs={'class': 'flowbite-dropzone-file'}),
+            forms.URLInput(attrs={'class': 'flowbite-dropzone-url', 'placeholder': 'Or enter image URL here'})
+        ]
+        super().__init__(widgets, attrs)
 
-    # def __init__(self, attrs=None, *args, **kwargs):
-    #     print('init')
-    #     print(self)
-    #     print(attrs)
-    #     # super().__init__(attrs)
 
-    # def decompress(self, value):
-    #     print('decompress')
-    #     print(value)
-    #     return []
+    def decompress(self, value):
+        if value:
+            # This method will be called with different types of values based on the field
+            # If it's a tuple of (file, url), return it
+            if isinstance(value, tuple) and len(value) == 2:
+                return value
+            # For a model instance where the value is already saved
+            # This is a placeholder - you'll need to adjust based on your model
+            return [None, None]
+        return [None, None]
 
-    # def __init__(self, attrs=None):
-    #     widgets = [
-    #         forms.URLInput(attrs=attrs),
-    #         forms.FileInput(attrs=attrs),
-    #     ]
-    #     super(SpecifyImageWidget, self).__init__(widgets, attrs)
+
+    def no_render(self, name, value, attrs=None, renderer=None):
+        """Custom rendering for the widget"""
+        if not isinstance(value, list) and value is not None:
+            value = self.decompress(value)
+        
+        output = super().render(name, value, attrs, renderer)
+        
+        # You could enhance this with custom HTML/JS for the Flowbite dropzone UI
+        return f'<div class="flowbite-image-dropzone">{output}<p class="mt-1 text-sm text-gray-500">Upload a file or provide an image URL (one is required)</p></div>'
+
