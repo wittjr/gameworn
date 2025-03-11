@@ -32,7 +32,7 @@ def get_user_avatar_url(email):
 
 @register.simple_tag(takes_context=True)
 def getmediaurl(context, image):
-    # print(image)
+    print(f'image: {image}')
     if image:
         if type(image) == str:
             return image

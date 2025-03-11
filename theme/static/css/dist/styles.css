@@ -1968,6 +1968,11 @@ input:checked + .toggle-bg {
   background-repeat: no-repeat;
 }
 
+.object-contain {
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
 .object-scale-down {
   -o-object-fit: scale-down;
      object-fit: scale-down;

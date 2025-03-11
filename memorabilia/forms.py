@@ -32,8 +32,15 @@ class MultipleFileField(FileField):
 
 
 class CollectionForm(ModelForm):
-    #  header_image = FileField(widget=SpecifyImageWidget, required=False)
-    header_image = FileField(widget=flowbite_widgets.FlowbiteImageDropzone, required=False)
+    header_image = FlowbiteImageDropzoneField(
+        label=False,
+        help_text="Upload a file or enter an image URL",
+        # required=False,
+        # max_file_size=5*1024*1024,  # 2MB
+        # allowed_extensions=['jpg', 'jpeg', 'png']
+        file_field_name='image',
+        url_field_name='image_link'
+    )
 
     class Meta:
         model = Collection
@@ -47,11 +54,22 @@ class CollectionForm(ModelForm):
             "title": flowbite_widgets.FlowbiteTextInput(),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-    def clean(self):
-        self.cleaned_data = super().clean()
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        file_value, url_value = self.cleaned_data['header_image']
+        if file_value:
+            instance.image = file_value
+        elif url_value:
+            instance.image_link = url_value
+        else:
+            return 
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
 
 class CollectibleForm(ModelForm):

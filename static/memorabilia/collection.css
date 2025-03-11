@@ -1,0 +1,62 @@
+.collection-list-container {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+.collection-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    margin: 15px;
+    max-width: 400px;
+    min-width: 200px;
+    max-height: 400px;
+    min-height: 200px;
+    /* width: 100px;
+    height: 100px; */
+
+    img {
+        width: 100%;
+    }
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    width: 100%;
+    opacity: 1;
+    transition: .7s ease;
+}
+
+.collection-card-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    padding: 5px;
+    top: 50%;
+    left: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.outlined {
+    color: white;
+    text-shadow:
+      -1px -1px 0 #000,
+       0   -1px 0 #000,
+       1px -1px 0 #000,
+       1px  0   0 #000,
+       1px  1px 0 #000,
+       0    1px 0 #000,
+      -1px  1px 0 #000,
+      -1px  0   0 #000;
+  }

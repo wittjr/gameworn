@@ -41,14 +41,15 @@ def create_collection(request):
         if form.is_valid():
             obj = form.save(commit=False)
             obj.owner_uid = request.user.id
-            obj.save()
+            print(vars(obj))
+            obj = form.save()
             return HttpResponseRedirect(f'/collection/{obj.id}')
 
-    # if a GET (or any other method) we'll create a blank form
     else:
         form = CollectionForm()
 
     return render(request, 'memorabilia/collection_form.html', {'form': form, 'title': 'New Collection'})
+
 
 
 @login_required
