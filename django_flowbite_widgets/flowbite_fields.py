@@ -47,6 +47,8 @@ class FlowbiteImageDropzoneField(forms.MultiValueField):
 
 
     def compress(self, data_list):
+        print(self)
+        print(data_list)
         if not data_list:
             return None
         

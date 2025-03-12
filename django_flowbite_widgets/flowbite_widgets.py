@@ -85,11 +85,7 @@ class FlowbiteImageDropzone(forms.MultiWidget):
 
     class Media:
         css = {}
-        # js = ["django_flowbite_widgets/image_dropzone.js"]
-        css = {
-            # 'all': ('css/image_url_widget.css',)
-        }
-        # js = ('js/image_url_widget.js',)
+        js = ["django_flowbite_widgets/image_dropzone.js"]
 
 
     def __init__(self, attrs=None):

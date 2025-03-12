@@ -30,11 +30,9 @@
     </div>
     <div id="default-tab-content">
         <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="upload" role="tabpanel" aria-labelledby="upload-tab">
-            <div class="flex items-center justify-center w-full">
-                <label
-                    for="{{ widget.attrs.id }}"
-                    class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-800">
-                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+            <div class="flex items-center justify-center w-full relative">
+                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6" id="dropzone-div">
                         <svg
                             class="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
                             aria-hidden="true"
@@ -53,8 +51,10 @@
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
                     </div>
-                    <input id="{{ widget.subwidgets.0.attrs.id }}" name="{{ widget.subwidgets.0.name }}"  type="file" class="hidden" />
+                    <input id="dropzone-file" name="{{ widget.subwidgets.0.name }}" type="file" class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
                 </label>
+            </div>
+            <div id="dropzone-preview" class="flex items-center justify-center w-full relative">
             </div>
         </div>
         <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="link" role="tabpanel" aria-labelledby="link-tab">
