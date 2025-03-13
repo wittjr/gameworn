@@ -32,7 +32,6 @@ def get_user_avatar_url(email):
 
 @register.simple_tag(takes_context=True)
 def getmediaurl(context, image):
-    print(f'image: {image}')
     if image:
         if type(image) == str:
             return image
@@ -46,7 +45,7 @@ def getmediaurl(context, image):
         elif type(image) is PhotoMatch:
             if image.link:
                 return image.link
-            else:
+            elif image.image and image.image.url:
                 return image.image.url
     return static('memorabilia/placeholder.svg')
 

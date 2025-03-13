@@ -1,3 +1,4 @@
+from django.utils.timezone import now
 from django.db import models
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
@@ -29,6 +30,7 @@ class Collection(RulesModel):
     title = models.CharField(max_length=100)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     image_link = models.CharField(max_length=255, blank=True, null=True)
+    last_updated = models.DateTimeField(default=now, editable=False)
 
     class Meta:
         rules_permissions = {
@@ -76,6 +78,7 @@ class Collectible(RulesModel):
     for_trade = models.BooleanField(blank=True, null=True)
     asking_price = models.FloatField(blank=True, null=True)
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
+    last_updated = models.DateTimeField(default=now, editable=False)
 
 
     class Meta:

@@ -18,7 +18,8 @@ import requests
 # Create your views here.
 
 def home(request):
-    return render(request, 'memorabilia/index.html')
+    data = Collectible.objects.order_by('-last_updated')[:4]
+    return render(request, 'memorabilia/index.html', {'collectibles': data})
 
 
 class IndexView(generic.ListView):
