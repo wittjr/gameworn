@@ -61,8 +61,10 @@ class CollectionForm(ModelForm):
         file_value, url_value = self.cleaned_data['header_image']
         if file_value:
             instance.image = file_value
+            instance.image_link = None
         elif url_value:
             instance.image_link = url_value
+            instance.image = None
         else:
             return 
         
@@ -209,8 +211,10 @@ class PhotoMatchForm(ModelForm):
         file_value, url_value = self.cleaned_data['photo']
         if file_value:
             pm.image = file_value
+            pm.link = None
         elif url_value:
             pm.link = url_value
+            pm.image = None
         else:
             return 
         
