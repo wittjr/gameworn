@@ -40,7 +40,7 @@
         </div>
     </section>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
+    <div class="flex flex-wrap gap-4 py-4 justify-evenly">
         {% for collectible in collection.collectible_set.all %}
             {% url 'memorabilia:collectible' collection.id collectible.id as the_url %}
             {% getmediaurl collectible.get_primary_image as image_url %}

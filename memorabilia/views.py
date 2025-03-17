@@ -113,18 +113,21 @@ class CollectibleView(generic.DetailView):
 @login_required
 @permission_required('memorabilia.create_collectible', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def create_collectible(request, collection_id):
+    collection = get_object_or_404(Collection, pk=collection_id)
     if request.method == "POST":
         form = CollectibleForm(request.POST, request.FILES, current_user=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('memorabilia:collection', pk=collection_id)
-        else:
-            collection = get_object_or_404(Collection, pk=collection_id)
+        image_formset = CollectibleImageFormSet(request.POST, request.FILES)
+        if form.is_valid() and image_formset.is_valid():
+            collectible = form.save()
+            image_formset.instance = collectible
+            image_formset.save()
+            # return redirect('memorabilia:collection', pk=collection_id)
+            return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible.id)
     else:
-        collection = get_object_or_404(Collection, pk=collection_id)
         form = CollectibleForm(initial={'collection':collection}, current_user=request.user)
+        image_formset = CollectibleImageFormSet()
 
-    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'title': 'New Collectible', 'collection': collection})
+    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_formset': image_formset, 'title': 'New Collectible', 'collection': collection})
 
 @login_required
 @permission_required('memorabilia.update_collectible', fn=objectgetter(Collectible, 'collectible_id'), raise_exception=True)
@@ -137,7 +140,6 @@ def edit_collectible(request, collection_id, collectible_id):
             collectible = form.save()
             image_formset.instance = collectible
             image_formset.save()
-            # print(vars(image_formset))
             return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible_id)
     else:
         form = CollectibleForm(instance = collectible, current_user=request.user)
