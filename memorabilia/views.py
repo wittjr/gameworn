@@ -18,7 +18,7 @@ import requests
 # Create your views here.
 
 def home(request):
-    data = Collectible.objects.order_by('-last_updated')[:4]
+    data = Collectible.objects.order_by('-last_updated')[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
 
 
