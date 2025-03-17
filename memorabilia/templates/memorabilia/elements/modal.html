@@ -1,0 +1,19 @@
+<button data-modal-target="{{ image_url|cut:'/'|cut:':'|cut:'.' }}" data-modal-toggle="{{ image_url|cut:'/'|cut:':'|cut:'.' }}"
+    class="flex justify-center items-center h-full w-full block hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg px-0 py-0 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+    <img class="rounded-lg w-auto h-auto max-h-full max-w-full" src="{{ image_url }}" alt="">
+</button>
+  
+  <!-- Main modal -->
+  <div id="{{ image_url|cut:'/'|cut:':'|cut:'.' }}" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+      <div class="relative p-4 w-full max-h-full">
+          <!-- Modal content -->
+          <div class="relative flex justify-center rounded-lg shadow-sm dark:bg-gray-700">
+            <button data-modal-hide="{{ image_url|cut:'/'|cut:':'|cut:'.' }}" type="button" 
+                class="bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                <!-- asdfdclass="bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"> -->
+                <img class="rounded-lg" src="{{ image_url }}" alt="">
+            </button>
+          </div>
+      </div>
+  </div>
+  
