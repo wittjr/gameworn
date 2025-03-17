@@ -13,6 +13,7 @@ from django.db.models import OuterRef, Subquery
 from django.conf import settings
 from django.urls import reverse
 import requests
+import datetime
 
 
 # Create your views here.
@@ -137,6 +138,7 @@ def edit_collectible(request, collection_id, collectible_id):
         form = CollectibleForm(request.POST, request.FILES, instance = collectible, current_user=request.user)
         image_formset = CollectibleImageFormSet(request.POST, request.FILES, instance=collectible)
         if form.is_valid() and image_formset.is_valid():
+            form.instance.last_updated = datetime.datetime.now()
             collectible = form.save()
             image_formset.instance = collectible
             image_formset.save()
