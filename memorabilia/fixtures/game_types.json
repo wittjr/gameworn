@@ -40,5 +40,12 @@
         "fields": {
             "name": "Heritage Classic"
         }
+    },
+    {
+        "model": "memorabilia.gametype",
+        "pk": "SS",
+        "fields": {
+            "name": "Stadium Series"
+        }
     }
 ]
