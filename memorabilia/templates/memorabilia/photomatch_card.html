@@ -1,0 +1,20 @@
+<div class="max-w-sm w-full h-full bg-white border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
+    <!-- <div class="w-full h-3/4">
+        <img class="mb-auto rounded-t-lg w-full h-auto max-w-full max-h-full object-scale-down" src="{{ image_url }}" alt="" />
+    </div> -->
+    <div class="relative">
+    {% include "memorabilia/elements/modal.html" with image_url=image_url %}
+    {% if request.user.id == object.collection.owner_uid or request.user.is_superuser %}
+        {% url 'memorabilia:edit_photo_match' object.collection.id object.id image.id as edit_match_url %}
+        <a href="{{ edit_match_url }}" class="absolute bottom-2 right-2 bg-white/80 dark:bg-gray-800/80 p-2 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors">
+            <i class="text-xl fa-solid fa-user-pen text-gray-800 dark:text-white"></i>
+        </a>
+    {% endif %}
+</div>
+    <div class="p-2">
+        <h5 class="mb-2 text-center text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ image.game_date }}</h5>
+        {% if image.description %}
+        <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ image.description }}</p>
+        {% endif %}
+    </div>
+
