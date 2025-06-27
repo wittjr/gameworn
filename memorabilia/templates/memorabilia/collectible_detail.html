@@ -29,7 +29,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
     <div class="grid gap-4 w-full">
         <div class="mx-auto">
-            <img class="h-auto w-screen max-h-screen max-w-full rounded-lg" src="{{ collectible.primary_image }}" alt="">
+            {% include "memorabilia/elements/modal.html" with image_url=collectible.primary_image %}
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for image in object.images.all %}

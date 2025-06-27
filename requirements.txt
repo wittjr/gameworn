@@ -5,6 +5,10 @@ fontawesomefree==6.6.0
 requests==2.32.3
 requests-oauthlib==2.0.0
 rules==3.5
-django-gravatar==1.4.5
-pillow=10.4.0
-django-tailwind=3.8.0
+django_gravatar2==1.4.5
+aiosmptd>=1.4.6
+pillow==10.4.0
+django_browser_reload>=1.18.0
+django-debug-toolbar>=5.2.0
+django_compressor>=4.5.1
+django-tailwind==3.8.0
