@@ -3,7 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views import generic
 
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, ExternalResource
 from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm
 from django.forms import ModelForm, inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
@@ -32,6 +32,14 @@ class IndexView(generic.ListView):
         context['collection_list'] = context['collection_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
         return context
 
+class ExternalResourceListView(generic.ListView):
+    model = ExternalResource
+
+    # def get_context_data(self, **kwargs):
+    #     context = super(ExternalResourceListView, self).get_context_data(**kwargs)
+    #     user_subquery = User.objects.filter(id=OuterRef('owner_uid'))
+    #     context['resource_list'] = context['resource_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
+    #     return context
 
 @login_required
 @permission_required('memorabilia.create_collection')

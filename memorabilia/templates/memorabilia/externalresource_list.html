@@ -1,0 +1,38 @@
+{% extends "memorabilia/base.html" %}
+{% load static %}
+{% load memorabilia_extras %}
+
+{% block page_css %}
+{% endblock page_css %}
+
+{% block page_navigation %}
+{% endblock page_navigation %}
+
+{% block breadcrumb %}
+    {% include 'memorabilia/breadcrumb.html' with label="Resources" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">External Resources</h1>
+        <p class="text-gray-600 dark:text-gray-300">A collection of useful resources for collectors</p>
+    </div>
+    
+    {% if object_list %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for resource in object_list %}
+            {% include 'memorabilia/externalresource_card.html' with resource=resource %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 mb-4">
+            <i class="fas fa-book-open text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-1">No resources yet</h3>
+        <p class="text-gray-500 dark:text-gray-400">Check back later for useful resources.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}

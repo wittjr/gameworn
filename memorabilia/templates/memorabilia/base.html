@@ -13,7 +13,6 @@
 
    {% block css %}
    {% tailwind_css %}
-   <!-- <link rel="stylesheet" href="{% static 'memorabilia/style.css' %}"> -->
    {% block page_css %} {% endblock page_css %}
    {% endblock css %}
    <script src="{% static 'fontawesomefree/js/fontawesome.js' %}"></script>
@@ -152,6 +151,8 @@
                {% block navigation %}
                {% url 'memorabilia:list_collections' as the_url %}
                {% include "memorabilia/navitem.html" with link=the_url label="Collections" %}
+               {% url 'memorabilia:list_externalresources' as the_url %}
+               {% include "memorabilia/navitem.html" with link=the_url label="Resources" %}
                {% endblock navigation %}
             </ul>
          </div>

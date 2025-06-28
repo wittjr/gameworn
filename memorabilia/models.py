@@ -49,6 +49,15 @@ class Collection(RulesModel):
     # )
 
 
+class ExternalResource(RulesModel):
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=255)
+    link = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.title
+
+
 class WantedItem(RulesModel):
     title = models.CharField(max_length=100)
     league = models.CharField(max_length=5)
