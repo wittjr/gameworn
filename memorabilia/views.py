@@ -125,7 +125,9 @@ def create_collectible(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     if request.method == "POST":
         form = CollectibleForm(request.POST, request.FILES, current_user=request.user)
-        image_formset = CollectibleImageFormSet(request.POST, request.FILES)
+        # Ensure collection is set even if not posted as a field
+        form.instance.collection = collection
+        image_formset = CollectibleImageFormSet(request.POST, request.FILES, prefix='images')
         if form.is_valid() and image_formset.is_valid():
             collectible = form.save()
             image_formset.instance = collectible
@@ -134,7 +136,7 @@ def create_collectible(request, collection_id):
             return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible.id)
     else:
         form = CollectibleForm(initial={'collection':collection}, current_user=request.user)
-        image_formset = CollectibleImageFormSet()
+        image_formset = CollectibleImageFormSet(prefix='images')
 
     return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_formset': image_formset, 'title': 'New Collectible', 'collection': collection})
 
@@ -144,16 +146,22 @@ def edit_collectible(request, collection_id, collectible_id):
     collectible = get_object_or_404(Collectible, pk=collectible_id)
     if request.method == "POST":
         form = CollectibleForm(request.POST, request.FILES, instance = collectible, current_user=request.user)
-        image_formset = CollectibleImageFormSet(request.POST, request.FILES, instance=collectible)
+        # Ensure collection is set even if not posted as a field
+        form.instance.collection = collectible.collection
+        image_formset = CollectibleImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
         if form.is_valid() and image_formset.is_valid():
+            print('IS VALID')
             form.instance.last_updated = datetime.datetime.now()
             collectible = form.save()
             image_formset.instance = collectible
             image_formset.save()
             return redirect('memorabilia:collectible', collection_id=collection_id, pk=collectible_id)
+        else:
+            print(form.errors)
     else:
         form = CollectibleForm(instance = collectible, current_user=request.user)
-        image_formset = CollectibleImageFormSet(instance=collectible)
+        print(collectible.collection.id)
+        image_formset = CollectibleImageFormSet(instance=collectible, prefix='images')
 
     return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_formset': image_formset, 'title': 'Edit Collectible', 'collectible': collectible})
 

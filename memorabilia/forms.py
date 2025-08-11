@@ -160,6 +160,27 @@ class CustomCollectibleImageFormSet(BaseInlineFormSet):
                 'data-index': index,
             })
 
+    def clean(self):
+        super().clean()
+        primary_count = 0
+        non_deleted_count = 0
+        for form in self.forms:
+            # Skip forms that didn't validate to cleaned_data
+            if not hasattr(form, 'cleaned_data'):
+                continue
+            # Ignore deleted forms
+            if self.can_delete and form.cleaned_data.get('DELETE'):
+                continue
+            non_deleted_count += 1
+            # Count primary selections
+            if form.cleaned_data.get('primary'):
+                primary_count += 1
+        # If there are no images, allow without error
+        if non_deleted_count == 0:
+            return
+        if primary_count != 1:
+            raise forms.ValidationError("Select exactly one primary image.")
+
 
 CollectibleImageFormSet = inlineformset_factory(
     Collectible, 

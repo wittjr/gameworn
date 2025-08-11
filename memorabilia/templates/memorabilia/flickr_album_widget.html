@@ -1,5 +1,12 @@
 <!-- Managment Form Start -->
 {{ formset.management_form }}
+{% if formset.non_form_errors %}
+<div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+    {% for error in formset.non_form_errors %}
+        <p class="text-red-700">{{ error }}</p>
+    {% endfor %}
+ </div>
+{% endif %}
 <!-- Managment Form End -->
 {% load memorabilia_extras %}
 
@@ -10,7 +17,7 @@
             <button class="inline-block p-4 border-b-2 rounded-t-lg" id="flickr-tab" data-tabs-target="#flickr"
                 type="button" role="tab" aria-controls="flickr" aria-selected="false">Flickr Album</button>
         </li>
-        <li class="me-2" role="presentation">
+        <!-- <li class="me-2" role="presentation">
             <button
                 class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
                 id="link-tab" data-tabs-target="#link" type="button" role="tab" aria-controls="link"
@@ -21,18 +28,24 @@
                 class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
                 id="upload-tab" data-tabs-target="#upload" type="button" role="tab" aria-controls="upload"
                 aria-selected="false">Upload Image</button>
-        </li>
+        </li> -->
     </ul>
 </div>
 <div id="default-tab-content">
     <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="flickr" role="tabpanel"
         aria-labelledby="flickr-tab">
-        <input type="text" id="flickrAlbum" value="https://www.flickr.com/photos/201912407@N04/albums/72177720322281002"
-            name="flickrAlbum"></input>
-        <button type="button" onclick="queryFlickr()"
-            class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-            Query Flickr
-        </button>
+        <input type="text" id="flickrAlbum" value=""
+            name="flickrAlbum" class="w-full mb-2 p-2 border rounded"></input>
+        <button type="button" id="queryFlickrBtn" onclick="queryFlickr()"
+        class="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 flex items-center justify-center">
+        <span id="queryFlickrText">Query Flickr</span>
+        <span id="queryFlickrSpinner" class="hidden ml-2">
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </span>
+    </button>
     </div>
     <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="link" role="tabpanel" aria-labelledby="link-tab">
         <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
@@ -48,20 +61,9 @@
             the content visibility and styling.</p>
     </div>
 </div>
-<div id="album" class="flex flex-row gap-4 w-full h-full flex-wrap ">
+<div id="album" class="flex flex-row gap-4 w-full flex-wrap ">
     {% for image_form in formset %}
-        <!-- {% for field in image_form %}
-        <div class="form-group">
-            {% if field.errors %}
-            <div class="errors">
-                {% for error in field.errors %}
-                <span class="error">{{ field.label_tag }} {{ error }}</span>
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %} -->
-        <div class="image-form">
+        <div class="image-form grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {{ image_form.id }}
             {% if image_form.link %}
                 <div class="form-group">
@@ -69,7 +71,7 @@
                         {{ image_form.link }}
                     </div>
                     {% getmediaurl image_form.link.value as image_url %}
-                    <img src="{{ image_url }}" />
+                    <img class="w-full h-auto rounded" src="{{ image_url }}" />
                 </div>
             {% elif image_form.image %}
                 <div class="form-group">
@@ -77,13 +79,15 @@
                     {{ image_form.image }}
                 </div>
             {% endif %}
-            <div class="form-group">
-                {{ image_form.primary.label_tag }}
-                {{ image_form.primary }}
+            <div class="form-group flex items-center gap-2">
+                <div class="hidden">{{ image_form.primary }}</div>
+                <input type="radio" name="primary_choice" value="{{ forloop.counter0 }}" id="primary-{{ forloop.counter0 }}" class="form-radio" {% if image_form.primary.value %}checked{% endif %}>
+                <label for="primary-{{ forloop.counter0 }}" class="cursor-pointer">Primary</label>
             </div>
-            <div class="form-group">
-                {{ image_form.DELETE.label_tag }}
+
+            <div class="form-group flex items-center gap-2">
                 {{ image_form.DELETE }}
+                <label for="{{ image_form.DELETE.id_for_label }}" class="cursor-pointer">Delete</label>
             </div>
         </div>
     {% endfor %}
@@ -91,10 +95,20 @@
 
 <script>
     function queryFlickr() {
-        var albumUrl = document.getElementById('flickrAlbum').value
-        var username = albumUrl.split('/')[4]
-        var album = albumUrl.split('/')[6]
-        var url = "{% url 'memorabilia:get_flickr_album' %}" + "?username=" + username + "&album=" + album
+        const button = document.getElementById('queryFlickrBtn');
+        const buttonText = document.getElementById('queryFlickrText');
+        const spinner = document.getElementById('queryFlickrSpinner');
+        
+        // Disable button and show loading state
+        button.disabled = true;
+        buttonText.textContent = 'Querying...';
+        spinner.classList.remove('hidden');
+        
+        var albumUrl = document.getElementById('flickrAlbum').value;
+        var username = albumUrl.split('/')[4];
+        var album = albumUrl.split('/')[6];
+        var url = "{% url 'memorabilia:get_flickr_album' %}" + "?username=" + username + "&album=" + album;
+        
         fetch(url, {
             method: 'GET',
             headers: {
@@ -102,38 +116,194 @@
                 'X-Requested-With': 'XMLHttpRequest',
             },
         })
-            .then((response) => {
-                return response.json(); //converts response to json
-            })
-            .then((data) => {
-                console.log(data)
-                var photos_div = document.getElementById('album')
-                var photo_html = ''
-                var idx = parseInt({{ formset.total_form_count }})
-                for (var i = 0; i < data['photos'].length; i++) {
-                    const key = Object.keys(data['photos'][i])[0]
-                    console.log(idx)
-                    var form = '{{ formset.empty_form|escapejs }}'
-                    form = form.replace(/__prefix__/g, idx)
-                    var new_image_form = document.createElement('div')
-                    new_image_form.innerHTML = form
-                    if (i == 0) {
-                        new_image_form.querySelector(`input#id_images-${idx}-primary`).checked = true
-                    }
-                    new_image_form.querySelector(`input#id_images-${idx}-link`).value = data['photos'][i][key]['large_1024']
-                    var nodes = new_image_form.querySelectorAll('div')
-                    console.log(nodes)
-                    nodes.forEach((node)=> {node.style.display = 'none'})
-                    new_image_form.querySelector(`textarea#id_images-${idx}-flickrObject`).value = JSON.stringify(data['photos'][i][key])
-                    console.log(new_image_form)
-                    var image_tag = document.createElement('img')
-                    image_tag.src = data['photos'][i][key]['square_150']
-                    console.log(image_tag)
-                    new_image_form.appendChild(image_tag)
-                    document.getElementById('album').append(new_image_form)
-                    idx++
-                    document.getElementById('id_{{ formset.prefix }}-TOTAL_FORMS').value = idx
-                }
-            })
+        .then(response => response.json())
+        .then(data => {
+            // Process the response data
+            console.log(data);
+            
+            // Re-enable button and restore original state
+            button.disabled = false;
+            buttonText.textContent = 'Query Flickr'
+            spinner.classList.add('hidden')
+
+            // Get the current form count
+            var formCount = parseInt('{{ formset.total_form_count }}');
+            var albumContainer = document.getElementById('album');
+            
+            // Determine if a primary is already selected
+            const hasPrimarySelected = !!document.querySelector('input[name="primary_choice"]:checked');
+
+            // Process each photo in the response (don't clear existing content)
+            data.photos.forEach((photo, index) => {
+                const photoKey = Object.keys(photo)[0];
+                const photoData = photo[photoKey];
+                
+                // Create a new form for each image
+                const formPrefix = `id_${formCount}`;
+                const formId = `id_images-${formCount}`;
+                
+                // Create the form container
+                const formContainer = document.createElement('div');
+                formContainer.className = 'image-form grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+                
+                // Create the image preview
+                const imgPreview = document.createElement('div');
+                imgPreview.className = 'image-preview';
+                const img = document.createElement('img');
+                img.src = photoData.square_150 || photoData.thumbnail;
+                img.className = 'w-full h-auto rounded';
+                img.alt = 'Flickr image';
+                imgPreview.appendChild(img);
+                                
+                // Hidden fields
+                const hiddenContainer = document.createElement('div');
+                hiddenContainer.style.display = 'none';
+                
+                // Link field
+                const linkDiv = document.createElement('div');
+                const linkLabel = document.createElement('label');
+                linkLabel.htmlFor = `${formId}-link`;
+                linkLabel.textContent = 'Link:';
+                const linkInput = document.createElement('input');
+                linkInput.type = 'text';
+                linkInput.name = `images-${formCount}-link`;
+                linkInput.id = `${formId}-link`;
+                linkInput.value = photoData.large_1024 || photoData.original;
+                linkDiv.appendChild(linkLabel);
+                linkDiv.appendChild(linkInput);
+                
+                // Primary radio button
+                const primaryDiv = document.createElement('div');
+                primaryDiv.className = 'form-group flex items-center gap-2';
+                const primaryInput = document.createElement('input');
+                primaryInput.type = 'radio';
+                primaryInput.name = 'primary_choice';
+                primaryInput.value = formCount;
+                primaryInput.id = `primary-${formCount}`;
+                primaryInput.className = 'form-radio';
+                // Only auto-select the first new radio if none is selected yet
+                primaryInput.checked = !hasPrimarySelected && index === 0;
+                
+                const primaryLabel = document.createElement('label');
+                primaryLabel.htmlFor = `primary-${formCount}`;
+                primaryLabel.textContent = 'Primary';
+                primaryLabel.className = 'cursor-pointer';
+                
+                primaryDiv.appendChild(primaryInput);
+                primaryDiv.appendChild(primaryLabel);
+                
+                // Include checkbox
+                const includeDiv = document.createElement('div');
+                includeDiv.className = 'form-group flex items-center gap-2';
+                const includeInput = document.createElement('input');
+                includeInput.className = 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600';
+                includeInput.type = 'checkbox';
+                includeInput.name = `images-${formCount}-DELETE`;
+                includeInput.id = `${formId}-DELETE`;
+                includeInput.checked = false; // Not deleted by default (included)
+                // includeInput.className = 'form-checkbox';
+                
+                const includeLabel = document.createElement('label');
+                includeLabel.htmlFor = `${formId}-DELETE`;
+                includeLabel.textContent = 'Delete';
+                includeLabel.className = 'cursor-pointer';
+                
+                includeDiv.appendChild(includeInput);
+                includeDiv.appendChild(includeLabel);
+                
+                // Hidden primary checkbox so Django binds this field
+                const primaryHidden = document.createElement('input');
+                primaryHidden.type = 'checkbox';
+                primaryHidden.name = `images-${formCount}-primary`;
+                primaryHidden.id = `id_images-${formCount}-primary`;
+                primaryHidden.style.display = 'none';
+
+                // Flickr object (hidden)
+                const flickrObjInput = document.createElement('input');
+                flickrObjInput.type = 'hidden';
+                flickrObjInput.name = `images-${formCount}-flickrObject`;
+                flickrObjInput.value = JSON.stringify(photoData);
+                
+                // Add all elements to the form
+                hiddenContainer.appendChild(linkDiv);
+                hiddenContainer.appendChild(primaryHidden);
+                hiddenContainer.appendChild(flickrObjInput);
+                formContainer.appendChild(hiddenContainer);
+                formContainer.appendChild(imgPreview);
+                formContainer.appendChild(primaryDiv);
+                formContainer.appendChild(includeDiv);
+                
+                albumContainer.appendChild(formContainer);
+                
+                // Increment form count and update management form
+                formCount++;
+                const totalFormsInput = document.getElementById('id_images-TOTAL_FORMS');
+                if (totalFormsInput) totalFormsInput.value = formCount;
+            });
+            
+            // Update the form count in the management form
+            document.getElementById('id_images-TOTAL_FORMS').value = formCount;
+            
+            // Re-enable button and restore original state
+            button.disabled = false;
+            buttonText.textContent = 'Query Flickr';
+            spinner.classList.add('hidden');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            
+            // Re-enable button and restore original state on error
+            button.disabled = false;
+            buttonText.textContent = 'Query Flickr';
+            spinner.classList.add('hidden');
+            
+            // Show error message to user (optional)
+            alert('Failed to fetch Flickr album. Please try again.');
+        });
     }
+</script>
+
+<script>
+    // Sync selected primary radio to hidden primary checkboxes on submit
+    (function() {
+        const form = document.querySelector('form');
+        if (!form) return;
+        form.addEventListener('submit', function() {
+            // Uncheck all hidden primary checkboxes first
+            document.querySelectorAll('input[type="checkbox"][name^="images-"][name$="-primary"]').forEach(cb => {
+                cb.checked = false;
+            });
+            // Find selected radio
+            const selected = document.querySelector('input[name="primary_choice"]:checked');
+            if (!selected) return; // server-side validation will handle none selected when images exist
+            const idx = selected.value;
+            const hidden = document.getElementById(`id_images-${idx}-primary`);
+            if (hidden) hidden.checked = true;
+        });
+    })();
+ </script>
+<script>
+// Sync radio selection to hidden primary checkboxes before submit
+(function() {
+    const container = document.getElementById('album');
+    // find the closest form ancestor
+    function closestForm(el){
+        while (el && el.nodeName !== 'FORM') el = el.parentElement;
+        return el;
+    }
+    const form = closestForm(container);
+    if (form) {
+        form.addEventListener('submit', function() {
+            const selected = document.querySelector('input[name="primary_choice"]:checked');
+            const totalInput = document.getElementById('id_images-TOTAL_FORMS');
+            const total = totalInput ? parseInt(totalInput.value) : 0;
+            for (let i = 0; i < total; i++) {
+                const cb = document.getElementById(`id_images-${i}-primary`);
+                if (!cb) continue;
+                // Ensure checkbox reflects radio choice
+                cb.checked = !!selected && parseInt(selected.value) === i;
+            }
+        });
+    }
+})();
 </script>

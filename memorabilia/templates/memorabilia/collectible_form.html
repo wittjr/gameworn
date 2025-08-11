@@ -1,7 +1,6 @@
 {% extends 'memorabilia/base.html' %}
 {% load memorabilia_extras %}
 
-
 {% block head_title %}
     {{ title }}
 {% endblock head_title %}
@@ -40,25 +39,69 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-<h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
-<div class="container mx-auto max-w-96">
-    <form method="post" enctype="multipart/form-data" novalidate>
-        {% csrf_token %}
-        {{ form }}
-        {% include 'memorabilia/flickr_album_widget.html' with formset=image_formset %}
-        <div class="mx-auto flex">
-            <button
-                type="submit"
-                class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                Save
-            </button>
-            <button
-                type="button"
-                class="grow text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                onclick="history.back()">
-                Cancel
-            </button>
+<h1 class="mb-6 text-4xl text-center font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl">{{ title }}</h1>
+
+<form method="post" enctype="multipart/form-data" novalidate class="bg-white rounded-lg shadow p-4">
+    {% csrf_token %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+    <!-- Left Column - Images -->
+    <div class="grid gap-4 w-full">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Images</h2>
+            {% include 'memorabilia/flickr_album_widget.html' with formset=image_formset %}
         </div>
-    </form>
-</div>
+    </div>
+
+    <!-- Right Column - Form Fields -->
+    <div class="w-full">
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    {% for error in form.non_field_errors %}
+                        <p class="text-red-700">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">            
+                {% for field in form.visible_fields %}
+                    {% if field.name != 'collection' and field.name != 'primary_image' %}
+                        <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700">
+                            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ field.label_tag }}</th>
+                            <td class="px-6 py-2">
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="form-errors">{{ field.errors }}</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                {# Ensure collection is submitted even though it's not rendered visibly #}
+                {% if form.collection %}
+                    {{ form.collection.as_hidden }}
+                {% endif %}
+                {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+            </table>
+
+            <div class="flex justify-end space-x-4 mt-6">
+                <button
+                    type="button"
+                    onclick="history.back()"
+                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Save Changes
+                </button>
+            </div>
+    </div>
+    </div>
+</form>
 {% endblock content %}
