@@ -85,9 +85,13 @@
                 <label for="primary-{{ forloop.counter0 }}" class="cursor-pointer">Primary</label>
             </div>
 
+            <div class="hidden">{{ image_form.DELETE }}</div>
             <div class="form-group flex items-center gap-2">
-                {{ image_form.DELETE }}
-                <label for="{{ image_form.DELETE.id_for_label }}" class="cursor-pointer">Delete</label>
+                <input type="checkbox"
+                       id="include-{{ forloop.counter0 }}"
+                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                       {% if image_form.DELETE.value %}{% else %}checked{% endif %}>
+                <label for="include-{{ forloop.counter0 }}" class="cursor-pointer">Include</label>
             </div>
         </div>
     {% endfor %}
@@ -133,10 +137,18 @@
             // Determine if a primary is already selected
             const hasPrimarySelected = !!document.querySelector('input[name="primary_choice"]:checked');
 
+            // Gather existing links to avoid duplicates
+            const existingLinks = new Set(Array.from(document.querySelectorAll('input[name^="images-"][name$="-link"]')).map(el => el.value));
+
             // Process each photo in the response (don't clear existing content)
             data.photos.forEach((photo, index) => {
                 const photoKey = Object.keys(photo)[0];
                 const photoData = photo[photoKey];
+                const linkVal = photoData.large_1024 || photoData.original;
+                // Skip if this photo link already exists
+                if (existingLinks.has(linkVal)) {
+                    return;
+                }
                 
                 // Create a new form for each image
                 const formPrefix = `id_${formCount}`;
@@ -168,7 +180,7 @@
                 linkInput.type = 'text';
                 linkInput.name = `images-${formCount}-link`;
                 linkInput.id = `${formId}-link`;
-                linkInput.value = photoData.large_1024 || photoData.original;
+                linkInput.value = linkVal;
                 linkDiv.appendChild(linkLabel);
                 linkDiv.appendChild(linkInput);
                 
@@ -192,24 +204,28 @@
                 primaryDiv.appendChild(primaryInput);
                 primaryDiv.appendChild(primaryLabel);
                 
-                // Include checkbox
+                // Include checkbox (visible)
                 const includeDiv = document.createElement('div');
                 includeDiv.className = 'form-group flex items-center gap-2';
                 const includeInput = document.createElement('input');
                 includeInput.className = 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600';
                 includeInput.type = 'checkbox';
-                includeInput.name = `images-${formCount}-DELETE`;
-                includeInput.id = `${formId}-DELETE`;
-                includeInput.checked = false; // Not deleted by default (included)
-                // includeInput.className = 'form-checkbox';
-                
+                includeInput.id = `include-${formCount}`;
+                includeInput.checked = true; // Included by default
                 const includeLabel = document.createElement('label');
-                includeLabel.htmlFor = `${formId}-DELETE`;
-                includeLabel.textContent = 'Delete';
+                includeLabel.htmlFor = `include-${formCount}`;
+                includeLabel.textContent = 'Include';
                 includeLabel.className = 'cursor-pointer';
-                
                 includeDiv.appendChild(includeInput);
                 includeDiv.appendChild(includeLabel);
+
+                // Hidden DELETE checkbox so Django binds this field (inverse of Include)
+                const deleteHidden = document.createElement('input');
+                deleteHidden.type = 'checkbox';
+                deleteHidden.name = `images-${formCount}-DELETE`;
+                deleteHidden.id = `id_images-${formCount}-DELETE`;
+                deleteHidden.style.display = 'none';
+                deleteHidden.checked = !includeInput.checked; // start inverse
                 
                 // Hidden primary checkbox so Django binds this field
                 const primaryHidden = document.createElement('input');
@@ -228,6 +244,7 @@
                 hiddenContainer.appendChild(linkDiv);
                 hiddenContainer.appendChild(primaryHidden);
                 hiddenContainer.appendChild(flickrObjInput);
+                hiddenContainer.appendChild(deleteHidden);
                 formContainer.appendChild(hiddenContainer);
                 formContainer.appendChild(imgPreview);
                 formContainer.appendChild(primaryDiv);
@@ -239,6 +256,8 @@
                 formCount++;
                 const totalFormsInput = document.getElementById('id_images-TOTAL_FORMS');
                 if (totalFormsInput) totalFormsInput.value = formCount;
+                // Track this link to prevent duplicates within the same session
+                existingLinks.add(linkVal);
             });
             
             // Update the form count in the management form
@@ -302,6 +321,13 @@
                 if (!cb) continue;
                 // Ensure checkbox reflects radio choice
                 cb.checked = !!selected && parseInt(selected.value) === i;
+
+                // Map Include (visible) to DELETE (hidden): DELETE = !Include
+                const includeCB = document.getElementById(`include-${i}`);
+                const deleteCB = document.getElementById(`id_images-${i}-DELETE`);
+                if (deleteCB) {
+                    deleteCB.checked = includeCB ? !includeCB.checked : deleteCB.checked;
+                }
             }
         });
     }
