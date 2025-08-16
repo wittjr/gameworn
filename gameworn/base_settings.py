@@ -85,6 +85,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'django.template.context_processors.request',
+                'memorabilia.context_processors.google_tag',
             ],
         },
     },
@@ -181,3 +182,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 SITE_NAME = 'Game Used'
 
 FLICKR_KEY = os.environ.get('FLICKR_KEY', '')
+
+# Google Analytics (gtag.js) ID, e.g. 'G-XXXXXXXXXX'. If empty, script won't render.
+GOOGLE_TAG_ID = os.environ.get('GOOGLE_TAG_ID', '')

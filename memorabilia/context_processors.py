@@ -21,3 +21,10 @@ def user_avatar(request):
 
 def site_name(request):
     return {'site_name': settings.SITE_NAME}
+
+def google_tag(request):
+    """Expose Google Tag ID to templates as `google_tag_id` if configured."""
+    tag = getattr(settings, 'GOOGLE_TAG_ID', '')
+    if tag:
+        return {'google_tag_id': tag}
+    return {}

@@ -24,6 +24,17 @@
    {{ form.media }}
    {% endblock extrahead %}
 </head>
+{% if google_tag_id %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ google_tag_id }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '{{ google_tag_id }}');
+  </script>
+{% endif %}
 
 <body class="h-full max-w-screen-xl mx-auto">
    <nav class="bg-white border-gray-200 dark:bg-gray-900">
