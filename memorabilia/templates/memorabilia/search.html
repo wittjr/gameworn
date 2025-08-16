@@ -1,4 +1,6 @@
 {% extends 'memorabilia/base.html' %}
+{% load static %}
+{% load memorabilia_extras %}
 
 {% block head_title %}
 {{ title }}
@@ -74,17 +76,8 @@
   <div class="flex flex-wrap gap-4 py-4 justify-evenly">
     {% for c in results %}
       {% url 'memorabilia:collectible' collection_id=c.collection.id pk=c.id as detail_url %}
-      {% with img=c.get_primary_image %}
-        {% if img %}
-          {% if img.url %}
-            {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title image=img.url %}
-          {% else %}
-            {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title image=img %}
-          {% endif %}
-        {% else %}
-          {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title %}
-        {% endif %}
-      {% endwith %}
+      {% getmediaurl c.get_primary_image as image_url %}
+      {% include "memorabilia/collectible_card.html" with link=detail_url label=c.title image=image_url %}
     {% empty %}
       <p>No results.</p>
     {% endfor %}
