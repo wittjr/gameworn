@@ -97,6 +97,7 @@ class CollectibleForm(ModelForm):
             "brand": flowbite_widgets.FlowbiteTextInput(),
             "size": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
+            "team": flowbite_widgets.FlowbiteTextInput(),
             "season": flowbite_widgets.FlowbiteTextInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
             "number": flowbite_widgets.FlowbiteNumberInput(),
@@ -242,3 +243,34 @@ class PhotoMatchForm(ModelForm):
         if commit:
             pm.save()
         
+        
+class CollectibleSearchForm(forms.Form):
+    query = forms.CharField(required=False, label="Text", widget=flowbite_widgets.FlowbiteTextInput())
+    player = forms.CharField(required=False, label="Player", widget=flowbite_widgets.FlowbiteTextInput())
+    team = forms.CharField(required=False, label="Team", widget=flowbite_widgets.FlowbiteTextInput())
+    brand = forms.CharField(required=False, label="Brand", widget=flowbite_widgets.FlowbiteTextInput())
+    number = forms.IntegerField(required=False, label="Number", widget=flowbite_widgets.FlowbiteTextInput())
+    season = forms.CharField(required=False, label="Season", widget=flowbite_widgets.FlowbiteTextInput())
+    league = forms.ChoiceField(required=False, label="League", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    game_type = forms.ChoiceField(required=False, label="Game Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    usage_type = forms.ChoiceField(required=False, label="Usage Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    collection = forms.ChoiceField(required=False, label="Collection", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    for_sale = forms.ChoiceField(
+        required=False,
+        label="For Sale",
+        choices=[('', 'Any'), ('true', 'Yes'), ('false', 'No')],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    for_trade = forms.ChoiceField(
+        required=False,
+        label="For Trade",
+        choices=[('', 'Any'), ('true', 'Yes'), ('false', 'No')],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['league'].choices = [('', 'Any')] + [(l.key, l.name) for l in League.objects.all()]
+        self.fields['game_type'].choices = [('', 'Any')] + [(g.key, g.name) for g in GameType.objects.all()]
+        self.fields['usage_type'].choices = [('', 'Any')] + [(u.key, u.name) for u in UsageType.objects.all()]
+        self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]

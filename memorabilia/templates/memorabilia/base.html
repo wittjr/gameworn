@@ -164,6 +164,8 @@
                {% include "memorabilia/navitem.html" with link=the_url label="Collections" %}
                {% url 'memorabilia:list_externalresources' as the_url %}
                {% include "memorabilia/navitem.html" with link=the_url label="Resources" %}
+               {% url 'memorabilia:search_collectibles' as the_url %}
+               {% include "memorabilia/navitem.html" with link=the_url label="Search" %}
                {% endblock navigation %}
             </ul>
          </div>

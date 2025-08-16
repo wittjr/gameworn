@@ -4,12 +4,12 @@ from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views import generic
 
 from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, ExternalResource
-from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm
+from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm
 from django.forms import ModelForm, inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
 from rules.contrib.views import permission_required, objectgetter
 from django.contrib.auth.models import User
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Subquery, Q
 from django.conf import settings
 from django.urls import reverse
 import requests
@@ -31,6 +31,69 @@ class IndexView(generic.ListView):
         user_subquery = User.objects.filter(id=OuterRef('owner_uid'))
         context['collection_list'] = context['collection_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
         return context
+
+
+def _apply_collectible_filters(qs, data):
+    query = data.get('query')
+    if query:
+        qs = qs.filter(
+            Q(title__icontains=query) |
+            Q(player__icontains=query) |
+            Q(team__icontains=query) |
+            Q(brand__icontains=query) |
+            Q(description__icontains=query)
+        )
+    player = data.get('player')
+    if player:
+        qs = qs.filter(player__icontains=player)
+    team = data.get('team')
+    if team:
+        qs = qs.filter(team__icontains=team)
+    brand = data.get('brand')
+    if brand:
+        qs = qs.filter(brand__icontains=brand)
+    number = data.get('number')
+    if number not in (None, ''):
+        qs = qs.filter(number=number)
+    season = data.get('season')
+    if season:
+        qs = qs.filter(season__icontains=season)
+    league = data.get('league')
+    if league:
+        qs = qs.filter(league=league)
+    game_type = data.get('game_type')
+    if game_type:
+        qs = qs.filter(game_type=game_type)
+    usage_type = data.get('usage_type')
+    if usage_type:
+        qs = qs.filter(usage_type=usage_type)
+    collection = data.get('collection')
+    if collection:
+        qs = qs.filter(collection_id=collection)
+    for_sale = data.get('for_sale')
+    if for_sale == 'true':
+        qs = qs.filter(for_sale=True)
+    elif for_sale == 'false':
+        qs = qs.filter(for_sale=False)
+    for_trade = data.get('for_trade')
+    if for_trade == 'true':
+        qs = qs.filter(for_trade=True)
+    elif for_trade == 'false':
+        qs = qs.filter(for_trade=False)
+    return qs
+
+
+def search_collectibles(request):
+    form = CollectibleSearchForm(request.GET or None)
+    results = Collectible.objects.all().order_by('-last_updated')
+    if form.is_valid():
+        results = _apply_collectible_filters(results, form.cleaned_data)
+    context = {
+        'title': 'Search Collectibles',
+        'form': form,
+        'results': results,
+    }
+    return render(request, 'memorabilia/search.html', context)
 
 class ExternalResourceListView(generic.ListView):
     model = ExternalResource

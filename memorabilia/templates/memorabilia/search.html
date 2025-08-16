@@ -1,0 +1,95 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block head_title %}
+{{ title }}
+{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% include 'memorabilia/breadcrumb.html' with url=request.path label=title %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="mb-6 text-4xl text-center font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl">{{ title }}</h1>
+
+<form method="get" class="bg-white rounded-lg shadow p-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.query.label }}</label>
+      {{ form.query }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.player.label }}</label>
+      {{ form.player }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.team.label }}</label>
+      {{ form.team }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.brand.label }}</label>
+      {{ form.brand }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.number.label }}</label>
+      {{ form.number }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.season.label }}</label>
+      {{ form.season }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.league.label }}</label>
+      {{ form.league }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.game_type.label }}</label>
+      {{ form.game_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.usage_type.label }}</label>
+      {{ form.usage_type }}
+    </div>
+    <!-- <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.collection.label }}</label>
+      {{ form.collection }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.for_sale.label }}</label>
+      {{ form.for_sale }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.for_trade.label }}</label>
+      {{ form.for_trade }}
+    </div> -->
+  </div>
+  <div class="flex justify-end mt-4 space-x-2">
+    <a href="{{ request.path }}" class="px-4 py-2 border border-gray-300 rounded-md text-sm">Clear</a>
+    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Search</button>
+  </div>
+</form>
+
+{% if results %}
+  <div class="flex flex-wrap gap-4 py-4 justify-evenly">
+    {% for c in results %}
+      {% url 'memorabilia:collectible' collection_id=c.collection.id pk=c.id as detail_url %}
+      {% with img=c.get_primary_image %}
+        {% if img %}
+          {% if img.url %}
+            {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title image=img.url %}
+          {% else %}
+            {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title image=img %}
+          {% endif %}
+        {% else %}
+          {% include 'memorabilia/collectible_card.html' with link=detail_url label=c.title %}
+        {% endif %}
+      {% endwith %}
+    {% empty %}
+      <p>No results.</p>
+    {% endfor %}
+  </div>
+{% else %}
+  <p>No results.</p>
+{% endif %}
+{% endblock content %}
