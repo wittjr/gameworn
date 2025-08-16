@@ -64,7 +64,7 @@
 
             <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">            
                 {% for field in form.visible_fields %}
-                    {% if field.name != 'collection' and field.name != 'primary_image' %}
+                    {% if field.name != 'primary_image' %}
                         <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700">
                             <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ field.label_tag }}</th>
                             <td class="px-6 py-2">
@@ -80,9 +80,6 @@
                     {% endif %}
                 {% endfor %}
                 {# Ensure collection is submitted even though it's not rendered visibly #}
-                {% if form.collection %}
-                    {{ form.collection.as_hidden }}
-                {% endif %}
                 {% for hidden in form.hidden_fields %}
                     {{ hidden }}
                 {% endfor %}
