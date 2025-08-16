@@ -69,6 +69,77 @@
                             <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ field.label_tag }}</th>
                             <td class="px-6 py-2">
                                 {{ field }}
+                                {% if field.name == 'league' %}
+                                    <datalist id="league-list">
+                                        {% for l in leagues %}
+                                            <option value="{{ l.key }}" label="{{ l.name }}"></option>
+                                        {% endfor %}
+                                    </datalist>
+                                {% endif %}
+                                {% if field.name == 'team' %}
+                                    <datalist id="team-list"></datalist>
+                                    <script>
+                                      (function() {
+                                        function fillTopOptionOnTab(e, inputEl, listId) {
+                                          if (e.key !== 'Tab') return;
+                                          const list = document.getElementById(listId);
+                                          if (!list) return;
+                                          const q = (inputEl.value || '').trim().toLowerCase();
+                                          if (!q) return;
+                                          const opts = Array.from(list.options || []);
+                                          // Prefer startsWith match; fallback to contains
+                                          let match = opts.find(o => (o.value || '').toLowerCase().startsWith(q));
+                                          if (!match) match = opts.find(o => (o.value || '').toLowerCase().includes(q));
+                                          if (match) {
+                                            inputEl.value = match.value;
+                                            // Do not prevent default so Tab still moves focus forward
+                                            return true;
+                                          }
+                                          return false;
+                                        }
+                                        function populateTeams(leagueVal) {
+                                          const list = document.getElementById('team-list');
+                                          if (!list) return;
+                                          list.innerHTML = '';
+                                          if (!leagueVal) return;
+                                          fetch(`{% url 'memorabilia:get_teams' %}?league=${encodeURIComponent(leagueVal)}`)
+                                            .then(r => r.json())
+                                            .then(data => {
+                                              (data.teams || []).forEach(name => {
+                                                const opt = document.createElement('option');
+                                                opt.value = name;
+                                                list.appendChild(opt);
+                                              });
+                                            })
+                                            .catch(() => {});
+                                        }
+                                        // On load
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                          const leagueInput = document.querySelector('[name="league"]');
+                                          const teamInput = document.querySelector('[name="team"]');
+                                          if (leagueInput) {
+                                            populateTeams(leagueInput.value);
+                                            leagueInput.addEventListener('input', function(e) {
+                                              populateTeams(e.target.value);
+                                            });
+                                            leagueInput.addEventListener('keydown', function(e) {
+                                              const filled = fillTopOptionOnTab(e, leagueInput, 'league-list');
+                                              if (filled) {
+                                                // Ensure teams datalist updates before focus leaves
+                                                populateTeams(leagueInput.value);
+                                              }
+                                            });
+                                          }
+                                          if (teamInput) {
+                                            teamInput.addEventListener('keydown', function(e) {
+                                              fillTopOptionOnTab(e, teamInput, 'team-list');
+                                            });
+                                          }
+                                          // If team has a value and list empty, keep it; options populate lazily
+                                        });
+                                      })();
+                                    </script>
+                                {% endif %}
                                 {% if field.help_text %}
                                     <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
                                 {% endif %}

@@ -75,9 +75,10 @@ class CollectionForm(ModelForm):
 
 
 class CollectibleForm(ModelForm):
-    league = ModelChoiceField(
-        queryset=League.objects.all(),
-        widget=flowbite_widgets.FlowbiteSelectInput,
+    league = forms.CharField(
+        required=True,
+        widget=flowbite_widgets.FlowbiteTextInput(),
+        help_text="Select from the list or type a custom value",
     )
     game_type = ModelChoiceField(
         queryset=GameType.objects.all(),
@@ -113,6 +114,16 @@ class CollectibleForm(ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        # Enable browser suggestions for league via datalist rendered in the template
+        self.fields['league'].widget.attrs.update({
+            'list': 'league-list',
+            'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
+        })
+        # Enable browser suggestions for team via datalist rendered in the template
+        self.fields['team'].widget.attrs.update({
+            'list': 'team-list',
+            'placeholder': 'Start typing a team...'
+        })
         
 
     def get_image_fields(self):
@@ -121,8 +132,9 @@ class CollectibleForm(ModelForm):
                 yield self[field_name]
 
     def clean_league(self):
-        data = self.cleaned_data["league"].pk
-        return data
+        # Accept either an existing League key or any custom string
+        value = self.cleaned_data.get("league", "")
+        return value.strip()
 
     def clean_game_type(self):
         data = self.cleaned_data["game_type"].pk
@@ -251,7 +263,7 @@ class CollectibleSearchForm(forms.Form):
     brand = forms.CharField(required=False, label="Brand", widget=flowbite_widgets.FlowbiteTextInput())
     number = forms.IntegerField(required=False, label="Number", widget=flowbite_widgets.FlowbiteTextInput())
     season = forms.CharField(required=False, label="Season", widget=flowbite_widgets.FlowbiteTextInput())
-    league = forms.ChoiceField(required=False, label="League", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    league = forms.CharField(required=False, label="League", widget=flowbite_widgets.FlowbiteTextInput())
     game_type = forms.ChoiceField(required=False, label="Game Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
     usage_type = forms.ChoiceField(required=False, label="Usage Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
     collection = forms.ChoiceField(required=False, label="Collection", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
@@ -270,7 +282,16 @@ class CollectibleSearchForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['league'].choices = [('', 'Any')] + [(l.key, l.name) for l in League.objects.all()]
+        # Enable browser suggestions for league via datalist rendered in the template
+        self.fields['league'].widget.attrs.update({
+            'list': 'league-list',
+            'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
+        })
+        # Enable browser suggestions for team via datalist rendered in the template
+        self.fields['team'].widget.attrs.update({
+            'list': 'team-list',
+            'placeholder': 'Start typing a team...'
+        })
         self.fields['game_type'].choices = [('', 'Any')] + [(g.key, g.name) for g in GameType.objects.all()]
         self.fields['usage_type'].choices = [('', 'Any')] + [(u.key, u.name) for u in UsageType.objects.all()]
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]

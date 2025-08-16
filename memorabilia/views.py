@@ -3,7 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views import generic
 
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, ExternalResource
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, ExternalResource, Team
 from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm
 from django.forms import ModelForm, inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
@@ -60,7 +60,7 @@ def _apply_collectible_filters(qs, data):
         qs = qs.filter(season__icontains=season)
     league = data.get('league')
     if league:
-        qs = qs.filter(league=league)
+        qs = qs.filter(league__icontains=league)
     game_type = data.get('game_type')
     if game_type:
         qs = qs.filter(game_type=game_type)
@@ -88,10 +88,16 @@ def search_collectibles(request):
     results = Collectible.objects.all().order_by('-last_updated')
     if form.is_valid():
         results = _apply_collectible_filters(results, form.cleaned_data)
+    # Build custom league options from existing collectibles (free-text values)
+    league_keys = set(League.objects.values_list('key', flat=True))
+    distinct_values = Collectible.objects.values_list('league', flat=True).distinct()
+    custom_leagues = [v for v in distinct_values if v and v not in league_keys]
     context = {
         'title': 'Search Collectibles',
         'form': form,
         'results': results,
+        'leagues': League.objects.all(),
+        'custom_leagues': custom_leagues,
     }
     return render(request, 'memorabilia/search.html', context)
 
@@ -160,7 +166,11 @@ class CollectibleView(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(CollectibleView, self).get_context_data(**kwargs)
         context['title'] = context['object'].title
-        context['object'].league = League.objects.get(pk=context['object'].league)
+        # league may be a custom string; resolve if possible, else leave as-is
+        try:
+            context['object'].league = League.objects.get(pk=context['object'].league)
+        except League.DoesNotExist:
+            pass
         context['object'].game_type = GameType.objects.get(pk=context['object'].game_type)
         context['object'].usage_type = UsageType.objects.get(pk=context['object'].usage_type)
         primary_image_filter = context['object'].images.filter(primary=True)
@@ -201,7 +211,13 @@ def create_collectible(request, collection_id):
         form = CollectibleForm(initial={'collection':collection}, current_user=request.user)
         image_formset = CollectibleImageFormSet(prefix='images')
 
-    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_formset': image_formset, 'title': 'New Collectible', 'collection': collection})
+    return render(request, 'memorabilia/collectible_form.html', {
+        'form': form,
+        'image_formset': image_formset,
+        'title': 'New Collectible',
+        'collection': collection,
+        'leagues': League.objects.all(),
+    })
 
 @login_required
 @permission_required('memorabilia.update_collectible', fn=objectgetter(Collectible, 'collectible_id'), raise_exception=True)
@@ -226,7 +242,13 @@ def edit_collectible(request, collection_id, collectible_id):
         print(collectible.collection.id)
         image_formset = CollectibleImageFormSet(instance=collectible, prefix='images')
 
-    return render(request, 'memorabilia/collectible_form.html', {'form': form, 'image_formset': image_formset, 'title': 'Edit Collectible', 'collectible': collectible})
+    return render(request, 'memorabilia/collectible_form.html', {
+        'form': form,
+        'image_formset': image_formset,
+        'title': 'Edit Collectible',
+        'collectible': collectible,
+        'leagues': League.objects.all(),
+    })
 
 
 
@@ -299,6 +321,25 @@ def get_flickr_albums(request, username):
                     image_sizes['large_1024'] = size['source']
             val['photos'].append({id: image_sizes})
         return JsonResponse(val)
+
+
+def get_teams(request):
+    """Return a JSON list of team names for a given league key.
+    Query params: ?league=NHL
+    """
+    league = request.GET.get('league', '').strip()
+    teams = []
+    if league:
+        teams = list(Team.objects.filter(league_id=league).values_list('name', flat=True).order_by('name'))
+        # Small bootstrap defaults if DB has no entries yet
+        if not teams and league.upper() == 'NHL':
+            teams = ["Carolina Hurricanes", "Detroit Red Wings"]
+        elif not teams and league.upper() == 'AHL':
+            teams = ["Grand Rapids Griffins"]
+    return JsonResponse({
+        'league': league,
+        'teams': teams,
+    })
 
 @login_required
 def get_flickr_album(request):

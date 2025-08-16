@@ -167,3 +167,14 @@ class GameType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Team(models.Model):
+    name = models.CharField(max_length=150)
+    league = models.ForeignKey(League, to_field='key', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ("name", "league")
+
+    def __str__(self):
+        return f"{self.name} ({self.league_id})"

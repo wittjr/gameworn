@@ -21,5 +21,6 @@ urlpatterns = [
     path("collection/<int:collection_id>/collectible/<int:collectible_id>/photoMatch/<int:photo_match_id>/delete", views.delete_photo_match, name="delete_photo_match"),
     path("external/flickr/album", views.get_flickr_album, name="get_flickr_album"),
     path("external/flickr/albums/<str:username>/<str:album>", views.get_flickr_albums, name="get_flickr_albums"),
-    path("resources", views.ExternalResourceListView.as_view(), name="list_externalresources")
+    path("resources", views.ExternalResourceListView.as_view(), name="list_externalresources"),
+    path("api/teams", views.get_teams, name="get_teams"),
 ]
