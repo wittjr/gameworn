@@ -295,3 +295,54 @@ class CollectibleSearchForm(forms.Form):
         self.fields['game_type'].choices = [('', 'Any')] + [(g.key, g.name) for g in GameType.objects.all()]
         self.fields['usage_type'].choices = [('', 'Any')] + [(u.key, u.name) for u in UsageType.objects.all()]
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]
+
+
+class BulkCollectibleForm(ModelForm):
+    """Simplified form for bulk editing Collectibles in a formset.
+    Locks collection, excludes image management, and uses selects for enums.
+    """
+
+    game_type = ModelChoiceField(
+        queryset=GameType.objects.all(),
+        widget=flowbite_widgets.FlowbiteSelectInput,
+        required=True,
+    )
+    usage_type = ModelChoiceField(
+        queryset=UsageType.objects.all(),
+        widget=flowbite_widgets.FlowbiteSelectInput,
+        required=True,
+    )
+
+    class Meta:
+        model = Collectible
+        fields = [
+            'title', 'league', 'brand', 'size', 'player', 'team', 'number',
+            'season', 'game_type', 'usage_type', 'description',
+        ]
+        widgets = {
+            'title': flowbite_widgets.FlowbiteTextInput(),
+            'league': flowbite_widgets.FlowbiteTextInput(),
+            'brand': flowbite_widgets.FlowbiteTextInput(),
+            'size': flowbite_widgets.FlowbiteTextInput(),
+            'player': flowbite_widgets.FlowbiteTextInput(),
+            'team': flowbite_widgets.FlowbiteTextInput(),
+            'season': flowbite_widgets.FlowbiteTextInput(),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+            'number': flowbite_widgets.FlowbiteNumberInput(),
+        }
+
+    def clean_game_type(self):
+        return self.cleaned_data['game_type'].pk
+
+    def clean_usage_type(self):
+        return self.cleaned_data['usage_type'].pk
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Placeholders; list attribute will be attached per-row in the template JS
+        self.fields['league'].widget.attrs.update({
+            'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
+        })
+        self.fields['team'].widget.attrs.update({
+            'placeholder': 'Start typing a team...'
+        })

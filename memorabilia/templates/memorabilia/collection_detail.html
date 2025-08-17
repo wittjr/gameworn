@@ -17,6 +17,9 @@
 
             {% url 'memorabilia:create_collectible' collection.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
+
+            {% url 'memorabilia:bulk_edit_collectibles' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Edit All Collectibles" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}

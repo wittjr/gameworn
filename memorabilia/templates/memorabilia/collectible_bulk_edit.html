@@ -1,0 +1,226 @@
+{% extends "memorabilia/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto p-4">
+  <h1 class="text-2xl font-semibold mb-4">{{ title }}</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% if formset.total_form_count %}
+      {% with header_form=formset.forms.0 %}
+      <div class="mb-3 p-3 border rounded bg-gray-50">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-medium">Visible columns</div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="show-all-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Show all</button>
+            <button type="button" id="hide-all-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Hide all</button>
+            <button type="button" id="reset-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Reset defaults</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
+          {% for hf in header_form.visible_fields %}
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" class="col-toggle" value="{{ hf.name }}" checked>
+              <span>{{ hf.label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full border rounded-md text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              {% for field in header_form.visible_fields %}
+                <th class="px-3 py-2 text-left {{ size }} font-medium text-gray-700 border-b" data-col="field-{{ field.name }}">{{ field.label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset %}
+              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                {{ form.id }}
+                {% for field in form.visible_fields %}
+                  <td class="py-1 align-top" data-col="field-{{ field.name }}">
+                    {{ field }}
+                    {% if field.name == 'team' %}
+                      <datalist id="team-list-{{ form.prefix }}"></datalist>
+                    {% endif %}
+                    {% if field.errors %}
+                      <div class="text-xs text-red-500">{{ field.errors }}</div>
+                    {% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endwith %}
+    {% else %}
+      <p>No collectibles in this collection yet.</p>
+    {% endif %}
+
+    <div class="mt-6 flex gap-2">
+      <a href="{% url 'memorabilia:collection' pk=collection.id %}" class="px-4 py-2 bg-gray-100 rounded border">Cancel</a>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Save Changes</button>
+    </div>
+  </form>
+
+  <datalist id="league-list">
+    {% for l in leagues %}
+      <option value="{{ l.key }}" label="{{ l.name }}"></option>
+    {% endfor %}
+  </datalist>
+  <!-- Per-row team datalists are rendered next to each team input. -->
+
+  <script>
+    (function() {
+      function applyVisibility(state) {
+        // state: { fieldName: true|false }
+        const allCols = new Set();
+        document.querySelectorAll('thead [data-col], tbody [data-col]').forEach(el => {
+          const key = el.getAttribute('data-col');
+          allCols.add(key);
+        });
+        allCols.forEach(key => {
+          const visible = state[key?.replace('field-', '')] !== false; // default true
+          document.querySelectorAll(`[data-col="${key}"]`).forEach(el => {
+            el.style.display = visible ? '' : 'none';
+          });
+        });
+        // Sync checkboxes
+        document.querySelectorAll('.col-toggle').forEach(cb => {
+          const val = cb.value;
+          cb.checked = state[val] !== false;
+        });
+      }
+      function loadState() {
+        try {
+          const key = `bulkColumns:collection:{{ collection.id }}`;
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : {};
+        } catch(e) { return {}; }
+      }
+      function saveState(state) {
+        const key = `bulkColumns:collection:{{ collection.id }}`;
+        localStorage.setItem(key, JSON.stringify(state));
+      }
+      function attachLists(row) {
+        const leagueInput = row.querySelector('[name$="-league"]');
+        const teamInput = row.querySelector('[name$="-team"]');
+        if (leagueInput) leagueInput.setAttribute('list', 'league-list');
+        if (teamInput) {
+          const prefix = row.getAttribute('data-row-prefix');
+          const listId = `team-list-${prefix}`;
+          teamInput.setAttribute('list', listId);
+        }
+      }
+      function fillTopOptionOnTab(e, inputEl, listEl) {
+        if (e.key !== 'Tab') return false;
+        const list = listEl;
+        if (!list) return false;
+        const opts = Array.from(list.querySelectorAll('option'));
+        if (!opts.length) return false;
+        const val = (inputEl.value || '').toLowerCase();
+        let match = null;
+        if (val) {
+          match = opts.find(o => (o.value || '').toLowerCase().startsWith(val));
+        }
+        if (!match) match = opts[0];
+        if (match) {
+          inputEl.value = match.value;
+          // Do not preventDefault so Tab still moves focus forward
+          return true;
+        }
+        return false;
+      }
+      async function populateTeams(leagueKey, list) {
+        if (!list) return;
+        list.innerHTML = '';
+        if (!leagueKey) return;
+        const url = new URL('{% url "memorabilia:get_teams" %}', window.location.origin);
+        url.searchParams.set('league', leagueKey);
+        fetch(url)
+          .then(r => r.json())
+          .then(data => {
+            (data.teams || []).forEach(name => {
+              const opt = document.createElement('option');
+              opt.value = name;
+              list.appendChild(opt);
+            });
+          })
+          .catch(() => {});
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+        // Column visibility controls
+        const state = loadState();
+        applyVisibility(state);
+        document.querySelectorAll('.col-toggle').forEach(cb => {
+          cb.addEventListener('change', function(e) {
+            const s = loadState();
+            const fname = e.target.value;
+            s[fname] = e.target.checked ? true : false;
+            saveState(s);
+            applyVisibility(s);
+          });
+        });
+
+        function setAllColumns(checked) {
+          const s = loadState();
+          document.querySelectorAll('.col-toggle').forEach(cb => {
+            cb.checked = checked;
+            s[cb.value] = checked;
+          });
+          saveState(s);
+          applyVisibility(s);
+        }
+        const showBtn = document.getElementById('show-all-cols');
+        const hideBtn = document.getElementById('hide-all-cols');
+        const resetBtn = document.getElementById('reset-cols');
+        if (showBtn) showBtn.addEventListener('click', () => setAllColumns(true));
+        if (hideBtn) hideBtn.addEventListener('click', () => setAllColumns(false));
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+          // Clear saved state and default to all visible
+          const key = `bulkColumns:collection:{{ collection.id }}`;
+          localStorage.removeItem(key);
+          setAllColumns(true);
+        });
+
+        const rows = document.querySelectorAll('form table tbody tr');
+        rows.forEach(row => {
+          attachLists(row);
+          const leagueInput = row.querySelector('[name$="-league"]');
+          const teamInput = row.querySelector('[name$="-team"]');
+          if (leagueInput) {
+            const listId = teamInput ? teamInput.getAttribute('list') : null;
+            const listEl = listId ? document.getElementById(listId) : null;
+            populateTeams(leagueInput.value, listEl);
+            leagueInput.addEventListener('input', function(e) {
+              if (teamInput) teamInput.value = '';
+              populateTeams(e.target.value, listEl);
+            });
+            leagueInput.addEventListener('keydown', function(e) {
+              const leagueList = document.getElementById('league-list');
+              const accepted = fillTopOptionOnTab(e, leagueInput, leagueList);
+              if (accepted) {
+                if (teamInput) teamInput.value = '';
+                populateTeams(leagueInput.value, listEl);
+              }
+            });
+          }
+          if (teamInput) {
+            teamInput.addEventListener('keydown', function(e) {
+              const listId = teamInput.getAttribute('list');
+              const listEl = document.getElementById(listId);
+              fillTopOptionOnTab(e, teamInput, listEl);
+            });
+          }
+        });
+      });
+    })();
+  </script>
+</div>
+{% endblock %}

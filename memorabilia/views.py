@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render, HttpResponseRedirect
 from django.views import generic
 
 from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, ExternalResource, Team
-from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm
+from .forms import CollectibleForm, CollectibleImageForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm
 from django.forms import ModelForm, inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import user_passes_test, login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -321,6 +321,36 @@ def get_flickr_albums(request, username):
                     image_sizes['large_1024'] = size['source']
             val['photos'].append({id: image_sizes})
         return JsonResponse(val)
+
+
+@login_required
+@permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
+def bulk_edit_collectibles(request, collection_id):
+    collection = get_object_or_404(Collection, pk=collection_id)
+    FormSet = modelformset_factory(Collectible, form=BulkCollectibleForm, extra=0, can_delete=False)
+    queryset = Collectible.objects.filter(collection=collection).order_by('id')
+    if request.method == 'POST':
+        formset = FormSet(request.POST, queryset=queryset)
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for obj in instances:
+                obj.collection = collection
+                obj.last_updated = datetime.datetime.now()
+                obj.save()
+            # Handle deleted objects if can_delete=True in the future
+            return redirect('memorabilia:collection', pk=collection_id)
+        else:
+            print(formset.errors)
+    else:
+        formset = FormSet(queryset=queryset)
+
+    context = {
+        'title': 'Bulk Edit Collectibles',
+        'collection': collection,
+        'formset': formset,
+        'leagues': League.objects.all(),
+    }
+    return render(request, 'memorabilia/collectible_bulk_edit.html', context)
 
 
 def get_teams(request):
