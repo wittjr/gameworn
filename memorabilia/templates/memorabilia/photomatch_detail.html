@@ -13,7 +13,7 @@
 {% endblock page_navigation %}
 
 {% block breadcrumb %}
-<div class="crumb"><a href="{% url 'memorabilia:home' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:list_collections' %}">Collections</a></div>><div class="crumb"><a href="{% url 'memorabilia:collection' object.collectible.collection.id %}">{{ object.collectible.collection }}</a></div>><div class="crumb"><a href="{% url 'memorabilia:collectible' object.collectible.collection.id object.collectible.id %}">{{ object.collectible }}</a></div>
+<div class="crumb"><a href="{% url 'memorabilia:home' %}">Home</a></div>><div class="crumb"><a href="{% url 'memorabilia:list_collections' %}">Collections</a></div>><div class="crumb"><a href="{% url 'memorabilia:collection' object.collectible.collection.id %}">{{ object.collectible.collection }}</a></div>><div class="crumb"><a href="{% url 'memorabilia:collectible' object.collectible.collection.id 'playeritem' object.collectible.id %}">{{ object.collectible }}</a></div>
 {% endblock breadcrumb %}
 
 

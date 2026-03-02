@@ -44,8 +44,8 @@
     </section>
 
     <div class="flex flex-wrap gap-4 py-4 justify-evenly">
-        {% for collectible in collection.collectible_set.all %}
-            {% url 'memorabilia:collectible' collection.id collectible.id as the_url %}
+        {% for collectible in collectibles %}
+            {% url 'memorabilia:collectible' collection.id collectible.collectible_type collectible.id as the_url %}
             {% getmediaurl collectible.get_primary_image as image_url %}
             {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url %}
         {% endfor %}

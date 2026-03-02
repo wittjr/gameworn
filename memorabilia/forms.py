@@ -2,7 +2,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -90,7 +90,7 @@ class CollectibleForm(ModelForm):
     )
 
     class Meta:
-        model = Collectible
+        model = PlayerItem
         fields = "__all__"
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
         widgets = {
@@ -150,7 +150,7 @@ class CollectibleImageForm(ModelForm):
     # images = ImageGallery(required=False)
 
     class Meta:
-        model = CollectibleImage
+        model = PlayerItemImage
         fields = "__all__"
         widgets = {
             # "image": flowbite_widgets.FlowbiteTextInput(),
@@ -158,6 +158,43 @@ class CollectibleImageForm(ModelForm):
             "primary": flowbite_widgets.FlowbiteCheckboxInput(),
             "flickrObject": flowbite_widgets.FlowbiteTextarea(),
         }
+
+
+class OtherItemImageForm(ModelForm):
+    """Form for OtherItem images"""
+    class Meta:
+        model = OtherItemImage
+        fields = "__all__"
+        widgets = {
+            "link": flowbite_widgets.FlowbiteTextInput(),
+            "primary": flowbite_widgets.FlowbiteCheckboxInput(),
+            "flickrObject": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+
+class OtherItemForm(ModelForm):
+    """Form for OtherItem - contains only base Collectible fields"""
+    class Meta:
+        model = OtherItem
+        fields = "__all__"
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        widgets = {
+            "title": flowbite_widgets.FlowbiteTextInput(),
+            "collection": flowbite_widgets.FlowbiteSelectInput(),
+            "description": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+
+
+def get_collectible_form_class(collectible_type='PlayerItem'):
+    """Factory function to get the appropriate form class based on type"""
+    if collectible_type == 'OtherItem':
+        return OtherItemForm
+    return CollectibleForm
 
 
 class CustomCollectibleImageFormSet(BaseInlineFormSet):
@@ -196,8 +233,10 @@ class CustomCollectibleImageFormSet(BaseInlineFormSet):
 
 
 CollectibleImageFormSet = inlineformset_factory(
-    Collectible, 
-    CollectibleImage, 
+    # Collectible,
+    # CollectibleImage, 
+    PlayerItem,
+    PlayerItemImage,
     form=CollectibleImageForm,
     formset=CustomCollectibleImageFormSet,
     extra=0,
@@ -314,7 +353,7 @@ class BulkCollectibleForm(ModelForm):
     )
 
     class Meta:
-        model = Collectible
+        model = PlayerItem
         fields = [
             'title', 'league', 'brand', 'size', 'player', 'team', 'number',
             'season', 'game_type', 'usage_type', 'description',

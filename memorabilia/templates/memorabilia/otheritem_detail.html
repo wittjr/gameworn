@@ -9,9 +9,6 @@
 
             {% url 'memorabilia:delete_collectible' object.collection.id object.collectible_type object.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Delete Collectible" %}
-
-            {% url 'memorabilia:create_photo_match' object.collection.id object.collectible_type object.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Add Photo Match" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}
@@ -19,7 +16,7 @@
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
     {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
-    {% url 'memorabilia:collection' object.collection.id object.collectible_type as the_url %}
+    {% url 'memorabilia:collection' object.collection.id as the_url %}
     {% include 'memorabilia/breadcrumb.html' with url=the_url label=object.collection.title %}
     {% include 'memorabilia/breadcrumb.html' with label=object.title %}
 {% endblock breadcrumb %}
@@ -43,25 +40,25 @@
     <div class="w-full relative overflow-x-auto">
         <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <tbody>
-                {% include 'memorabilia/tablerow.html' with label='League' value=collectible.league %}
-                {% include 'memorabilia/tablerow.html' with label='Brand' value=collectible.brand %}
-                {% include 'memorabilia/tablerow.html' with label='Size' value=collectible.size %}
-                {% include 'memorabilia/tablerow.html' with label='Player' value=collectible.player %}
-                {% include 'memorabilia/tablerow.html' with label='Team' value=collectible.team %}
-                {% include 'memorabilia/tablerow.html' with label='Number' value=collectible.number %}
-                {% include 'memorabilia/tablerow.html' with label='Season' value=collectible.season %}
-                {% include 'memorabilia/tablerow.html' with label='Description' value=collectible.description %}
-                {% include 'memorabilia/tablerow.html' with label='Usage Type' value=collectible.usage_type %}
-                {% include 'memorabilia/tablerow.html' with label='Game Type' value=collectible.game_type %}
+                <!-- {% include 'memorabilia/tablerow.html' with label='League' value=object.league %}
+                {% include 'memorabilia/tablerow.html' with label='Brand' value=object.brand %}
+                {% include 'memorabilia/tablerow.html' with label='Size' value=object.size %}
+                {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
+                {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
+                {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
+                {% include 'memorabilia/tablerow.html' with label='Season' value=object.season %} -->
+                {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
+                <!-- {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
+                {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %} -->
                 <!-- {% include 'memorabilia/tablerow.html' with label='Collection' value=collectible.collection %} -->
                 <!-- {% include 'memorabilia/tablerow.html' with label='For Sale' value=collectible.for_sale %} -->
                 <!-- {% include 'memorabilia/tablerow.html' with label='For Trade' value=collectible.for_trade %} -->
-                {% if object.for_sale %}
-                    {% include 'memorabilia/tablerow.html' with label='Asking Price' value=collectible.asking_price %}
+                <!-- {% if object.for_sale %}
+                    {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
                 {% endif %}
                 {% if object.for_trade %}
-                    {% include 'memorabilia/tablerow.html' with label='Looking for' value=collectible.looking_for %}
-                {% endif %}    
+                    {% include 'memorabilia/tablerow.html' with label='Looking for' value=object.looking_for %}
+                {% endif %}     -->
             </tbody>
         </table>
         
