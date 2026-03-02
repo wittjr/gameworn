@@ -4,7 +4,7 @@ from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
 from django.templatetags.static import static
 from django.db.models.fields.files import ImageFieldFile
-from memorabilia.models import PhotoMatch, CollectibleImage, PlayerItemImage, OtherItemImage
+from memorabilia.models import PhotoMatch, CollectibleImage, PlayerItemImage, OtherItemImage, PlayerGearItemImage
 
 register = template.Library()
 
@@ -35,7 +35,7 @@ def getmediaurl(context, image):
             return image
         elif type(image) is ImageFieldFile:
             return image.url
-        elif type(image) is CollectibleImage or type(image) is PlayerItemImage or type(image) is OtherItemImage:
+        elif type(image) is CollectibleImage or type(image) is PlayerItemImage or type(image) is OtherItemImage or type(image) is PlayerGearItemImage:
             if image.link:
                 return image.link
             else:

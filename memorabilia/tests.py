@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from .models import Collection, PlayerItem, OtherItem, League, GameType, UsageType
+from .models import Collection, PlayerItem, PlayerGearItem, OtherItem, League, GameType, UsageType
 
 
 class BaseTestCase(TestCase):
@@ -25,9 +25,17 @@ class BaseTestCase(TestCase):
             description='A test jersey',
             collection=cls.collection,
             league='NHL',
+            player='Wayne Gretzky',
+        )
+
+        cls.player_gear_item = PlayerGearItem.objects.create(
+            title='Test Gear Jersey',
+            description='A test gear jersey',
+            collection=cls.collection,
+            league='NHL',
+            player='Wayne Gretzky',
             brand='Adidas',
             size='L',
-            player='Wayne Gretzky',
             season='1985',
             game_type='REG',
             usage_type='GU',
@@ -47,9 +55,26 @@ class BaseTestCase(TestCase):
             'description': 'A new test jersey',
             'collection': self.collection.id,
             'league': 'NHL',
+            'player': 'Test Player',
+            'images-TOTAL_FORMS': '0',
+            'images-INITIAL_FORMS': '0',
+            'images-MIN_NUM_FORMS': '0',
+            'images-MAX_NUM_FORMS': '1000',
+        }
+        data.update(overrides)
+        return data
+
+    def _player_gear_item_post_data(self, **overrides):
+        """Return valid POST data for creating/editing a PlayerGearItem."""
+        data = {
+            'collectible_type': 'PlayerGearItem',
+            'title': 'New Gear Jersey',
+            'description': 'A new test gear jersey',
+            'collection': self.collection.id,
+            'league': 'NHL',
+            'player': 'Test Player',
             'brand': 'Adidas',
             'size': 'L',
-            'player': 'Test Player',
             'season': '2024',
             'game_type': 'REG',
             'usage_type': 'GU',
@@ -99,6 +124,17 @@ class PublicViewTests(BaseTestCase):
                 'collection_id': self.collection.id,
                 'collectible_type': 'playeritem',
                 'pk': self.player_item.id,
+            },
+        ))
+        self.assertEqual(response.status_code, 200)
+
+    def test_playergearitem_detail(self):
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={
+                'collection_id': self.collection.id,
+                'collectible_type': 'playergearitem',
+                'pk': self.player_gear_item.id,
             },
         ))
         self.assertEqual(response.status_code, 200)
@@ -225,8 +261,7 @@ class PlayerItemCRUDTests(BaseTestCase):
     def test_delete_post(self):
         temp = PlayerItem.objects.create(
             title='Temp Jersey', description='temp', collection=self.collection,
-            league='NHL', brand='Adidas', size='L', player='P',
-            season='2024', game_type='REG', usage_type='GU',
+            league='NHL', player='P',
         )
         response = self.client.post(reverse(
             'memorabilia:delete_collectible',
@@ -234,6 +269,49 @@ class PlayerItemCRUDTests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PlayerItem.objects.filter(pk=temp.id).exists())
+
+
+class PlayerGearItemCRUDTests(BaseTestCase):
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_create_post(self):
+        response = self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._player_gear_item_post_data(title='Created Gear Jersey'),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(PlayerGearItem.objects.filter(title='Created Gear Jersey').exists())
+
+    def test_edit_get(self):
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'playergearitem', self.player_gear_item.id],
+        ))
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_post(self):
+        response = self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'playergearitem', self.player_gear_item.id]),
+            self._player_gear_item_post_data(title='Edited Gear Jersey'),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.player_gear_item.refresh_from_db()
+        self.assertEqual(self.player_gear_item.title, 'Edited Gear Jersey')
+
+    def test_delete_post(self):
+        temp = PlayerGearItem.objects.create(
+            title='Temp Gear Jersey', description='temp', collection=self.collection,
+            league='NHL', player='P', brand='Adidas', size='L',
+            season='2024', game_type='REG', usage_type='GU',
+        )
+        response = self.client.post(reverse(
+            'memorabilia:delete_collectible',
+            args=[self.collection.id, 'playergearitem', temp.id],
+        ))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(PlayerGearItem.objects.filter(pk=temp.id).exists())
 
 
 class OtherItemCRUDTests(BaseTestCase):
@@ -299,6 +377,14 @@ class CollectiblePermissionTests(BaseTestCase):
         response = self.client.post(reverse(
             'memorabilia:delete_collectible',
             args=[self.collection.id, 'playeritem', self.player_item.id],
+        ))
+        self.assertEqual(response.status_code, 403)
+
+    def test_edit_playergearitem_other_user_forbidden(self):
+        self.client.force_login(self.other_user)
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'playergearitem', self.player_gear_item.id],
         ))
         self.assertEqual(response.status_code, 403)
 

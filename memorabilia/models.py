@@ -103,30 +103,55 @@ class Collectible(RulesModel):
                 return primary_image
         return None
 
-
-
-class PlayerItem(Collectible):
-    league = models.CharField(max_length=5)
-    brand = models.CharField(max_length=25)
-    size = models.CharField(max_length=5)
+class BasePlayerItem(Collectible):
+    league = models.CharField(max_length=5, blank=True, null=True)
     player = models.CharField(max_length=100)
     team = models.CharField(max_length=150, blank=True, null=True)
     number = models.IntegerField(blank=True, null=True)
-    season = models.CharField(max_length=10)
-    game_type = models.CharField(max_length=5)
-    usage_type = models.CharField(max_length=5)
+
+    class Meta(Collectible.Meta):
+        abstract = True
+
+
+class PlayerItem(BasePlayerItem):
     collectible_type = 'playeritem'
 
     def __str__(self):
         return self.title
 
+class PlayerGearItem(BasePlayerItem):
+    brand = models.CharField(max_length=25)
+    size = models.CharField(max_length=5)
+    season = models.CharField(max_length=10)
+    game_type = models.CharField(max_length=5)
+    usage_type = models.CharField(max_length=5)
+    collectible_type = 'playergearitem'
+
+    def __str__(self):
+        return self.title
+
+    def get_primary_image(self):
+        primary_image_filter = self.gear_images.filter(primary=True)
+        if len(primary_image_filter) >= 1:
+            if primary_image_filter[0].image:
+                return primary_image_filter[0].image
+            elif primary_image_filter[0].link:
+                return primary_image_filter[0].link
+        else:
+            images = self.gear_images.all()
+            if len(images) >= 1:
+                return images[0].image
+        return None
+
 class OtherItem(Collectible):
     collectible_type = 'otheritem'
     ...
+    
+    def __str__(self):
+        return self.title
 
 
 class CollectibleImage(RulesModel):
-    # collectible = models.ForeignKey(Collectible, on_delete=models.CASCADE, related_name='images')
     primary = models.BooleanField(blank=True, null=True)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     link = models.CharField(max_length=255, blank=True, null=True)
@@ -138,6 +163,9 @@ class CollectibleImage(RulesModel):
 class PlayerItemImage(CollectibleImage):
     collectible = models.ForeignKey(PlayerItem, on_delete=models.CASCADE, related_name='images')
 
+class PlayerGearItemImage(CollectibleImage):
+    collectible = models.ForeignKey(PlayerGearItem, on_delete=models.CASCADE, related_name='gear_images')
+
 class OtherItemImage(CollectibleImage):
     collectible = models.ForeignKey(OtherItem, on_delete=models.CASCADE, related_name='images')
 
@@ -146,7 +174,7 @@ class PhotoMatch(RulesModel):
     link = models.CharField(max_length=255, blank=True, null=True)
     description = models.CharField(max_length=500, blank=True, null=True)
     game_date = models.DateField()
-    collectible = models.ForeignKey(PlayerItem, on_delete=models.CASCADE, related_name='photomatches')
+    collectible = models.ForeignKey(PlayerGearItem, on_delete=models.CASCADE, related_name='photomatches')
 
     class Meta:
         rules_permissions = {

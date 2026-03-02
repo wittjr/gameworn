@@ -2,7 +2,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -76,17 +76,9 @@ class CollectionForm(ModelForm):
 
 class CollectibleForm(ModelForm):
     league = forms.CharField(
-        required=True,
+        required=False,
         widget=flowbite_widgets.FlowbiteTextInput(),
         help_text="Select from the list or type a custom value",
-    )
-    game_type = ModelChoiceField(
-        queryset=GameType.objects.all(),
-        widget=flowbite_widgets.FlowbiteSelectInput,
-    )
-    usage_type = ModelChoiceField(
-        queryset=UsageType.objects.all(),
-        widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
     class Meta:
@@ -95,11 +87,8 @@ class CollectibleForm(ModelForm):
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
-            "brand": flowbite_widgets.FlowbiteTextInput(),
-            "size": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
             "team": flowbite_widgets.FlowbiteTextInput(),
-            "season": flowbite_widgets.FlowbiteTextInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
             "number": flowbite_widgets.FlowbiteNumberInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
@@ -132,17 +121,8 @@ class CollectibleForm(ModelForm):
                 yield self[field_name]
 
     def clean_league(self):
-        # Accept either an existing League key or any custom string
         value = self.cleaned_data.get("league", "")
         return value.strip()
-
-    def clean_game_type(self):
-        data = self.cleaned_data["game_type"].pk
-        return data
-
-    def clean_usage_type(self):
-        data = self.cleaned_data["usage_type"].pk
-        return data
 
 
 class CollectibleImageForm(ModelForm):
@@ -190,10 +170,79 @@ class OtherItemForm(ModelForm):
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
 
 
+class PlayerGearItemImageForm(ModelForm):
+    """Form for PlayerGearItem images"""
+    class Meta:
+        model = PlayerGearItemImage
+        fields = "__all__"
+        widgets = {
+            "link": flowbite_widgets.FlowbiteTextInput(),
+            "primary": flowbite_widgets.FlowbiteCheckboxInput(),
+            "flickrObject": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+
+class PlayerGearItemForm(ModelForm):
+    """Form for PlayerGearItem - includes all PlayerItem fields plus gear-specific fields"""
+    league = forms.CharField(
+        required=True,
+        widget=flowbite_widgets.FlowbiteTextInput(),
+        help_text="Select from the list or type a custom value",
+    )
+    game_type = ModelChoiceField(
+        queryset=GameType.objects.all(),
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    usage_type = ModelChoiceField(
+        queryset=UsageType.objects.all(),
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    class Meta:
+        model = PlayerGearItem
+        fields = "__all__"
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        widgets = {
+            "title": flowbite_widgets.FlowbiteTextInput(),
+            "brand": flowbite_widgets.FlowbiteTextInput(),
+            "size": flowbite_widgets.FlowbiteTextInput(),
+            "player": flowbite_widgets.FlowbiteTextInput(),
+            "team": flowbite_widgets.FlowbiteTextInput(),
+            "season": flowbite_widgets.FlowbiteTextInput(),
+            "number": flowbite_widgets.FlowbiteNumberInput(),
+            "collection": flowbite_widgets.FlowbiteSelectInput(),
+            "description": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        self.fields['league'].widget.attrs.update({
+            'list': 'league-list',
+            'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
+        })
+        self.fields['team'].widget.attrs.update({
+            'list': 'team-list',
+            'placeholder': 'Start typing a team...'
+        })
+
+    def clean_league(self):
+        return self.cleaned_data.get("league", "").strip()
+
+    def clean_game_type(self):
+        return self.cleaned_data["game_type"].pk
+
+    def clean_usage_type(self):
+        return self.cleaned_data["usage_type"].pk
+
+
 def get_collectible_form_class(collectible_type='PlayerItem'):
     """Factory function to get the appropriate form class based on type"""
     if collectible_type == 'OtherItem':
         return OtherItemForm
+    if collectible_type == 'PlayerGearItem':
+        return PlayerGearItemForm
     return CollectibleForm
 
 
@@ -245,6 +294,16 @@ CollectibleImageFormSet = inlineformset_factory(
     # validate_min=True,
     # max_num=10,
     # validate_max=True
+)
+
+PlayerGearItemImageFormSet = inlineformset_factory(
+    PlayerGearItem,
+    PlayerGearItemImage,
+    form=PlayerGearItemImageForm,
+    formset=CustomCollectibleImageFormSet,
+    fk_name='collectible',
+    extra=0,
+    can_delete=True,
 )
 
 
@@ -337,48 +396,22 @@ class CollectibleSearchForm(forms.Form):
 
 
 class BulkCollectibleForm(ModelForm):
-    """Simplified form for bulk editing Collectibles in a formset.
-    Locks collection, excludes image management, and uses selects for enums.
-    """
-
-    game_type = ModelChoiceField(
-        queryset=GameType.objects.all(),
-        widget=flowbite_widgets.FlowbiteSelectInput,
-        required=True,
-    )
-    usage_type = ModelChoiceField(
-        queryset=UsageType.objects.all(),
-        widget=flowbite_widgets.FlowbiteSelectInput,
-        required=True,
-    )
+    """Simplified form for bulk editing PlayerItems in a formset."""
 
     class Meta:
         model = PlayerItem
-        fields = [
-            'title', 'league', 'brand', 'size', 'player', 'team', 'number',
-            'season', 'game_type', 'usage_type', 'description',
-        ]
+        fields = ['title', 'league', 'player', 'team', 'number', 'description']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
-            'brand': flowbite_widgets.FlowbiteTextInput(),
-            'size': flowbite_widgets.FlowbiteTextInput(),
             'player': flowbite_widgets.FlowbiteTextInput(),
             'team': flowbite_widgets.FlowbiteTextInput(),
-            'season': flowbite_widgets.FlowbiteTextInput(),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
             'number': flowbite_widgets.FlowbiteNumberInput(),
         }
 
-    def clean_game_type(self):
-        return self.cleaned_data['game_type'].pk
-
-    def clean_usage_type(self):
-        return self.cleaned_data['usage_type'].pk
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Placeholders; list attribute will be attached per-row in the template JS
         self.fields['league'].widget.attrs.update({
             'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
         })

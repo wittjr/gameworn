@@ -10,4 +10,4 @@ django-polls
 **/static/debug_toolbar
 **/static/django-browser-reload
 backend
-
+.vscode

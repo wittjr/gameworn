@@ -9,6 +9,9 @@
 
             {% url 'memorabilia:delete_collectible' object.collection.id object.collectible_type object.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Delete Collectible" %}
+
+            {% url 'memorabilia:create_photo_match' object.collection.id object.collectible_type object.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Add Photo Match" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}
@@ -29,7 +32,7 @@
             {% include "memorabilia/elements/modal.html" with image_url=object.primary_image %}
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {% for image in object.images.all %}
+            {% for image in object.gear_images.all %}
                 {% if image.primary == False %}
                     {% getmediaurl image as image_url %}
                     {% include "memorabilia/elements/modal.html" with image_url=image_url %}
@@ -41,23 +44,34 @@
         <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <tbody>
                 {% include 'memorabilia/tablerow.html' with label='League' value=object.league %}
+                {% include 'memorabilia/tablerow.html' with label='Brand' value=object.brand %}
+                {% include 'memorabilia/tablerow.html' with label='Size' value=object.size %}
                 {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
                 {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
                 {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
+                {% include 'memorabilia/tablerow.html' with label='Season' value=object.season %}
                 {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
-                <!-- {% include 'memorabilia/tablerow.html' with label='Collection' value=collectible.collection %} -->
-                <!-- {% include 'memorabilia/tablerow.html' with label='For Sale' value=collectible.for_sale %} -->
-                <!-- {% include 'memorabilia/tablerow.html' with label='For Trade' value=collectible.for_trade %} -->
+                {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
+                {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
                 {% endif %}
                 {% if object.for_trade %}
                     {% include 'memorabilia/tablerow.html' with label='Looking for' value=object.looking_for %}
-                {% endif %}    
+                {% endif %}
             </tbody>
         </table>
-        
     </div>
 </div>
+{% if object.photomatches.all.count > 0 %}
+<h2 class="mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
+<div class="container flex flex-row gap-4 w-full justify-start">
+    {% for image in object.photomatches.all %}
+        {% getmediaurl image as image_url %}
+        {% include 'memorabilia/photomatch_card.html' with image_url=image_url %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 {% endblock content %}

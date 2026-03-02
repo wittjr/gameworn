@@ -7,7 +7,7 @@ test:
 	$(VENV) && $(TEST_SETTINGS) python manage.py test memorabilia
 
 migrations:
-	$(VENV) && python manage.py makemigrations
+	$(VENV) && $(TEST_SETTINGS) python manage.py makemigrations
 
 migrate:
 	$(VENV) && python manage.py migrate

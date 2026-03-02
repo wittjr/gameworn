@@ -53,11 +53,20 @@
         <div class="flex items-center space-x-6">
             <div class="flex items-center">
                 <input
+                    id="type-playergearitem"
+                    type="radio"
+                    name="collectible_type"
+                    value="PlayerGearItem"
+                    checked
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
+                <label for="type-playergearitem" class="ml-2 text-sm font-medium text-gray-900">Player Gear Item</label>
+            </div>
+            <div class="flex items-center">
+                <input
                     id="type-playeritem"
                     type="radio"
                     name="collectible_type"
                     value="PlayerItem"
-                    checked
                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
                 <label for="type-playeritem" class="ml-2 text-sm font-medium text-gray-900">Player Item</label>
             </div>
@@ -73,7 +82,7 @@
         </div>
     </div>
     {% else %}
-    <input type="radio" name="collectible_type" value="{% if collectible.collectible_type == 'otheritem' %}OtherItem{% else %}PlayerItem{% endif %}" checked hidden>
+    <input type="radio" name="collectible_type" value="{% if collectible.collectible_type == 'otheritem' %}OtherItem{% elif collectible.collectible_type == 'playergearitem' %}PlayerGearItem{% else %}PlayerItem{% endif %}" checked hidden>
     {% endif %}
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
@@ -209,26 +218,32 @@
 <script>
     // Handle toggling form fields based on collectible type
     (function() {
-        // PlayerItem-specific fields that should be hidden for OtherItem
-        const playerItemFields = ['league', 'brand', 'size', 'player', 'team', 'number', 'season', 'game_type', 'usage_type'];
-        
-        function toggleFields() {
-            const selectedType = document.querySelector('input[name="collectible_type"]:checked').value;
-            const isPlayerItem = selectedType === 'PlayerItem';
-            
-            // Show/hide PlayerItem-specific fields
-            playerItemFields.forEach(fieldName => {
-                const fieldRow = document.querySelector(`tr.field-row[data-field="${fieldName}"]`);
-                if (fieldRow) {
-                    fieldRow.style.display = isPlayerItem ? '' : 'none';
-                }
+        const playerFields = ['league', 'player', 'team', 'number'];
+        const gearFields = ['brand', 'size', 'season', 'game_type', 'usage_type'];
+
+        function setVisible(fields, visible) {
+            fields.forEach(fieldName => {
+                const row = document.querySelector(`tr.field-row[data-field="${fieldName}"]`);
+                if (row) row.style.display = visible ? '' : 'none';
             });
         }
-        
-        // Initialize on page load
+
+        function toggleFields() {
+            const selectedType = document.querySelector('input[name="collectible_type"]:checked').value;
+            if (selectedType === 'PlayerGearItem') {
+                setVisible(playerFields, true);
+                setVisible(gearFields, true);
+            } else if (selectedType === 'PlayerItem') {
+                setVisible(playerFields, true);
+                setVisible(gearFields, false);
+            } else {
+                // OtherItem
+                setVisible(playerFields, false);
+                setVisible(gearFields, false);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', toggleFields);
-        
-        // Listen for radio button changes
         document.querySelectorAll('input[name="collectible_type"]').forEach(radio => {
             radio.addEventListener('change', toggleFields);
         });

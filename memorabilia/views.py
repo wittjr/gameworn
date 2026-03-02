@@ -1,8 +1,10 @@
+from itertools import chain
+
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, PlayerItem, UsageType, ExternalResource, Team, OtherItem, OtherItemImage
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm
+from .models import Collection, PhotoMatch, League, GameType, PlayerItem, UsageType, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -18,6 +20,8 @@ def _get_collectible(request, **view_kwargs):
     collectible_type = view_kwargs.get('collectible_type', 'playeritem')
     if collectible_type == 'otheritem':
         return get_object_or_404(OtherItem, pk=collectible_id)
+    elif collectible_type == 'playergearitem':
+        return get_object_or_404(PlayerGearItem, pk=collectible_id)
     return get_object_or_404(PlayerItem, pk=collectible_id)
 
 
@@ -25,7 +29,11 @@ def _get_collectible(request, **view_kwargs):
 
 def home(request):
     print(request)
-    data = PlayerItem.objects.order_by('-last_updated')[:6]
+    data = sorted(
+        chain(PlayerItem.objects.all(), PlayerGearItem.objects.all()),
+        key=lambda x: x.last_updated,
+        reverse=True,
+    )[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
 
 
@@ -39,16 +47,22 @@ class IndexView(generic.ListView):
         return context
 
 
+def _model_has_field(qs, field_name):
+    return any(f.name == field_name for f in qs.model._meta.get_fields())
+
+
 def _apply_collectible_filters(qs, data):
     query = data.get('query')
     if query:
-        qs = qs.filter(
+        q = (
             Q(title__icontains=query) |
             Q(player__icontains=query) |
             Q(team__icontains=query) |
-            Q(brand__icontains=query) |
             Q(description__icontains=query)
         )
+        if _model_has_field(qs, 'brand'):
+            q |= Q(brand__icontains=query)
+        qs = qs.filter(q)
     player = data.get('player')
     if player:
         qs = qs.filter(player__icontains=player)
@@ -91,9 +105,22 @@ def _apply_collectible_filters(qs, data):
 
 def search_collectibles(request):
     form = CollectibleSearchForm(request.GET or None)
-    results = PlayerItem.objects.all().order_by('-last_updated')
+    gear_qs = PlayerGearItem.objects.all()
+    player_qs = PlayerItem.objects.all()
     if form.is_valid():
-        results = _apply_collectible_filters(results, form.cleaned_data)
+        data = form.cleaned_data
+        gear_qs = _apply_collectible_filters(gear_qs, data)
+        # PlayerItem has no gear-specific fields; strip them before filtering
+        player_data = {
+            k: v for k, v in data.items()
+            if k not in ('brand', 'season', 'game_type', 'usage_type')
+        }
+        player_qs = _apply_collectible_filters(player_qs, player_data)
+    results = sorted(
+        list(gear_qs) + list(player_qs),
+        key=lambda x: x.last_updated,
+        reverse=True,
+    )
     # Build custom league options from existing collectibles (free-text values)
     league_keys = set(League.objects.values_list('key', flat=True))
     distinct_values = PlayerItem.objects.values_list('league', flat=True).distinct()
@@ -166,18 +193,12 @@ class CollectionView(generic.DetailView):
         context = super(CollectionView, self).get_context_data(**kwargs)
         collection = context['object']
         
-        # Combine PlayerItem and OtherItem objects
+        player_gear_items = list(collection.playergearitem_set.all())
         player_items = list(collection.playeritem_set.all())
         other_items = list(collection.otheritem_set.all())
-        
-        # Add collectible_type attribute to each object
-        for item in player_items:
-            item.collectible_type = 'playeritem'
-        for item in other_items:
-            item.collectible_type = 'otheritem'
-        
+
         # Merge and sort by title
-        collectibles = player_items + other_items
+        collectibles = player_items + player_gear_items + other_items
         collectibles.sort(key=lambda x: x.title, reverse=False)
         
         context['collectibles'] = collectibles
@@ -200,21 +221,23 @@ class CollectibleView(generic.DetailView):
         if collectible_type == 'playeritem':
             return PlayerItem.objects.get(pk=pk, collection_id=collection_id)
         elif collectible_type == 'otheritem':
-            return OtherItem.objects.get(pk=pk, collection_id=collection_id)        
-        
-        # If neither found, raise 404
+            return OtherItem.objects.get(pk=pk, collection_id=collection_id)
+        elif collectible_type == 'playergearitem':
+            return PlayerGearItem.objects.get(pk=pk, collection_id=collection_id)
+
         raise Http404("Collectible not found")
     
     def get_template_names(self):
         """Return appropriate template based on object type"""
         obj = self.get_object()
         
-        if isinstance(obj, PlayerItem):
+        if isinstance(obj, PlayerGearItem):
+            return ['memorabilia/playergearitem_detail.html']
+        elif isinstance(obj, PlayerItem):
             return ['memorabilia/playeritem_detail.html']
         elif isinstance(obj, OtherItem):
             return ['memorabilia/otheritem_detail.html']
-        
-        # Fallback to default
+
         return ['memorabilia/playeritem_detail.html']
     
     def get_context_data(self, **kwargs):
@@ -222,28 +245,31 @@ class CollectibleView(generic.DetailView):
         collectible = context['object']
         context['title'] = collectible.title
         
-        # Only process PlayerItem-specific fields if it's a PlayerItem
-        if isinstance(collectible, PlayerItem):
-            # league may be a custom string; resolve if possible, else leave as-is
+        if isinstance(collectible, PlayerGearItem):
             try:
                 collectible.league = League.objects.get(pk=collectible.league)
             except League.DoesNotExist:
                 pass
             collectible.game_type = GameType.objects.get(pk=collectible.game_type)
             collectible.usage_type = UsageType.objects.get(pk=collectible.usage_type)
+        elif isinstance(collectible, PlayerItem):
+            try:
+                collectible.league = League.objects.get(pk=collectible.league)
+            except League.DoesNotExist:
+                pass
         
-        # Handle primary image for both types
-        primary_image_filter = collectible.images.filter(primary=True)
+        # Handle primary image
+        image_qs = collectible.gear_images if isinstance(collectible, PlayerGearItem) else collectible.images
+        primary_image_filter = image_qs.filter(primary=True)
         if len(primary_image_filter) >= 1:
             if primary_image_filter[0].image:
                 collectible.primary_image = f'settings.MEDIA_URL{primary_image_filter[0].image}'
             elif primary_image_filter[0].link:
                 collectible.primary_image = primary_image_filter[0].link
         else:
-            images = collectible.images.all()
+            images = image_qs.all()
             if len(images) >= 1:
-                primary_image = images[0].image
-                collectible.primary_image = primary_image
+                collectible.primary_image = images[0].image
         
         print(context['object'].collectible_type)
         print(context['object'].id)
@@ -270,6 +296,8 @@ def create_collectible(request, collection_id):
                 extra=0,
                 can_delete=True,
             )
+        elif collectible_type == 'PlayerGearItem':
+            ImageFormSet = PlayerGearItemImageFormSet
         else:
             ImageFormSet = CollectibleImageFormSet
         
@@ -284,8 +312,8 @@ def create_collectible(request, collection_id):
             # return redirect('memorabilia:collection', pk=collection_id)
             return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible.collectible_type, pk=collectible.id)
     else:
-        form = CollectibleForm(initial={'collection':collection}, current_user=request.user)
-        image_formset = CollectibleImageFormSet(prefix='images')
+        form = PlayerGearItemForm(initial={'collection': collection}, current_user=request.user)
+        image_formset = PlayerGearItemImageFormSet(prefix='images')
 
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
@@ -300,24 +328,18 @@ def create_collectible(request, collection_id):
 def edit_collectible(request, collection_id, collectible_type, collectible_id):
     if collectible_type == 'otheritem':
         collectible = get_object_or_404(OtherItem, pk=collectible_id)
-        is_player_item = False
         FormClass = OtherItemForm
+        ImageFormSet = inlineformset_factory(
+            OtherItem, OtherItemImage, form=OtherItemImageForm, extra=0, can_delete=True,
+        )
+    elif collectible_type == 'playergearitem':
+        collectible = get_object_or_404(PlayerGearItem, pk=collectible_id)
+        FormClass = PlayerGearItemForm
+        ImageFormSet = PlayerGearItemImageFormSet
     else:
         collectible = get_object_or_404(PlayerItem, pk=collectible_id)
-        is_player_item = True
         FormClass = CollectibleForm
-    
-    # Select appropriate formset based on collectible type
-    if is_player_item:
         ImageFormSet = CollectibleImageFormSet
-    else:
-        ImageFormSet = inlineformset_factory(
-            OtherItem,
-            OtherItemImage,
-            form=OtherItemImageForm,
-            extra=0,
-            can_delete=True,
-        )
     
     if request.method == "POST":
         form = FormClass(request.POST, request.FILES, instance = collectible, current_user=request.user)
@@ -353,6 +375,8 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
 def delete_collectible(request, collection_id, collectible_type, collectible_id):
     if collectible_type == 'otheritem':
         get_object_or_404(OtherItem, pk=collectible_id).delete()
+    elif collectible_type == 'playergearitem':
+        get_object_or_404(PlayerGearItem, pk=collectible_id).delete()
     else:
         get_object_or_404(PlayerItem, pk=collectible_id).delete()
     
@@ -360,31 +384,31 @@ def delete_collectible(request, collection_id, collectible_type, collectible_id)
 
 
 @login_required
-@permission_required('memorabilia.create_photomatch', fn=objectgetter(PlayerItem, 'collectible_id'), raise_exception=True)
+@permission_required('memorabilia.create_photomatch', fn=objectgetter(PlayerGearItem, 'collectible_id'), raise_exception=True)
 def create_photo_match(request, collection_id, collectible_id):
     if request.method == "POST":
         form = PhotoMatchForm(request.POST, request.FILES, current_user=request.user)
         if form.is_valid():
             form.save()
-            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playeritem', pk=collectible_id)
+            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergearitem', pk=collectible_id)
         else:
-            collectible = get_object_or_404(PlayerItem, pk=collectible_id)
+            collectible = get_object_or_404(PlayerGearItem, pk=collectible_id)
     else:
-        collectible = get_object_or_404(PlayerItem, pk=collectible_id)
+        collectible = get_object_or_404(PlayerGearItem, pk=collectible_id)
         form = PhotoMatchForm(initial={'collectible':collectible}, current_user=request.user)
 
     return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'New Photo Match', 'collectible': collectible})
 
 
 @login_required
-@permission_required('memorabilia.update_photomatch', fn=objectgetter(PlayerItem, 'collectible_id'), raise_exception=True)
+@permission_required('memorabilia.update_photomatch', fn=objectgetter(PlayerGearItem, 'collectible_id'), raise_exception=True)
 def edit_photo_match(request, collection_id, collectible_id, photo_match_id):
     photomatch = get_object_or_404(PhotoMatch, pk=photo_match_id)
     if request.method == "POST":
         form = PhotoMatchForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playeritem', pk=collectible_id)
+            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergearitem', pk=collectible_id)
     else:
         form = PhotoMatchForm(instance = photomatch)
 
@@ -392,10 +416,10 @@ def edit_photo_match(request, collection_id, collectible_id, photo_match_id):
 
 
 @login_required
-@permission_required('memorabilia.delete_photomatch', fn=objectgetter(PlayerItem, 'collectible_id'), raise_exception=True)
+@permission_required('memorabilia.delete_photomatch', fn=objectgetter(PlayerGearItem, 'collectible_id'), raise_exception=True)
 def delete_photo_match(request, collection_id, collectible_id, photo_match_id):
     PhotoMatch.objects.filter(pk=photo_match_id).delete()
-    return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playeritem', pk=collectible_id)
+    return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergearitem', pk=collectible_id)
 
 @login_required
 def get_flickr_albums(request, username):
