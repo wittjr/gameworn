@@ -498,12 +498,17 @@ def get_teams(request):
 @login_required
 def get_flickr_album(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        val = {}
         username = request.GET['username']
         album = request.GET['album']
+        url = f'https://www.flickr.com/services/rest/?method=flickr.photosets.getInfo&api_key={settings.FLICKR_KEY}&photoset_id={album}&user_id={username}&format=json&nojsoncallback=1'
+        r = requests.get(url)
+        data = r.json()
+        val['title'] = data['photoset']['title']['_content']
+        val['description'] = data['photoset']['description']['_content']
         url = f'https://www.flickr.com/services/rest/?method=flickr.photosets.getPhotos&api_key={settings.FLICKR_KEY}&photoset_id={album}&user_id={username}&format=json&nojsoncallback=1'
         r = requests.get(url)
         data = r.json()
-        val = {}
         val['primary'] = data['photoset']['primary']
         val['photos'] = []
         for photo in data['photoset']['photo']:

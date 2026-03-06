@@ -121,14 +121,21 @@
             },
         })
         .then(response => response.json())
-        .then(data => {
-            // Process the response data
-            console.log(data);
-            
+        .then(data => {            
             // Re-enable button and restore original state
             button.disabled = false;
             buttonText.textContent = 'Query Flickr'
             spinner.classList.add('hidden')
+
+            // Populate title and description fields if they are empty
+            if (data.title) {
+                const titleInput = document.querySelector('[name="title"]');
+                if (titleInput && !titleInput.value) titleInput.value = data.title;
+            }
+            if (data.description) {
+                const descInput = document.querySelector('form textarea[name="description"], form input[name="description"]');
+                if (descInput && !descInput.value) descInput.value = data.description;
+            }
 
             // Get the current form count
             var formCount = parseInt('{{ formset.total_form_count }}');
