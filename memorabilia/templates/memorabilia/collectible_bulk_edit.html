@@ -7,50 +7,31 @@
 
   <form method="post">
     {% csrf_token %}
-    {{ formset.management_form }}
+    {{ gear_formset.management_form }}
+    {{ player_formset.management_form }}
+    {{ other_formset.management_form }}
 
-    {% if formset.total_form_count %}
-      {% with header_form=formset.forms.0 %}
-      <div class="mb-3 p-3 border rounded bg-gray-50">
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium">Visible columns</div>
-          <div class="flex items-center gap-2">
-            <button type="button" id="show-all-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Show all</button>
-            <button type="button" id="hide-all-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Hide all</button>
-            <button type="button" id="reset-cols" class="text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100">Reset defaults</button>
-          </div>
-        </div>
-        <div class="flex flex-wrap gap-x-4 gap-y-2">
-          {% for hf in header_form.visible_fields %}
-            <label class="inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" class="col-toggle" value="{{ hf.name }}" checked>
-              <span>{{ hf.label }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-      <div class="overflow-x-auto">
+      {% if gear_formset.total_form_count %}
+      <h2 class="text-lg font-semibold mt-6 mb-2">Player Gear Items</h2>
+      {% with header_form=gear_formset.forms.0 %}
+      <div class="overflow-x-auto mb-6">
         <table class="min-w-full border rounded-md text-sm">
           <thead class="bg-gray-50">
             <tr>
               {% for field in header_form.visible_fields %}
-                <th class="px-3 py-2 text-left {{ size }} font-medium text-gray-700 border-b" data-col="field-{{ field.name }}">{{ field.label }}</th>
+                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
               {% endfor %}
             </tr>
           </thead>
           <tbody>
-            {% for form in formset %}
+            {% for form in gear_formset %}
               <tr class="border-b" data-row-prefix="{{ form.prefix }}">
                 {{ form.id }}
                 {% for field in form.visible_fields %}
-                  <td class="py-1 align-top" data-col="field-{{ field.name }}">
+                  <td class="py-1 align-top">
                     {{ field }}
-                    {% if field.name == 'team' %}
-                      <datalist id="team-list-{{ form.prefix }}"></datalist>
-                    {% endif %}
-                    {% if field.errors %}
-                      <div class="text-xs text-red-500">{{ field.errors }}</div>
-                    {% endif %}
+                    {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
+                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
                   </td>
                 {% endfor %}
               </tr>
@@ -59,7 +40,70 @@
         </table>
       </div>
       {% endwith %}
-    {% else %}
+      {% endif %}
+
+      {% if player_formset.total_form_count %}
+      <h2 class="text-lg font-semibold mt-6 mb-2">Player Items</h2>
+      {% with header_form=player_formset.forms.0 %}
+      <div class="overflow-x-auto mb-6">
+        <table class="min-w-full border rounded-md text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              {% for field in header_form.visible_fields %}
+                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in player_formset %}
+              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                {{ form.id }}
+                {% for field in form.visible_fields %}
+                  <td class="py-1 align-top">
+                    {{ field }}
+                    {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
+                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endwith %}
+      {% endif %}
+
+      {% if other_formset.total_form_count %}
+      <h2 class="text-lg font-semibold mt-6 mb-2">Other Items</h2>
+      {% with header_form=other_formset.forms.0 %}
+      <div class="overflow-x-auto mb-6">
+        <table class="min-w-full border rounded-md text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              {% for field in header_form.visible_fields %}
+                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in other_formset %}
+              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                {{ form.id }}
+                {% for field in form.visible_fields %}
+                  <td class="py-1 align-top">
+                    {{ field }}
+                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+                  </td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endwith %}
+      {% endif %}
+
+    {% if not gear_formset.total_form_count and not player_formset.total_form_count and not other_formset.total_form_count %}
       <p>No collectibles in this collection yet.</p>
     {% endif %}
 
@@ -78,36 +122,6 @@
 
   <script>
     (function() {
-      function applyVisibility(state) {
-        // state: { fieldName: true|false }
-        const allCols = new Set();
-        document.querySelectorAll('thead [data-col], tbody [data-col]').forEach(el => {
-          const key = el.getAttribute('data-col');
-          allCols.add(key);
-        });
-        allCols.forEach(key => {
-          const visible = state[key?.replace('field-', '')] !== false; // default true
-          document.querySelectorAll(`[data-col="${key}"]`).forEach(el => {
-            el.style.display = visible ? '' : 'none';
-          });
-        });
-        // Sync checkboxes
-        document.querySelectorAll('.col-toggle').forEach(cb => {
-          const val = cb.value;
-          cb.checked = state[val] !== false;
-        });
-      }
-      function loadState() {
-        try {
-          const key = `bulkColumns:collection:{{ collection.id }}`;
-          const raw = localStorage.getItem(key);
-          return raw ? JSON.parse(raw) : {};
-        } catch(e) { return {}; }
-      }
-      function saveState(state) {
-        const key = `bulkColumns:collection:{{ collection.id }}`;
-        localStorage.setItem(key, JSON.stringify(state));
-      }
       function attachLists(row) {
         const leagueInput = row.querySelector('[name$="-league"]');
         const teamInput = row.querySelector('[name$="-team"]');
@@ -155,40 +169,6 @@
           .catch(() => {});
       }
       document.addEventListener('DOMContentLoaded', function() {
-        // Column visibility controls
-        const state = loadState();
-        applyVisibility(state);
-        document.querySelectorAll('.col-toggle').forEach(cb => {
-          cb.addEventListener('change', function(e) {
-            const s = loadState();
-            const fname = e.target.value;
-            s[fname] = e.target.checked ? true : false;
-            saveState(s);
-            applyVisibility(s);
-          });
-        });
-
-        function setAllColumns(checked) {
-          const s = loadState();
-          document.querySelectorAll('.col-toggle').forEach(cb => {
-            cb.checked = checked;
-            s[cb.value] = checked;
-          });
-          saveState(s);
-          applyVisibility(s);
-        }
-        const showBtn = document.getElementById('show-all-cols');
-        const hideBtn = document.getElementById('hide-all-cols');
-        const resetBtn = document.getElementById('reset-cols');
-        if (showBtn) showBtn.addEventListener('click', () => setAllColumns(true));
-        if (hideBtn) hideBtn.addEventListener('click', () => setAllColumns(false));
-        if (resetBtn) resetBtn.addEventListener('click', () => {
-          // Clear saved state and default to all visible
-          const key = `bulkColumns:collection:{{ collection.id }}`;
-          localStorage.removeItem(key);
-          setAllColumns(true);
-        });
-
         const rows = document.querySelectorAll('form table tbody tr');
         rows.forEach(row => {
           attachLists(row);

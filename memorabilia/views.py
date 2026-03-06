@@ -4,7 +4,7 @@ from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
 from .models import Collection, PhotoMatch, League, GameType, PlayerItem, UsageType, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
+from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkOtherItemForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -460,27 +460,36 @@ def get_flickr_albums(request, username):
 @permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def bulk_edit_collectibles(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
-    FormSet = modelformset_factory(PlayerItem, form=BulkCollectibleForm, extra=0, can_delete=False)
-    queryset = PlayerItem.objects.filter(collection=collection).order_by('id')
+    GearFormSet = modelformset_factory(PlayerGearItem, form=BulkPlayerGearItemForm, extra=0, can_delete=False)
+    PlayerFormSet = modelformset_factory(PlayerItem, form=BulkCollectibleForm, extra=0, can_delete=False)
+    OtherFormSet = modelformset_factory(OtherItem, form=BulkOtherItemForm, extra=0, can_delete=False)
+    gear_qs = PlayerGearItem.objects.filter(collection=collection).order_by('id')
+    player_qs = PlayerItem.objects.filter(collection=collection).order_by('id')
+    other_qs = OtherItem.objects.filter(collection=collection).order_by('id')
     if request.method == 'POST':
-        formset = FormSet(request.POST, queryset=queryset)
-        if formset.is_valid():
-            instances = formset.save(commit=False)
-            for obj in instances:
-                obj.collection = collection
-                obj.last_updated = datetime.datetime.now()
-                obj.save()
-            # Handle deleted objects if can_delete=True in the future
+        gear_formset = GearFormSet(request.POST, queryset=gear_qs, prefix='gear')
+        player_formset = PlayerFormSet(request.POST, queryset=player_qs, prefix='player')
+        other_formset = OtherFormSet(request.POST, queryset=other_qs, prefix='other')
+        if gear_formset.is_valid() and player_formset.is_valid() and other_formset.is_valid():
+            now = datetime.datetime.now()
+            for formset in [gear_formset, player_formset, other_formset]:
+                instances = formset.save(commit=False)
+                for obj in instances:
+                    obj.collection = collection
+                    obj.last_updated = now
+                    obj.save()
             return redirect('memorabilia:collection', pk=collection_id)
-        else:
-            print(formset.errors)
     else:
-        formset = FormSet(queryset=queryset)
+        gear_formset = GearFormSet(queryset=gear_qs, prefix='gear')
+        player_formset = PlayerFormSet(queryset=player_qs, prefix='player')
+        other_formset = OtherFormSet(queryset=other_qs, prefix='other')
 
     context = {
         'title': 'Bulk Edit Collectibles',
         'collection': collection,
-        'formset': formset,
+        'gear_formset': gear_formset,
+        'player_formset': player_formset,
+        'other_formset': other_formset,
         'leagues': League.objects.all(),
     }
     return render(request, 'memorabilia/collectible_bulk_edit.html', context)

@@ -418,3 +418,41 @@ class BulkCollectibleForm(ModelForm):
         self.fields['team'].widget.attrs.update({
             'placeholder': 'Start typing a team...'
         })
+
+
+class BulkPlayerGearItemForm(ModelForm):
+    """Simplified form for bulk editing PlayerGearItems in a formset."""
+
+    class Meta:
+        model = PlayerGearItem
+        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description']
+        widgets = {
+            'title': flowbite_widgets.FlowbiteTextInput(),
+            'league': flowbite_widgets.FlowbiteTextInput(),
+            'player': flowbite_widgets.FlowbiteTextInput(),
+            'team': flowbite_widgets.FlowbiteTextInput(),
+            'number': flowbite_widgets.FlowbiteNumberInput(),
+            'brand': flowbite_widgets.FlowbiteTextInput(),
+            'size': flowbite_widgets.FlowbiteTextInput(),
+            'season': flowbite_widgets.FlowbiteTextInput(),
+            'game_type': flowbite_widgets.FlowbiteTextInput(),
+            'usage_type': flowbite_widgets.FlowbiteTextInput(),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['league'].widget.attrs.update({'placeholder': 'e.g., NHL, AHL...'})
+        self.fields['team'].widget.attrs.update({'placeholder': 'Start typing a team...'})
+
+
+class BulkOtherItemForm(ModelForm):
+    """Simplified form for bulk editing OtherItems in a formset."""
+
+    class Meta:
+        model = OtherItem
+        fields = ['title', 'description']
+        widgets = {
+            'title': flowbite_widgets.FlowbiteTextInput(),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+        }
