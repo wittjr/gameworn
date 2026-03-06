@@ -352,16 +352,13 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
     
     if request.method == "POST":
         form = FormClass(request.POST, request.FILES, instance = collectible, current_user=request.user)
-        # Ensure collection is set even if not posted as a field
-        form.instance.collection = collectible.collection
         image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
         if form.is_valid() and image_formset.is_valid():
-            print('IS VALID')
             form.instance.last_updated = datetime.datetime.now()
             collectible = form.save()
             image_formset.instance = collectible
             image_formset.save()
-            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible_type, pk=collectible_id)
+            return redirect('memorabilia:collectible', collection_id=collectible.collection_id, collectible_type=collectible_type, pk=collectible.pk)
         else:
             print(form.errors)
     else:
