@@ -57,7 +57,7 @@
                     type="radio"
                     name="collectible_type"
                     value="PlayerGearItem"
-                    checked
+                    {% if selected_collectible_type == 'PlayerGearItem' %}checked{% endif %}
                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
                 <label for="type-playergearitem" class="ml-2 text-sm font-medium text-gray-900">Player Gear Item</label>
             </div>
@@ -67,6 +67,7 @@
                     type="radio"
                     name="collectible_type"
                     value="PlayerItem"
+                    {% if selected_collectible_type == 'PlayerItem' %}checked{% endif %}
                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
                 <label for="type-playeritem" class="ml-2 text-sm font-medium text-gray-900">Player Item</label>
             </div>
@@ -76,6 +77,7 @@
                     type="radio"
                     name="collectible_type"
                     value="OtherItem"
+                    {% if selected_collectible_type == 'OtherItem' %}checked{% endif %}
                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
                 <label for="type-otheritem" class="ml-2 text-sm font-medium text-gray-900">Other Item</label>
             </div>
@@ -107,8 +109,8 @@
             <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">            
                 {% for field in form.visible_fields %}
                     {% if field.name != 'primary_image' %}
-                        <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700 field-row" data-field="{{ field.name }}">
-                            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ field.label_tag }}</th>
+                        <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700 field-row{% if field.errors %} field-error{% endif %}" data-field="{{ field.name }}">
+                            <th scope="row" class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white">{{ field.label_tag }}</th>
                             <td class="px-6 py-2">
                                 {{ field }}
                                 {% if field.name == 'league' %}
@@ -186,7 +188,9 @@
                                     <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
                                 {% endif %}
                                 {% if field.errors %}
-                                    <div class="form-errors">{{ field.errors }}</div>
+                                    {% for error in field.errors %}
+                                        <p class="field-error-msg mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                                    {% endfor %}
                                 {% endif %}
                             </td>
                         </tr>
@@ -215,6 +219,35 @@
     </div>
 </form>
 
+<style>
+    tr.field-row.field-error {
+        background-color: rgb(254 242 242) !important;
+    }
+    tr.field-row.field-error th {
+        color: rgb(185 28 28) !important;
+    }
+    tr.field-row.field-error input,
+    tr.field-row.field-error select,
+    tr.field-row.field-error textarea {
+        border-color: #f87171 !important;
+    }
+</style>
+
+<script>
+    // Clear field error state on blur when field has a value
+    document.querySelectorAll('tr.field-error input, tr.field-error select, tr.field-error textarea').forEach(function(el) {
+        el.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                const row = this.closest('tr.field-row');
+                if (row) {
+                    row.classList.remove('field-error');
+                    row.querySelectorAll('.field-error-msg').forEach(function(msg) { msg.remove(); });
+                }
+            }
+        });
+    });
+</script>
+
 <script>
     // Handle toggling form fields based on collectible type
     (function() {
@@ -224,7 +257,7 @@
         function setVisible(fields, visible) {
             fields.forEach(fieldName => {
                 const row = document.querySelector(`tr.field-row[data-field="${fieldName}"]`);
-                if (row) row.style.display = visible ? '' : 'none';
+                if (row) row.style.display = visible ? 'table-row' : 'none';
             });
         }
 

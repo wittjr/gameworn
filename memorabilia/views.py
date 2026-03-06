@@ -311,7 +311,15 @@ def create_collectible(request, collection_id):
             image_formset.save()
             # return redirect('memorabilia:collection', pk=collection_id)
             return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible.collectible_type, pk=collectible.id)
+        # On failure, always render with PlayerGearItemForm so all field rows
+        # exist in the DOM and the type toggle JS works correctly.
+        if not isinstance(form, PlayerGearItemForm):
+            display_form = PlayerGearItemForm(request.POST, request.FILES, current_user=request.user)
+            # Copy validation errors from the actual form to the display form
+            display_form._errors = form.errors
+            form = display_form
     else:
+        collectible_type = 'PlayerGearItem'
         form = PlayerGearItemForm(initial={'collection': collection}, current_user=request.user)
         image_formset = PlayerGearItemImageFormSet(prefix='images')
 
@@ -321,6 +329,7 @@ def create_collectible(request, collection_id):
         'title': 'New Collectible',
         'collection': collection,
         'leagues': League.objects.all(),
+        'selected_collectible_type': collectible_type,
     })
 
 @login_required

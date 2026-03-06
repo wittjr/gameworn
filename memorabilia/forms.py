@@ -84,7 +84,7 @@ class CollectibleForm(ModelForm):
     class Meta:
         model = PlayerItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'collectible_type']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
