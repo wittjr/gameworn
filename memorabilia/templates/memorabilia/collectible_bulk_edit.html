@@ -5,8 +5,9 @@
 <div class="max-w-6xl mx-auto p-4">
   <h1 class="text-2xl font-semibold mb-4">{{ title }}</h1>
 
-  <form method="post">
+  <form method="post" id="bulkEditForm">
     {% csrf_token %}
+    <input type="hidden" name="action" id="formAction" value="save" />
     {{ gear_formset.management_form }}
     {{ player_formset.management_form }}
     {{ other_formset.management_form }}
@@ -18,6 +19,9 @@
         <table class="min-w-full border rounded-md text-sm">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-3 py-2 border-b">
+                <input type="checkbox" class="select-all-cb" data-group="gear" title="Select all" />
+              </th>
               {% for field in header_form.visible_fields %}
                 <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
               {% endfor %}
@@ -26,6 +30,10 @@
           <tbody>
             {% for form in gear_formset %}
               <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                <td class="px-3 py-1 align-middle">
+                  <input type="checkbox" class="delete-cb" data-group="gear"
+                    name="delete_ids" value="playergearitem:{{ form.instance.pk }}" />
+                </td>
                 {{ form.id }}
                 {% for field in form.visible_fields %}
                   <td class="py-1 align-top">
@@ -49,6 +57,9 @@
         <table class="min-w-full border rounded-md text-sm">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-3 py-2 border-b">
+                <input type="checkbox" class="select-all-cb" data-group="player" title="Select all" />
+              </th>
               {% for field in header_form.visible_fields %}
                 <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
               {% endfor %}
@@ -57,6 +68,10 @@
           <tbody>
             {% for form in player_formset %}
               <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                <td class="px-3 py-1 align-middle">
+                  <input type="checkbox" class="delete-cb" data-group="player"
+                    name="delete_ids" value="playeritem:{{ form.instance.pk }}" />
+                </td>
                 {{ form.id }}
                 {% for field in form.visible_fields %}
                   <td class="py-1 align-top">
@@ -80,6 +95,9 @@
         <table class="min-w-full border rounded-md text-sm">
           <thead class="bg-gray-50">
             <tr>
+              <th class="px-3 py-2 border-b">
+                <input type="checkbox" class="select-all-cb" data-group="other" title="Select all" />
+              </th>
               {% for field in header_form.visible_fields %}
                 <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
               {% endfor %}
@@ -88,6 +106,10 @@
           <tbody>
             {% for form in other_formset %}
               <tr class="border-b" data-row-prefix="{{ form.prefix }}">
+                <td class="px-3 py-1 align-middle">
+                  <input type="checkbox" class="delete-cb" data-group="other"
+                    name="delete_ids" value="otheritem:{{ form.instance.pk }}" />
+                </td>
                 {{ form.id }}
                 {% for field in form.visible_fields %}
                   <td class="py-1 align-top">
@@ -107,9 +129,12 @@
       <p>No collectibles in this collection yet.</p>
     {% endif %}
 
-    <div class="mt-6 flex gap-2">
+    <div class="mt-6 flex gap-2 items-center">
       <a href="{% url 'memorabilia:collection' pk=collection.id %}" class="px-4 py-2 bg-gray-100 rounded border">Cancel</a>
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Save Changes</button>
+      <button type="submit" class="btn-primary">Save Changes</button>
+      <button type="button" id="deleteSelectedBtn" onclick="deleteSelected()"
+        class="btn-primary-red ml-auto"
+        disabled>Delete Selected</button>
     </div>
   </form>
 
@@ -119,6 +144,35 @@
     {% endfor %}
   </datalist>
   <!-- Per-row team datalists are rendered next to each team input. -->
+
+  <script>
+    // Bulk delete logic
+    function updateDeleteBtn() {
+      const any = document.querySelector('.delete-cb:checked');
+      document.getElementById('deleteSelectedBtn').disabled = !any;
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.delete-cb').forEach(cb => cb.addEventListener('change', updateDeleteBtn));
+      document.querySelectorAll('.select-all-cb').forEach(selectAll => {
+        selectAll.addEventListener('change', function() {
+          const group = this.dataset.group;
+          document.querySelectorAll(`.delete-cb[data-group="${group}"]`).forEach(cb => {
+            cb.checked = this.checked;
+          });
+          updateDeleteBtn();
+        });
+      });
+    });
+    function deleteSelected() {
+      const checked = document.querySelectorAll('.delete-cb:checked');
+      if (!checked.length) return;
+      if (!confirm('Delete ' + checked.length + ' item' + (checked.length > 1 ? 's' : '') + '? This cannot be undone.')) return;
+      document.getElementById('formAction').value = 'delete_selected';
+      // Uncheck unchecked delete boxes so only selected ones are submitted
+      document.querySelectorAll('.delete-cb:not(:checked)').forEach(cb => cb.disabled = true);
+      document.getElementById('bulkEditForm').submit();
+    }
+  </script>
 
   <script>
     (function() {

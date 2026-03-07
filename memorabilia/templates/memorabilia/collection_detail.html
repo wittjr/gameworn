@@ -20,6 +20,9 @@
 
             {% url 'memorabilia:bulk_edit_collectibles' collection.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Edit All Collectibles" %}
+
+            {% url 'memorabilia:bulk_add_from_flickr' collection.id as the_url %}
+            {% include "memorabilia/navitem.html" with link=the_url label="Bulk Add from Flickr" %}
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}

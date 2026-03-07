@@ -13,6 +13,9 @@ from django.db.models import OuterRef, Subquery, Q
 from django.conf import settings
 import requests
 import datetime
+import threading
+import json as _json
+from django.db import connection as _db_connection
 
 
 def _get_collectible(request, **view_kwargs):
@@ -30,7 +33,7 @@ def _get_collectible(request, **view_kwargs):
 def home(request):
     print(request)
     data = sorted(
-        chain(PlayerItem.objects.all(), PlayerGearItem.objects.all()),
+        chain(PlayerItem.objects.all(), PlayerGearItem.objects.all(), OtherItem.objects.all()),
         key=lambda x: x.last_updated,
         reverse=True,
     )[:6]
@@ -464,6 +467,19 @@ def bulk_edit_collectibles(request, collection_id):
     player_qs = PlayerItem.objects.filter(collection=collection).order_by('id')
     other_qs = OtherItem.objects.filter(collection=collection).order_by('id')
     if request.method == 'POST':
+        if request.POST.get('action') == 'delete_selected':
+            for entry in request.POST.getlist('delete_ids'):
+                try:
+                    kind, pk = entry.split(':', 1)
+                    if kind == 'playergearitem':
+                        PlayerGearItem.objects.filter(pk=pk, collection=collection).delete()
+                    elif kind == 'playeritem':
+                        PlayerItem.objects.filter(pk=pk, collection=collection).delete()
+                    elif kind == 'otheritem':
+                        OtherItem.objects.filter(pk=pk, collection=collection).delete()
+                except (ValueError, Exception):
+                    pass
+            return redirect('memorabilia:bulk_edit_collectibles', collection_id=collection_id)
         gear_formset = GearFormSet(request.POST, queryset=gear_qs, prefix='gear')
         player_formset = PlayerFormSet(request.POST, queryset=player_qs, prefix='player')
         other_formset = OtherFormSet(request.POST, queryset=other_qs, prefix='other')
@@ -490,6 +506,156 @@ def bulk_edit_collectibles(request, collection_id):
         'leagues': League.objects.all(),
     }
     return render(request, 'memorabilia/collectible_bulk_edit.html', context)
+
+
+@login_required
+def get_flickr_user_albums(request):
+    if request.headers.get('x-requested-with') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Ajax required'}, status=400)
+    username = request.GET.get('username', '').strip()
+    if not username:
+        return JsonResponse({'error': 'username required'}, status=400)
+    url = f'https://www.flickr.com/services/rest/?method=flickr.photosets.getList&api_key={settings.FLICKR_KEY}&user_id={username}&format=json&nojsoncallback=1&per_page=500'
+    r = requests.get(url)
+    data = r.json()
+    if data.get('stat') != 'ok':
+        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=400)
+    albums = []
+    for ps in data['photosets']['photoset']:
+        server = ps.get('server', '')
+        primary = ps.get('primary', '')
+        secret = ps.get('secret', '')
+        thumbnail = f'https://live.staticflickr.com/{server}/{primary}_{secret}_q.jpg' if server and primary and secret else ''
+        albums.append({
+            'id': ps['id'],
+            'title': ps['title']['_content'],
+            'description': ps['description']['_content'],
+            'thumbnail': thumbnail,
+            'count': ps.get('photos', 0),
+        })
+    return JsonResponse({'albums': albums})
+
+
+@login_required
+@permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
+def bulk_add_from_flickr(request, collection_id):
+    collection = get_object_or_404(Collection, pk=collection_id)
+    return render(request, 'memorabilia/flickr_bulk_add.html', {
+        'title': 'Bulk Add from Flickr',
+        'collection': collection,
+    })
+
+
+@login_required
+@permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
+def bulk_add_flickr_album(request, collection_id):
+    """Create a single OtherItem from one Flickr album. Called via fetch for each selected album."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    collection = get_object_or_404(Collection, pk=collection_id)
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    title = body.get('title', '').strip()
+    description = body.get('description', '').strip()
+    username = body.get('username', '').strip()
+    album_id = body.get('album_id', '').strip()
+    if not title:
+        return JsonResponse({'error': 'title required'}, status=400)
+    item = OtherItem.objects.create(
+        title=title,
+        description=description,
+        collection=collection,
+    )
+    photo_count = 0
+    if username and album_id:
+        photo_count = _import_flickr_album_photos(item, username, album_id)
+    return JsonResponse({'id': item.pk, 'title': item.title, 'photo_count': photo_count})
+
+
+@login_required
+@permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
+def bulk_add_flickr_batch(request, collection_id):
+    """Accept all selected albums at once, process in a background thread, return immediately."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        body = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    username = body.get('username', '').strip()
+    albums = body.get('albums', [])
+    if not albums:
+        return JsonResponse({'error': 'No albums provided'}, status=400)
+    thread = threading.Thread(
+        target=_process_albums_background,
+        args=(collection_id, username, albums),
+        daemon=True,
+    )
+    thread.start()
+    return JsonResponse({'status': 'started', 'count': len(albums)})
+
+
+def _process_albums_background(collection_id, username, albums):
+    """Background thread: create OtherItems and import Flickr photos for each album."""
+    try:
+        collection = Collection.objects.get(pk=collection_id)
+        for album in albums:
+            title = album.get('title', '').strip()
+            description = album.get('description', '').strip()
+            album_id = album.get('album_id', '').strip()
+            if not title:
+                continue
+            item = OtherItem.objects.create(
+                title=title,
+                description=description,
+                collection=collection,
+            )
+            if username and album_id:
+                _import_flickr_album_photos(item, username, album_id)
+    except Exception:
+        pass
+    finally:
+        _db_connection.close()
+
+
+def _import_flickr_album_photos(item, username, album_id):
+    """Fetch all photos from a Flickr album and create OtherItemImage records. Returns photo count."""
+    url = (
+        f'https://www.flickr.com/services/rest/'
+        f'?method=flickr.photosets.getPhotos'
+        f'&api_key={settings.FLICKR_KEY}'
+        f'&photoset_id={album_id}'
+        f'&user_id={username}'
+        f'&extras=url_l,url_m,url_s,url_sq'
+        f'&format=json&nojsoncallback=1&per_page=500'
+    )
+    try:
+        data = requests.get(url, timeout=15).json()
+    except Exception:
+        return 0
+    if data.get('stat') != 'ok':
+        return 0
+    photos = data.get('photoset', {}).get('photo', [])
+    primary_id = data.get('photoset', {}).get('primary')
+    count = 0
+    first = True
+    for photo in photos:
+        link = photo.get('url_l') or photo.get('url_m') or photo.get('url_s') or ''
+        if not link:
+            continue
+        is_primary = first or photo.get('id') == primary_id
+        OtherItemImage.objects.create(
+            collectible=item,
+            link=link,
+            primary=is_primary,
+            flickrObject=str({'id': photo.get('id'), 'url_sq': photo.get('url_sq', '')}),
+        )
+        first = False
+        count += 1
+    return count
 
 
 def get_teams(request):

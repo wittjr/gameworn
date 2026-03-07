@@ -22,6 +22,10 @@ urlpatterns = [
     path("collection/<int:collection_id>/collectible/<int:collectible_id>/photoMatch/<int:photo_match_id>/delete", views.delete_photo_match, name="delete_photo_match"),
     path("external/flickr/album", views.get_flickr_album, name="get_flickr_album"),
     path("external/flickr/albums/<str:username>/<str:album>", views.get_flickr_albums, name="get_flickr_albums"),
+    path("external/flickr/user-albums", views.get_flickr_user_albums, name="get_flickr_user_albums"),
+    path("collection/<int:collection_id>/bulk-add-flickr", views.bulk_add_from_flickr, name="bulk_add_from_flickr"),
+    path("collection/<int:collection_id>/bulk-add-flickr/album", views.bulk_add_flickr_album, name="bulk_add_flickr_album"),
+    path("collection/<int:collection_id>/bulk-add-flickr/batch", views.bulk_add_flickr_batch, name="bulk_add_flickr_batch"),
     path("resources", views.ExternalResourceListView.as_view(), name="list_externalresources"),
     path("api/teams", views.get_teams, name="get_teams"),
 ]
