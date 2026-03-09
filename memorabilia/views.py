@@ -3,7 +3,7 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, PlayerItem, UsageType, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collection, PhotoMatch, League, GameType, PlayerItem, PlayerItemImage, UsageType, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkOtherItemForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -335,39 +335,121 @@ def create_collectible(request, collection_id):
         'selected_collectible_type': collectible_type,
     })
 
+def _get_image_formset_class(ctype):
+    if ctype == 'otheritem':
+        return inlineformset_factory(OtherItem, OtherItemImage, form=OtherItemImageForm, extra=0, can_delete=True)
+    elif ctype == 'playergearitem':
+        return PlayerGearItemImageFormSet
+    return CollectibleImageFormSet
+
+
+def _copy_images(old_collectible, new_collectible):
+    """Copy all images from old collectible to new collectible."""
+    if isinstance(old_collectible, PlayerGearItem):
+        old_images = list(old_collectible.gear_images.all())
+    else:
+        old_images = list(old_collectible.images.all())
+
+    if isinstance(new_collectible, PlayerGearItem):
+        NewImage = PlayerGearItemImage
+    elif isinstance(new_collectible, PlayerItem):
+        NewImage = PlayerItemImage
+    else:
+        NewImage = OtherItemImage
+
+    for img in old_images:
+        NewImage.objects.create(
+            collectible=new_collectible,
+            primary=img.primary,
+            image=img.image,
+            link=img.link,
+            flickrObject=img.flickrObject,
+        )
+
+
+_TYPE_NORMALIZE = {
+    'PlayerGearItem': 'playergearitem',
+    'PlayerItem': 'playeritem',
+    'OtherItem': 'otheritem',
+}
+_TYPE_DISPLAY = {v: k for k, v in _TYPE_NORMALIZE.items()}
+
+
 @login_required
 @permission_required('memorabilia.update_collectible', fn=_get_collectible, raise_exception=True)
 def edit_collectible(request, collection_id, collectible_type, collectible_id):
     if collectible_type == 'otheritem':
         collectible = get_object_or_404(OtherItem, pk=collectible_id)
-        FormClass = OtherItemForm
-        ImageFormSet = inlineformset_factory(
-            OtherItem, OtherItemImage, form=OtherItemImageForm, extra=0, can_delete=True,
-        )
     elif collectible_type == 'playergearitem':
         collectible = get_object_or_404(PlayerGearItem, pk=collectible_id)
-        FormClass = PlayerGearItemForm
-        ImageFormSet = PlayerGearItemImageFormSet
     else:
         collectible = get_object_or_404(PlayerItem, pk=collectible_id)
-        FormClass = CollectibleForm
-        ImageFormSet = CollectibleImageFormSet
-    
+
     if request.method == "POST":
-        form = FormClass(request.POST, request.FILES, instance = collectible, current_user=request.user)
-        image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
-        if form.is_valid() and image_formset.is_valid():
-            form.instance.last_updated = datetime.datetime.now()
-            collectible = form.save()
-            image_formset.instance = collectible
-            image_formset.save()
-            return redirect('memorabilia:collectible', collection_id=collectible.collection_id, collectible_type=collectible_type, pk=collectible.pk)
+        submitted_type_raw = request.POST.get('collectible_type', '')
+        new_type = _TYPE_NORMALIZE.get(submitted_type_raw, submitted_type_raw.lower())
+
+        if new_type == collectible_type:
+            # Same type — standard edit
+            FormClass = get_collectible_form_class(submitted_type_raw)
+            ImageFormSet = _get_image_formset_class(collectible_type)
+            form = FormClass(request.POST, request.FILES, instance=collectible, current_user=request.user)
+            image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
+            if form.is_valid() and image_formset.is_valid():
+                form.instance.last_updated = datetime.datetime.now()
+                collectible = form.save()
+                image_formset.instance = collectible
+                image_formset.save()
+                return redirect('memorabilia:collectible', collection_id=collectible.collection_id, collectible_type=collectible_type, pk=collectible.pk)
+            else:
+                print(form.errors)
+                if not isinstance(form, PlayerGearItemForm):
+                    display_form = PlayerGearItemForm(request.POST, request.FILES, current_user=request.user)
+                    display_form._errors = form.errors
+                    form = display_form
         else:
-            print(form.errors)
+            # Type changed — convert collectible
+            NewFormClass = get_collectible_form_class(submitted_type_raw)
+            form = NewFormClass(request.POST, request.FILES, current_user=request.user)
+            if form.is_valid():
+                new_instance = form.save(commit=False)
+                new_instance.last_updated = datetime.datetime.now()
+                new_instance.save()
+                _copy_images(collectible, new_instance)
+                collectible.delete()
+                return redirect('memorabilia:collectible',
+                                collection_id=new_instance.collection_id,
+                                collectible_type=new_instance.collectible_type,
+                                pk=new_instance.pk)
+            else:
+                print(form.errors)
+                if not isinstance(form, PlayerGearItemForm):
+                    display_form = PlayerGearItemForm(request.POST, request.FILES, current_user=request.user)
+                    display_form._errors = form.errors
+                    form = display_form
+            # Show existing images on type-change failure
+            ImageFormSet = _get_image_formset_class(collectible_type)
+            image_formset = ImageFormSet(instance=collectible, prefix='images')
+
+        selected_collectible_type = submitted_type_raw
     else:
-        form = FormClass(instance = collectible, current_user=request.user)
-        print(collectible.collection.id)
+        # GET — pre-populate PlayerGearItemForm with existing instance data so all
+        # field rows exist in the DOM and the type-toggle JS works correctly.
+        initial = {
+            'title': collectible.title,
+            'description': collectible.description,
+            'collection': collectible.collection_id,
+            'for_sale': collectible.for_sale,
+            'for_trade': collectible.for_trade,
+            'asking_price': collectible.asking_price,
+        }
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type']:
+            if hasattr(collectible, field):
+                initial[field] = getattr(collectible, field)
+        form = PlayerGearItemForm(initial=initial, current_user=request.user)
+        ImageFormSet = _get_image_formset_class(collectible_type)
         image_formset = ImageFormSet(instance=collectible, prefix='images')
+        selected_collectible_type = _TYPE_DISPLAY.get(collectible_type, 'PlayerGearItem')
 
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
@@ -375,6 +457,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'title': 'Edit Collectible',
         'collectible': collectible,
         'leagues': League.objects.all(),
+        'selected_collectible_type': selected_collectible_type,
     })
 
 
