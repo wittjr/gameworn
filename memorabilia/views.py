@@ -431,16 +431,16 @@ def delete_photo_match(request, collection_id, collectible_id, photo_match_id):
     return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergearitem', pk=collectible_id)
 
 @login_required
-def get_flickr_albums(request, username):
+def get_flickr_albums(request, username, album):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        r = requests.get(f'https://www.flickr.com/services/rest/?method=flickr.photosets.getPhotos&api_key=36f362344a45751e7c36d3de65ab9e4e&photoset_id=72177720322281002&user_id=201912407%40N04&format=json&nojsoncallback=1', params=request.GET)
+        r = requests.get(f'https://www.flickr.com/services/rest/?method=flickr.photosets.getPhotos&api_key={settings.FLICKR_KEY}&photoset_id={album}&user_id={username}&format=json&nojsoncallback=1')
         data = r.json()
         val = {}
         val['primary'] = data['photoset']['primary']
         val['photos'] = []
         for photo in data['photoset']['photo']:
             id = photo['id']
-            p = requests.get(f'https://www.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=36f362344a45751e7c36d3de65ab9e4e&photo_id={id}&format=json&nojsoncallback=1', params=request.GET)
+            p = requests.get(f'https://www.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key={settings.FLICKR_KEY}&photo_id={id}&format=json&nojsoncallback=1', params=request.GET)
             sizes = p.json()['sizes']['size']
             image_sizes = {}
             for size in sizes:
