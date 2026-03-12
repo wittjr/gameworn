@@ -3,7 +3,7 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, PlayerItem, PlayerItemImage, UsageType, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collection, PhotoMatch, League, GameType, UsageType, PlayerItem, PlayerItemImage, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkOtherItemForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -12,7 +12,6 @@ from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery, Q
 from django.conf import settings
 import requests
-import datetime
 import threading
 import json as _json
 from django.db import connection as _db_connection
@@ -32,11 +31,10 @@ def _get_collectible(request, **view_kwargs):
 
 def home(request):
     print(request)
-    data = sorted(
-        chain(PlayerItem.objects.all(), PlayerGearItem.objects.all(), OtherItem.objects.all()),
-        key=lambda x: x.last_updated,
-        reverse=True,
-    )[:6]
+    recent = PlayerItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
+    recent_gear = PlayerGearItem.objects.prefetch_related('gear_images').order_by('-last_updated')[:6]
+    recent_other = OtherItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
+    data = sorted(chain(recent, recent_gear, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
 
 
@@ -196,9 +194,9 @@ class CollectionView(generic.DetailView):
         context = super(CollectionView, self).get_context_data(**kwargs)
         collection = context['object']
         
-        player_gear_items = list(collection.playergearitem_set.all())
-        player_items = list(collection.playeritem_set.all())
-        other_items = list(collection.otheritem_set.all())
+        player_gear_items = list(collection.playergearitem_set.prefetch_related('gear_images').all())
+        player_items = list(collection.playeritem_set.prefetch_related('images').all())
+        other_items = list(collection.otheritem_set.prefetch_related('images').all())
 
         # Merge and sort by title
         collectibles = player_items + player_gear_items + other_items
@@ -222,60 +220,43 @@ class CollectibleView(generic.DetailView):
         collectible_type = self.kwargs.get('collectible_type')
 
         if collectible_type == 'playeritem':
-            return PlayerItem.objects.get(pk=pk, collection_id=collection_id)
+            return get_object_or_404(PlayerItem, pk=pk, collection_id=collection_id)
         elif collectible_type == 'otheritem':
-            return OtherItem.objects.get(pk=pk, collection_id=collection_id)
+            return get_object_or_404(OtherItem, pk=pk, collection_id=collection_id)
         elif collectible_type == 'playergearitem':
-            return PlayerGearItem.objects.get(pk=pk, collection_id=collection_id)
+            return get_object_or_404(PlayerGearItem, pk=pk, collection_id=collection_id)
 
         raise Http404("Collectible not found")
     
-    def get_template_names(self):
-        """Return appropriate template based on object type"""
-        obj = self.get_object()
-        
-        if isinstance(obj, PlayerGearItem):
-            return ['memorabilia/playergearitem_detail.html']
-        elif isinstance(obj, PlayerItem):
-            return ['memorabilia/playeritem_detail.html']
-        elif isinstance(obj, OtherItem):
-            return ['memorabilia/otheritem_detail.html']
+    _COLLECTIBLE_TEMPLATES = {
+        'playergearitem': 'memorabilia/playergearitem_detail.html',
+        'playeritem': 'memorabilia/playeritem_detail.html',
+        'otheritem': 'memorabilia/otheritem_detail.html',
+    }
 
-        return ['memorabilia/playeritem_detail.html']
-    
+    def get_template_names(self):
+        collectible_type = self.kwargs.get('collectible_type')
+        return [self._COLLECTIBLE_TEMPLATES.get(collectible_type, 'memorabilia/playeritem_detail.html')]
+
     def get_context_data(self, **kwargs):
-        context = super(CollectibleView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         collectible = context['object']
         context['title'] = collectible.title
-        
-        if isinstance(collectible, PlayerGearItem):
+
+        if isinstance(collectible, (PlayerGearItem, PlayerItem)):
             try:
-                collectible.league = League.objects.get(pk=collectible.league)
+                context['league'] = League.objects.get(pk=collectible.league)
             except League.DoesNotExist:
-                pass
-            collectible.game_type = GameType.objects.get(pk=collectible.game_type)
-            collectible.usage_type = UsageType.objects.get(pk=collectible.usage_type)
-        elif isinstance(collectible, PlayerItem):
-            try:
-                collectible.league = League.objects.get(pk=collectible.league)
-            except League.DoesNotExist:
-                pass
-        
-        # Handle primary image
+                context['league'] = None
+
         image_qs = collectible.gear_images if isinstance(collectible, PlayerGearItem) else collectible.images
-        primary_image_filter = image_qs.filter(primary=True)
-        if len(primary_image_filter) >= 1:
-            if primary_image_filter[0].image:
-                collectible.primary_image = f'settings.MEDIA_URL{primary_image_filter[0].image}'
-            elif primary_image_filter[0].link:
-                collectible.primary_image = primary_image_filter[0].link
+        primary = image_qs.filter(primary=True).first()
+        if primary:
+            context['primary_image'] = primary.image if primary.image else primary.link
         else:
-            images = image_qs.all()
-            if len(images) >= 1:
-                collectible.primary_image = images[0].image
-        
-        print(context['object'].collectible_type)
-        print(context['object'].id)
+            first = image_qs.first()
+            context['primary_image'] = first.image if first else None
+
         return context
 
 
@@ -343,6 +324,52 @@ def _get_image_formset_class(ctype):
     return CollectibleImageFormSet
 
 
+def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None):
+    """Convert a bulk-edit collectible to a new type, copying shared fields from form data."""
+    data = form.cleaned_data
+    prefix = form.prefix
+    post_data = post_data or {}
+
+    def get_field(name):
+        """Read from cleaned_data first, then extra POST inputs, then old instance."""
+        if name in data:
+            return data[name]
+        key = f'{prefix}-{name}'
+        if key in post_data:
+            return post_data[key]
+        return getattr(old_instance, name, None)
+
+    base = {
+        'title': get_field('title') or old_instance.title,
+        'description': get_field('description') or '',
+        'collection': collection,
+    }
+    player_base = dict(base)
+    for field in ['league', 'player', 'team', 'number']:
+        player_base[field] = get_field(field)
+
+    def get_fk_id(name):
+        """Return the raw PK string for a FK field (works with instances or raw POST strings)."""
+        val = get_field(name)
+        if hasattr(val, 'pk'):
+            return val.pk
+        return val or getattr(old_instance, f'{name}_id', None)
+
+    if new_type == 'playeritem':
+        new_instance = PlayerItem(**player_base)
+    elif new_type == 'playergearitem':
+        gear_extra = {field: get_field(field) for field in ['brand', 'size', 'season']}
+        gear_extra['game_type_id'] = get_fk_id('game_type')
+        gear_extra['usage_type_id'] = get_fk_id('usage_type')
+        new_instance = PlayerGearItem(**player_base, **gear_extra)
+    else:  # otheritem
+        new_instance = OtherItem(**base)
+
+    new_instance.save()
+    _copy_images(old_instance, new_instance)
+    old_instance.delete()
+
+
 def _copy_images(old_collectible, new_collectible):
     """Copy all images from old collectible to new collectible."""
     if isinstance(old_collectible, PlayerGearItem):
@@ -396,7 +423,6 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             form = FormClass(request.POST, request.FILES, instance=collectible, current_user=request.user)
             image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
             if form.is_valid() and image_formset.is_valid():
-                form.instance.last_updated = datetime.datetime.now()
                 collectible = form.save()
                 image_formset.instance = collectible
                 image_formset.save()
@@ -413,7 +439,6 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             form = NewFormClass(request.POST, request.FILES, current_user=request.user)
             if form.is_valid():
                 new_instance = form.save(commit=False)
-                new_instance.last_updated = datetime.datetime.now()
                 new_instance.save()
                 _copy_images(collectible, new_instance)
                 collectible.delete()
@@ -567,13 +592,51 @@ def bulk_edit_collectibles(request, collection_id):
         player_formset = PlayerFormSet(request.POST, queryset=player_qs, prefix='player')
         other_formset = OtherFormSet(request.POST, queryset=other_qs, prefix='other')
         if gear_formset.is_valid() and player_formset.is_valid() and other_formset.is_valid():
-            now = datetime.datetime.now()
-            for formset in [gear_formset, player_formset, other_formset]:
-                instances = formset.save(commit=False)
-                for obj in instances:
+            # Process type conversions first
+            gear_converted = set()
+            player_converted = set()
+            other_converted = set()
+
+            for form in gear_formset.initial_forms:
+                new_type = request.POST.get(f'item_type_{form.prefix}', 'playergearitem')
+                if new_type != 'playergearitem':
+                    pk = form.instance.pk
+                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                    gear_converted.add(pk)
+
+            for form in player_formset.initial_forms:
+                new_type = request.POST.get(f'item_type_{form.prefix}', 'playeritem')
+                if new_type != 'playeritem':
+                    pk = form.instance.pk
+                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                    player_converted.add(pk)
+
+            for form in other_formset.initial_forms:
+                new_type = request.POST.get(f'item_type_{form.prefix}', 'otheritem')
+                if new_type != 'otheritem':
+                    pk = form.instance.pk
+                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                    other_converted.add(pk)
+
+            # Save non-converted items
+            for form in gear_formset.initial_forms:
+                if form.instance.pk not in gear_converted and form.has_changed():
+                    obj = form.save(commit=False)
                     obj.collection = collection
-                    obj.last_updated = now
                     obj.save()
+
+            for form in player_formset.initial_forms:
+                if form.instance.pk not in player_converted and form.has_changed():
+                    obj = form.save(commit=False)
+                    obj.collection = collection
+                    obj.save()
+
+            for form in other_formset.initial_forms:
+                if form.instance.pk not in other_converted and form.has_changed():
+                    obj = form.save(commit=False)
+                    obj.collection = collection
+                    obj.save()
+
             return redirect('memorabilia:collection', pk=collection_id)
     else:
         gear_formset = GearFormSet(queryset=gear_qs, prefix='gear')
@@ -587,6 +650,8 @@ def bulk_edit_collectibles(request, collection_id):
         'player_formset': player_formset,
         'other_formset': other_formset,
         'leagues': League.objects.all(),
+        'game_types': GameType.objects.all(),
+        'usage_types': UsageType.objects.all(),
     }
     return render(request, 'memorabilia/collectible_bulk_edit.html', context)
 
@@ -734,7 +799,7 @@ def _import_flickr_album_photos(item, username, album_id):
             collectible=item,
             link=link,
             primary=is_primary,
-            flickrObject=str({'id': photo.get('id'), 'url_sq': photo.get('url_sq', '')}),
+            flickrObject={'id': photo.get('id'), 'url_sq': photo.get('url_sq', '')},
         )
         first = False
         count += 1

@@ -230,12 +230,6 @@ class PlayerGearItemForm(ModelForm):
     def clean_league(self):
         return self.cleaned_data.get("league", "").strip()
 
-    def clean_game_type(self):
-        return self.cleaned_data["game_type"].pk
-
-    def clean_usage_type(self):
-        return self.cleaned_data["usage_type"].pk
-
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
     """Factory function to get the appropriate form class based on type"""
@@ -423,6 +417,9 @@ class BulkCollectibleForm(ModelForm):
 class BulkPlayerGearItemForm(ModelForm):
     """Simplified form for bulk editing PlayerGearItems in a formset."""
 
+    game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+    usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+
     class Meta:
         model = PlayerGearItem
         fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description']
@@ -435,8 +432,6 @@ class BulkPlayerGearItemForm(ModelForm):
             'brand': flowbite_widgets.FlowbiteTextInput(),
             'size': flowbite_widgets.FlowbiteTextInput(),
             'season': flowbite_widgets.FlowbiteTextInput(),
-            'game_type': flowbite_widgets.FlowbiteTextInput(),
-            'usage_type': flowbite_widgets.FlowbiteTextInput(),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
         }
 

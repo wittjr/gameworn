@@ -11,3 +11,4 @@ django-polls
 **/static/django-browser-reload
 backend
 .vscode
+.claude

@@ -1,4 +1,3 @@
-from django.utils.timezone import now
 from django.db import models
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
@@ -28,7 +27,7 @@ class Collection(RulesModel):
     title = models.CharField(max_length=100)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     image_link = models.CharField(max_length=255, blank=True, null=True)
-    last_updated = models.DateTimeField(default=now, editable=False)
+    last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
         rules_permissions = {
@@ -76,9 +75,8 @@ class Collectible(RulesModel):
     for_trade = models.BooleanField(blank=True, null=True)
     asking_price = models.FloatField(blank=True, null=True)
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
-    last_updated = models.DateTimeField(default=now, editable=False)
-    collectible_type = models.CharField(max_length=25)
-    
+    last_updated = models.DateTimeField(auto_now=True)
+
     class Meta:
         abstract = True
         rules_permissions = {
@@ -88,20 +86,22 @@ class Collectible(RulesModel):
         }
 
     def get_primary_image(self):
-        primary_image_filter = self.images.filter(primary=True)
-        # print(primary_image_filter)
-        if len(primary_image_filter) >= 1:
-            # print(primary_image_filter[0])
-            if primary_image_filter[0].image:
-                return primary_image_filter[0].image
-            elif primary_image_filter[0].link:
-                return primary_image_filter[0].link
-        else:
-            images = self.images.all()
-            if len(images) >= 1:
-                primary_image = images[0].image
-                return primary_image
-        return None
+        images = list(self.images.all())
+        primary = next((img for img in images if img.primary), None)
+        if primary:
+            return primary.image if primary.image else primary.link
+        return images[0].image if images else None
+
+    def get_primary_image_url(self):
+        img = self.get_primary_image()
+        if img is None:
+            return None
+        if hasattr(img, 'url'):
+            try:
+                return img.url
+            except ValueError:
+                return None
+        return str(img)
 
 class BasePlayerItem(Collectible):
     league = models.CharField(max_length=5, blank=True, null=True)
@@ -123,25 +123,19 @@ class PlayerGearItem(BasePlayerItem):
     brand = models.CharField(max_length=25)
     size = models.CharField(max_length=5)
     season = models.CharField(max_length=10)
-    game_type = models.CharField(max_length=5)
-    usage_type = models.CharField(max_length=5)
+    game_type = models.ForeignKey('GameType', to_field='key', on_delete=models.PROTECT, db_column='game_type')
+    usage_type = models.ForeignKey('UsageType', to_field='key', on_delete=models.PROTECT, db_column='usage_type')
     collectible_type = 'playergearitem'
 
     def __str__(self):
         return self.title
 
     def get_primary_image(self):
-        primary_image_filter = self.gear_images.filter(primary=True)
-        if len(primary_image_filter) >= 1:
-            if primary_image_filter[0].image:
-                return primary_image_filter[0].image
-            elif primary_image_filter[0].link:
-                return primary_image_filter[0].link
-        else:
-            images = self.gear_images.all()
-            if len(images) >= 1:
-                return images[0].image
-        return None
+        images = list(self.gear_images.all())
+        primary = next((img for img in images if img.primary), None)
+        if primary:
+            return primary.image if primary.image else primary.link
+        return images[0].image if images else None
 
 class OtherItem(Collectible):
     collectible_type = 'otheritem'
@@ -155,7 +149,7 @@ class CollectibleImage(RulesModel):
     primary = models.BooleanField(blank=True, null=True)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     link = models.CharField(max_length=255, blank=True, null=True)
-    flickrObject = models.TextField(blank=True, null=True)
+    flickrObject = models.JSONField(blank=True, null=True)
 
     class Meta:
         abstract = True

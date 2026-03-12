@@ -12,6 +12,9 @@ migrations:
 migrate:
 	$(VENV) && python manage.py migrate
 
+collectstatic:
+	$(VENV) && $(TEST_SETTINGS) python manage.py collectstatic --noinput
+
 run:
 	$(VENV) && python manage.py runserver
 

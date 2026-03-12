@@ -12,118 +12,190 @@
     {{ player_formset.management_form }}
     {{ other_formset.management_form }}
 
-      {% if gear_formset.total_form_count %}
-      <h2 class="text-lg font-semibold mt-6 mb-2">Player Gear Items</h2>
-      {% with header_form=gear_formset.forms.0 %}
-      <div class="overflow-x-auto mb-6">
-        <table class="min-w-full border rounded-md text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 border-b">
-                <input type="checkbox" class="select-all-cb" data-group="gear" title="Select all" />
-              </th>
-              {% for field in header_form.visible_fields %}
-                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for form in gear_formset %}
-              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
-                <td class="px-3 py-1 align-middle">
-                  <input type="checkbox" class="delete-cb" data-group="gear"
-                    name="delete_ids" value="playergearitem:{{ form.instance.pk }}" />
-                </td>
-                {{ form.id }}
-                {% for field in form.visible_fields %}
-                  <td class="py-1 align-top">
-                    {{ field }}
-                    {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
-                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
-                  </td>
-                {% endfor %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% if gear_formset.total_form_count %}
+    <h2 class="text-lg font-semibold mt-6 mb-1">Player Gear Items</h2>
+    <div class="flex items-center gap-2 py-1 mb-1 text-sm text-gray-500">
+      <input type="checkbox" class="select-all-cb" data-group="gear" title="Select all" />
+      <span>Select all</span>
+    </div>
+    {% for form in gear_formset %}
+    <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
+      <div class="flex items-center pt-5 w-4 shrink-0">
+        <input type="checkbox" class="delete-cb" data-group="gear"
+          name="delete_ids" value="playergearitem:{{ form.instance.pk }}" />
+      </div>
+      {% with thumb=form.instance.get_primary_image_url %}
+      <div class="shrink-0 w-14 h-14 rounded overflow-hidden bg-gray-100 flex items-center justify-center mt-1">
+        {% if thumb %}<img src="{{ thumb }}" class="w-full h-full object-cover" alt="" />
+        {% else %}<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 4-6 4 6M4 20h16M4 4h16v12H4z"/></svg>{% endif %}
       </div>
       {% endwith %}
-      {% endif %}
+      <div class="shrink-0 w-28">
+        <div class="text-xs text-gray-500 mb-1">Type</div>
+        <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
+          <option value="playergearitem" selected>Player Gear</option>
+          <option value="playeritem">Player Item</option>
+          <option value="otheritem">Other</option>
+        </select>
+      </div>
+      {{ form.id }}
+      {% for field in form.visible_fields %}
+      <div class="flex-1 min-w-[8rem]" data-field="{{ field.name }}">
+        <div class="text-xs text-gray-500 mb-1">{{ field.label }}</div>
+        {{ field }}
+        {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
+        {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
 
-      {% if player_formset.total_form_count %}
-      <h2 class="text-lg font-semibold mt-6 mb-2">Player Items</h2>
-      {% with header_form=player_formset.forms.0 %}
-      <div class="overflow-x-auto mb-6">
-        <table class="min-w-full border rounded-md text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 border-b">
-                <input type="checkbox" class="select-all-cb" data-group="player" title="Select all" />
-              </th>
-              {% for field in header_form.visible_fields %}
-                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for form in player_formset %}
-              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
-                <td class="px-3 py-1 align-middle">
-                  <input type="checkbox" class="delete-cb" data-group="player"
-                    name="delete_ids" value="playeritem:{{ form.instance.pk }}" />
-                </td>
-                {{ form.id }}
-                {% for field in form.visible_fields %}
-                  <td class="py-1 align-top">
-                    {{ field }}
-                    {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
-                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
-                  </td>
-                {% endfor %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% if player_formset.total_form_count %}
+    <h2 class="text-lg font-semibold mt-6 mb-1">Player Items</h2>
+    <div class="flex items-center gap-2 py-1 mb-1 text-sm text-gray-500">
+      <input type="checkbox" class="select-all-cb" data-group="player" title="Select all" />
+      <span>Select all</span>
+    </div>
+    {% for form in player_formset %}
+    <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
+      <div class="flex items-center pt-5 w-4 shrink-0">
+        <input type="checkbox" class="delete-cb" data-group="player"
+          name="delete_ids" value="playeritem:{{ form.instance.pk }}" />
+      </div>
+      {% with thumb=form.instance.get_primary_image_url %}
+      <div class="shrink-0 w-14 h-14 rounded overflow-hidden bg-gray-100 flex items-center justify-center mt-1">
+        {% if thumb %}<img src="{{ thumb }}" class="w-full h-full object-cover" alt="" />
+        {% else %}<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 4-6 4 6M4 20h16M4 4h16v12H4z"/></svg>{% endif %}
       </div>
       {% endwith %}
-      {% endif %}
+      <div class="shrink-0 w-28">
+        <div class="text-xs text-gray-500 mb-1">Type</div>
+        <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
+          <option value="playergearitem">Player Gear</option>
+          <option value="playeritem" selected>Player Item</option>
+          <option value="otheritem">Other</option>
+        </select>
+      </div>
+      {{ form.id }}
+      {% for field in form.visible_fields %}
+      <div class="flex-1 min-w-[8rem]" data-field="{{ field.name }}">
+        <div class="text-xs text-gray-500 mb-1">{{ field.label }}</div>
+        {{ field }}
+        {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
+        {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="flex-1 min-w-[8rem]" data-field="brand">
+        <div class="text-xs text-gray-500 mb-1">Brand</div>
+        <input type="text" name="{{ form.prefix }}-brand" maxlength="25" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[6rem]" data-field="size">
+        <div class="text-xs text-gray-500 mb-1">Size</div>
+        <input type="text" name="{{ form.prefix }}-size" maxlength="5" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="season">
+        <div class="text-xs text-gray-500 mb-1">Season</div>
+        <input type="text" name="{{ form.prefix }}-season" maxlength="10" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="game_type">
+        <div class="text-xs text-gray-500 mb-1">Game Type</div>
+        <select name="{{ form.prefix }}-game_type" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for gt in game_types %}<option value="{{ gt.key }}">{{ gt.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="usage_type">
+        <div class="text-xs text-gray-500 mb-1">Usage Type</div>
+        <select name="{{ form.prefix }}-usage_type" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for ut in usage_types %}<option value="{{ ut.key }}">{{ ut.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
-      {% if other_formset.total_form_count %}
-      <h2 class="text-lg font-semibold mt-6 mb-2">Other Items</h2>
-      {% with header_form=other_formset.forms.0 %}
-      <div class="overflow-x-auto mb-6">
-        <table class="min-w-full border rounded-md text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 border-b">
-                <input type="checkbox" class="select-all-cb" data-group="other" title="Select all" />
-              </th>
-              {% for field in header_form.visible_fields %}
-                <th class="px-3 py-2 text-left font-medium text-gray-700 border-b">{{ field.label }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for form in other_formset %}
-              <tr class="border-b" data-row-prefix="{{ form.prefix }}">
-                <td class="px-3 py-1 align-middle">
-                  <input type="checkbox" class="delete-cb" data-group="other"
-                    name="delete_ids" value="otheritem:{{ form.instance.pk }}" />
-                </td>
-                {{ form.id }}
-                {% for field in form.visible_fields %}
-                  <td class="py-1 align-top">
-                    {{ field }}
-                    {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
-                  </td>
-                {% endfor %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% if other_formset.total_form_count %}
+    <h2 class="text-lg font-semibold mt-6 mb-1">Other Items</h2>
+    <div class="flex items-center gap-2 py-1 mb-1 text-sm text-gray-500">
+      <input type="checkbox" class="select-all-cb" data-group="other" title="Select all" />
+      <span>Select all</span>
+    </div>
+    {% for form in other_formset %}
+    <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
+      <div class="flex items-center pt-5 w-4 shrink-0">
+        <input type="checkbox" class="delete-cb" data-group="other"
+          name="delete_ids" value="otheritem:{{ form.instance.pk }}" />
+      </div>
+      {% with thumb=form.instance.get_primary_image_url %}
+      <div class="shrink-0 w-14 h-14 rounded overflow-hidden bg-gray-100 flex items-center justify-center mt-1">
+        {% if thumb %}<img src="{{ thumb }}" class="w-full h-full object-cover" alt="" />
+        {% else %}<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 4-6 4 6M4 20h16M4 4h16v12H4z"/></svg>{% endif %}
       </div>
       {% endwith %}
-      {% endif %}
+      <div class="shrink-0 w-28">
+        <div class="text-xs text-gray-500 mb-1">Type</div>
+        <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
+          <option value="playergearitem">Player Gear</option>
+          <option value="playeritem">Player Item</option>
+          <option value="otheritem" selected>Other</option>
+        </select>
+      </div>
+      {{ form.id }}
+      {% for field in form.visible_fields %}
+      <div class="flex-1 min-w-[8rem]" data-field="{{ field.name }}">
+        <div class="text-xs text-gray-500 mb-1">{{ field.label }}</div>
+        {{ field }}
+        {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      <div class="flex-1 min-w-[6rem]" data-field="league">
+        <div class="text-xs text-gray-500 mb-1">League</div>
+        <input type="text" name="{{ form.prefix }}-league" maxlength="5" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" list="league-list" />
+      </div>
+      <div class="flex-1 min-w-[8rem]" data-field="player">
+        <div class="text-xs text-gray-500 mb-1">Player</div>
+        <input type="text" name="{{ form.prefix }}-player" maxlength="100" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[8rem]" data-field="team">
+        <div class="text-xs text-gray-500 mb-1">Team</div>
+        <input type="text" name="{{ form.prefix }}-team" maxlength="150" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+        <datalist id="team-list-{{ form.prefix }}"></datalist>
+      </div>
+      <div class="flex-1 min-w-[5rem]" data-field="number">
+        <div class="text-xs text-gray-500 mb-1">Number</div>
+        <input type="number" name="{{ form.prefix }}-number" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[8rem]" data-field="brand">
+        <div class="text-xs text-gray-500 mb-1">Brand</div>
+        <input type="text" name="{{ form.prefix }}-brand" maxlength="25" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[6rem]" data-field="size">
+        <div class="text-xs text-gray-500 mb-1">Size</div>
+        <input type="text" name="{{ form.prefix }}-size" maxlength="5" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="season">
+        <div class="text-xs text-gray-500 mb-1">Season</div>
+        <input type="text" name="{{ form.prefix }}-season" maxlength="10" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="game_type">
+        <div class="text-xs text-gray-500 mb-1">Game Type</div>
+        <select name="{{ form.prefix }}-game_type" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for gt in game_types %}<option value="{{ gt.key }}">{{ gt.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="flex-1 min-w-[7rem]" data-field="usage_type">
+        <div class="text-xs text-gray-500 mb-1">Usage Type</div>
+        <select name="{{ form.prefix }}-usage_type" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for ut in usage_types %}<option value="{{ ut.key }}">{{ ut.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 
     {% if not gear_formset.total_form_count and not player_formset.total_form_count and not other_formset.total_form_count %}
       <p>No collectibles in this collection yet.</p>
@@ -143,7 +215,35 @@
       <option value="{{ l.key }}" label="{{ l.name }}"></option>
     {% endfor %}
   </datalist>
-  <!-- Per-row team datalists are rendered next to each team input. -->
+
+  <script>
+    // Fields visible per item type
+    const TYPE_FIELDS = {
+      playergearitem: ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description'],
+      playeritem:     ['title', 'league', 'player', 'team', 'number', 'description'],
+      otheritem:      ['title', 'description'],
+    };
+
+    function applyTypeVisibility(selectEl) {
+      const newType = selectEl.value;
+      const row = selectEl.closest('[data-row-prefix]');
+      const allowed = TYPE_FIELDS[newType] || [];
+      row.querySelectorAll('[data-field]').forEach(el => {
+        const visible = allowed.includes(el.dataset.field);
+        el.style.display = visible ? '' : 'none';
+        el.querySelectorAll('input[data-extra], select[data-extra]').forEach(inp => {
+          inp.disabled = !visible;
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.item-type-select').forEach(sel => {
+        applyTypeVisibility(sel);
+        sel.addEventListener('change', function() { applyTypeVisibility(this); });
+      });
+    });
+  </script>
 
   <script>
     // Bulk delete logic
@@ -168,7 +268,6 @@
       if (!checked.length) return;
       if (!confirm('Delete ' + checked.length + ' item' + (checked.length > 1 ? 's' : '') + '? This cannot be undone.')) return;
       document.getElementById('formAction').value = 'delete_selected';
-      // Uncheck unchecked delete boxes so only selected ones are submitted
       document.querySelectorAll('.delete-cb:not(:checked)').forEach(cb => cb.disabled = true);
       document.getElementById('bulkEditForm').submit();
     }
@@ -188,24 +287,16 @@
       }
       function fillTopOptionOnTab(e, inputEl, listEl) {
         if (e.key !== 'Tab') return false;
-        const list = listEl;
-        if (!list) return false;
-        const opts = Array.from(list.querySelectorAll('option'));
+        if (!listEl) return false;
+        const opts = Array.from(listEl.querySelectorAll('option'));
         if (!opts.length) return false;
         const val = (inputEl.value || '').toLowerCase();
-        let match = null;
-        if (val) {
-          match = opts.find(o => (o.value || '').toLowerCase().startsWith(val));
-        }
+        let match = val ? opts.find(o => (o.value || '').toLowerCase().startsWith(val)) : null;
         if (!match) match = opts[0];
-        if (match) {
-          inputEl.value = match.value;
-          // Do not preventDefault so Tab still moves focus forward
-          return true;
-        }
+        if (match) { inputEl.value = match.value; return true; }
         return false;
       }
-      async function populateTeams(leagueKey, list) {
+      function populateTeams(leagueKey, list) {
         if (!list) return;
         list.innerHTML = '';
         if (!leagueKey) return;
@@ -223,8 +314,7 @@
           .catch(() => {});
       }
       document.addEventListener('DOMContentLoaded', function() {
-        const rows = document.querySelectorAll('form table tbody tr');
-        rows.forEach(row => {
+        document.querySelectorAll('[data-row-prefix]').forEach(row => {
           attachLists(row);
           const leagueInput = row.querySelector('[name$="-league"]');
           const teamInput = row.querySelector('[name$="-team"]');
@@ -247,8 +337,7 @@
           }
           if (teamInput) {
             teamInput.addEventListener('keydown', function(e) {
-              const listId = teamInput.getAttribute('list');
-              const listEl = document.getElementById(listId);
+              const listEl = document.getElementById(teamInput.getAttribute('list'));
               fillTopOptionOnTab(e, teamInput, listEl);
             });
           }

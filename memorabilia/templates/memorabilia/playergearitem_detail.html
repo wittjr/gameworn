@@ -29,7 +29,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
     <div class="grid gap-4 w-full">
         <div class="mx-auto">
-            {% include "memorabilia/elements/modal.html" with image_url=object.primary_image %}
+            {% include "memorabilia/elements/modal.html" with image_url=primary_image %}
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {% for image in object.gear_images.all %}
@@ -43,7 +43,7 @@
     <div class="w-full relative overflow-x-auto">
         <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <tbody>
-                {% include 'memorabilia/tablerow.html' with label='League' value=object.league %}
+                {% include 'memorabilia/tablerow.html' with label='League' value=league %}
                 {% include 'memorabilia/tablerow.html' with label='Brand' value=object.brand %}
                 {% include 'memorabilia/tablerow.html' with label='Size' value=object.size %}
                 {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
