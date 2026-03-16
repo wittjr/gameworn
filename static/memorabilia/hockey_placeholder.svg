@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGrad)"/>
+
+  <!-- Subtle ice rink markings -->
+  <circle cx="400" cy="220" r="90" fill="none" stroke="#1e3a5f" stroke-width="2"/>
+  <line x1="400" y1="100" x2="400" y2="340" stroke="#1e3a5f" stroke-width="2"/>
+  <line x1="80" y1="220" x2="720" y2="220" stroke="#1e3a5f" stroke-width="1" stroke-dasharray="6,10"/>
+
+  <!-- Hockey stick (diagonal, behind everything) -->
+  <g opacity="0.55">
+    <rect x="568" y="55" width="14" height="310" rx="4" fill="#334155" transform="rotate(-18 575 210)"/>
+    <path d="M526,308 Q520,310 516,322 Q514,334 528,334 L582,330 Q592,326 590,318 Q588,310 576,310 Z"
+          fill="#334155" transform="rotate(-18 575 210)"/>
+  </g>
+
+  <!-- Jersey -->
+  <g opacity="0.85">
+    <!-- Body -->
+    <path d="M308,130 Q308,108 368,102 Q400,98 432,102 Q492,108 492,130 L492,318 Q492,334 476,334 L324,334 Q308,334 308,318 Z" fill="#1e3a5f"/>
+    <!-- Left sleeve -->
+    <path d="M308,130 Q292,130 256,158 L236,228 Q234,244 252,246 Q268,248 276,234 L298,178 L308,168 Z" fill="#1e3a5f"/>
+    <!-- Right sleeve -->
+    <path d="M492,130 Q508,130 544,158 L564,228 Q566,244 548,246 Q532,248 524,234 L502,178 L492,168 Z" fill="#1e3a5f"/>
+    <!-- Collar -->
+    <path d="M368,102 Q400,118 432,102" fill="none" stroke="#2563eb" stroke-width="3"/>
+    <!-- Stripe -->
+    <rect x="308" y="268" width="184" height="16" fill="#2563eb" opacity="0.6"/>
+    <!-- Number -->
+    <text x="400" y="248" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="60" font-weight="900" fill="#2563eb" opacity="0.7">99</text>
+  </g>
+
+  <!-- Helmet (upper left) -->
+  <g transform="translate(110,105)" opacity="0.75">
+    <!-- Dome -->
+    <path d="M8,82 Q6,28 54,22 Q104,16 108,82 Z" fill="#334155"/>
+    <!-- Bottom rim -->
+    <rect x="8" y="80" width="100" height="14" rx="5" fill="#334155"/>
+    <!-- Visor area -->
+    <path d="M10,94 L106,94 L106,116 Q106,122 100,122 L16,122 Q10,122 10,116 Z" fill="#1e293b"/>
+    <!-- Cage bars horizontal -->
+    <line x1="12" y1="100" x2="104" y2="100" stroke="#475569" stroke-width="1.5"/>
+    <line x1="12" y1="107" x2="104" y2="107" stroke="#475569" stroke-width="1.5"/>
+    <line x1="12" y1="114" x2="104" y2="114" stroke="#475569" stroke-width="1.5"/>
+    <!-- Cage bars vertical -->
+    <line x1="28" y1="94" x2="28" y2="122" stroke="#475569" stroke-width="1.5"/>
+    <line x1="48" y1="94" x2="48" y2="122" stroke="#475569" stroke-width="1.5"/>
+    <line x1="68" y1="94" x2="68" y2="122" stroke="#475569" stroke-width="1.5"/>
+    <line x1="88" y1="94" x2="88" y2="122" stroke="#475569" stroke-width="1.5"/>
+    <!-- Ear guards -->
+    <path d="M8,80 Q-4,96 8,112" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round"/>
+    <path d="M108,80 Q120,96 108,112" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round"/>
+    <!-- Chin strap -->
+    <path d="M28,122 Q58,132 88,122" fill="none" stroke="#475569" stroke-width="2"/>
+  </g>
+
+  <!-- Puck (lower right) -->
+  <g transform="translate(600,345)" opacity="0.85">
+    <!-- Shadow/depth -->
+    <ellipse cx="2" cy="10" rx="46" ry="14" fill="#0f172a" opacity="0.5"/>
+    <!-- Side of puck -->
+    <ellipse cx="0" cy="6" rx="46" ry="13" fill="#1e293b"/>
+    <!-- Top of puck -->
+    <ellipse cx="0" cy="0" rx="46" ry="13" fill="#334155"/>
+    <!-- Top highlight ring -->
+    <ellipse cx="0" cy="0" rx="38" ry="9" fill="none" stroke="#475569" stroke-width="1.5"/>
+    <!-- Brand text simulation -->
+    <text x="0" y="4" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#475569" letter-spacing="1">NHL</text>
+  </g>
+
+  <!-- Label -->
+  <text x="400" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#475569" letter-spacing="5" font-weight="300">HOCKEY MEMORABILIA</text>
+</svg>

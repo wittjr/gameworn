@@ -1,41 +1,250 @@
 {% extends 'memorabilia/base.html' %}
-	
+{% load static %}
+{% load memorabilia_extras %}
+
 {% block page_navigation %}
 {% endblock page_navigation %}
 
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% url 'memorabilia:collection' collection.id as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label=collection.title %}
+{% endblock breadcrumb %}
+
 {% block content %}
 <h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
-<div class="container mx-auto max-w-96">
+<div class="container mx-auto max-w-xl">
     <form method="post" enctype="multipart/form-data" class="mx-auto" novalidate>
         {% csrf_token %}
-        {{ form }}
-        
-<!-- 
-        <label for="title" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Title</label>
-        <input type="text" id="title" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="My stuff" value="{{ form.title }}" required />
-
-        <label for="description" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description</label>
-        <textarea id="description" rows="4" class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Write an optional description here..."></textarea>
--->
-<!-- 
-        <div class="flex items-center justify-center w-full">
-            <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
-                <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg class="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-                    </svg>
-                    <p class="mb-2 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
-                </div>
-                <input id="dropzone-file" type="file" class="hidden" />
-            </label>
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            {% for error in form.non_field_errors %}
+                <p class="text-red-700">{{ error }}</p>
+            {% endfor %}
         </div>
--->
+        {% endif %}
+
+        <div class="mb-4{% if form.title.errors %} bg-red-50 rounded-lg p-2 field-has-error{% endif %}">
+            <label class="block mb-2 text-sm font-medium {% if form.title.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Title</label>
+            {{ form.title }}
+            {% for error in form.title.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="mb-4{% if form.header_image.errors %} bg-red-50 rounded-lg p-2{% endif %}">
+            <label class="block mb-2 text-sm font-medium {% if form.header_image.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Header Image</label>
+
+            {# --- Image option cards --- #}
+            <div class="flex gap-3 mb-4" id="image-option-cards">
+
+                {# "Keep Current" card — only when editing and a custom image exists #}
+                {% if collection and collection.get_header_image_url %}
+                <div class="image-option-card flex-1 rounded-lg border-2 border-blue-500 cursor-pointer overflow-hidden"
+                     data-option="current"
+                     onclick="selectImageOption('current')">
+                    <div class="h-32 overflow-hidden">
+                        <img src="{{ collection.get_header_image_url }}" class="w-full h-full object-cover" alt="Current image" />
+                    </div>
+                    <div class="p-2 text-center text-xs font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-800">
+                        Keep Current
+                    </div>
+                </div>
+                {% endif %}
+
+                {# "Upload / Link" card — pre-selected when no custom image exists #}
+                <div class="image-option-card flex-1 rounded-lg border-2 cursor-pointer overflow-hidden
+                            {% if collection and collection.get_header_image_url %}border-gray-300 dark:border-gray-600{% else %}border-blue-500{% endif %}"
+                     data-option="new"
+                     onclick="selectImageOption('new')">
+                    <div class="h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
+                        <svg class="w-10 h-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                        </svg>
+                    </div>
+                    <div class="p-2 text-center text-xs font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-800">
+                        Upload / Link
+                    </div>
+                </div>
+
+                {# "Collage" card #}
+                <div class="image-option-card flex-1 rounded-lg border-2 cursor-pointer overflow-hidden
+                            {% if collection and not collection.get_header_image_url %}border-blue-500{% else %}border-gray-300 dark:border-gray-600{% endif %}"
+                     data-option="collage"
+                     onclick="selectImageOption('collage')">
+                    <div class="h-32 overflow-hidden bg-gray-800">
+                        {% if collection %}
+                            {% with collage_imgs=collage_images %}
+                            {% if collage_imgs %}
+                            {% collage_rows collage_imgs as rows %}
+                            <div class="flex flex-col w-full h-full gap-0.5">
+                                {% for row in rows %}
+                                <div class="flex flex-1 gap-0.5">
+                                    {% for img in row %}
+                                        {% getmediaurl img as img_url %}
+                                        <div class="flex-1 bg-center bg-cover bg-no-repeat" style="background-image: url('{{ img_url }}')"></div>
+                                    {% endfor %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <img src="{% static 'memorabilia/hockey_placeholder.svg' %}" class="w-full h-full object-contain p-4" alt="Hockey memorabilia" />
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                        <img src="{% static 'memorabilia/hockey_placeholder.svg' %}" class="w-full h-full object-contain p-4" alt="Hockey memorabilia" />
+                        {% endif %}
+                    </div>
+                    <div class="p-2 text-center text-xs font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-800">
+                        Collage
+                    </div>
+                </div>
+
+            </div>{# end cards #}
+
+            {# Dropzone — visible when "Upload / Link" is active #}
+            <div id="dropzone-panel" class="hidden">
+                {{ form.header_image }}
+            </div>
+
+            {# Header image errors — shown below cards/dropzone #}
+            {% for error in form.header_image.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+            {% endfor %}
+
+            {# Collage image picker — available when there are more than 1 collectible with images #}
+            {% if all_collage_images|length > 1 %}
+            <div id="collage-picker" class="hidden mt-4">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select up to 9 images for the collage <span id="collage-pick-count" class="text-gray-400"></span></p>
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    {% for img_info in all_collage_images %}
+                    <div class="collage-pick-card relative rounded-lg overflow-hidden border-2 border-gray-300 cursor-pointer select-none"
+                         data-type="{{ img_info.type }}"
+                         data-id="{{ img_info.id }}"
+                         onclick="toggleCollagePick(this)">
+                        <img src="{{ img_info.url }}" class="w-full aspect-square object-cover bg-gray-100" alt="{{ img_info.title }}" />
+                        <div class="check-indicator hidden absolute top-1 right-1 bg-blue-600 rounded-full w-5 h-5">
+                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <div class="p-1 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 truncate">{{ img_info.title }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# Hidden image_mode field ('current', 'new', 'collage'), set by JS #}
+            {{ form.image_mode }}
+            {# Hidden collage_selection field (JSON), set by JS when picker is used #}
+            {{ form.collage_selection }}
+
+        </div>{# end header image section #}
 
         <div class="mx-auto flex">
-         <button type="submit" class="btn-primary grow me-2 mb-2">Save</button>
-         <button type="button" class="btn-primary grow me-2 mb-2" onclick="history.back()">Cancel</button> 
+            <button type="submit" class="btn-primary grow me-2 mb-2">Save</button>
+            <button type="button" class="btn-primary grow me-2 mb-2" onclick="history.back()">Cancel</button>
         </div>
-      </form>
+    </form>
 </div>
+
+<style>
+    .field-has-error input,
+    .field-has-error textarea,
+    .field-has-error select {
+        border-color: #f87171 !important;
+    }
+    .check-indicator:not(.hidden) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<script>
+(function () {
+    function selectImageOption(option) {
+        document.querySelectorAll('.image-option-card').forEach(function (card) {
+            var active = card.dataset.option === option;
+            card.classList.toggle('border-blue-500', active);
+            card.classList.toggle('border-gray-300', !active);
+        });
+
+        var panel = document.getElementById('dropzone-panel');
+        if (panel) panel.classList.toggle('hidden', option !== 'new');
+
+        var picker = document.getElementById('collage-picker');
+        if (picker) picker.classList.toggle('hidden', option !== 'collage');
+
+        var modeField = document.querySelector('input[name="image_mode"]');
+        if (modeField) modeField.value = option;
+    }
+
+    window.selectImageOption = selectImageOption;
+
+    // --- Collage picker ---
+    function toggleCollagePick(card) {
+        var isSelected = card.classList.contains('selected');
+        var selectedCount = document.querySelectorAll('.collage-pick-card.selected').length;
+        if (!isSelected && selectedCount >= 9) return;
+
+        card.classList.toggle('selected');
+        card.classList.toggle('border-blue-500', !isSelected);
+        card.classList.toggle('border-gray-300', isSelected);
+        card.querySelector('.check-indicator').classList.toggle('hidden', isSelected);
+        updateCollageSelection();
+    }
+
+    function updateCollageSelection() {
+        var selected = Array.from(document.querySelectorAll('.collage-pick-card.selected'));
+        var ids = selected.map(function (c) {
+            return { type: c.dataset.type, id: parseInt(c.dataset.id) };
+        });
+        var field = document.querySelector('input[name="collage_selection"]');
+        if (field) field.value = ids.length ? JSON.stringify(ids) : '';
+        var countEl = document.getElementById('collage-pick-count');
+        if (countEl) countEl.textContent = '(' + selected.length + ' of 9 selected)';
+    }
+
+    window.toggleCollagePick = toggleCollagePick;
+
+    // Pre-populate picker from existing selection stored in the hidden field
+    function restoreCollageSelection() {
+        var field = document.querySelector('input[name="collage_selection"]');
+        var raw = field ? field.value : '';
+        if (!raw) return;
+        try {
+            var existing = JSON.parse(raw);
+            existing.forEach(function (item) {
+                var card = document.querySelector(
+                    '.collage-pick-card[data-type="' + item.type + '"][data-id="' + item.id + '"]'
+                );
+                if (card) {
+                    card.classList.add('selected', 'border-blue-500');
+                    card.classList.remove('border-gray-300');
+                    card.querySelector('.check-indicator').classList.remove('hidden');
+                }
+            });
+            updateCollageSelection();
+        } catch (e) {}
+    }
+
+    restoreCollageSelection();
+
+    // On load: restore the selected state.
+    // If the form was re-rendered after a validation error the hidden field already
+    // holds the mode the user had chosen; otherwise derive it from the pre-selected card.
+    var modeField = document.querySelector('input[name="image_mode"]');
+    var submittedMode = modeField ? modeField.value : '';
+    if (submittedMode) {
+        selectImageOption(submittedMode);
+    } else {
+        var activeCard = document.querySelector('.image-option-card.border-blue-500');
+        if (activeCard) selectImageOption(activeCard.dataset.option);
+    }
+})();
+</script>
 {% endblock content %}

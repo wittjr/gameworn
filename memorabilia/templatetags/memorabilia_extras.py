@@ -50,3 +50,30 @@ def getmediaurl(context, image):
 @register.simple_tag(takes_context=True)
 def test(context, input):
     print(vars(input))
+
+
+_COLLAGE_LAYOUT = {
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [2, 2],
+    5: [2, 3],
+    6: [3, 3],
+    7: [2, 2, 3],
+    8: [2, 3, 3],
+    9: [3, 3, 3],
+}
+
+
+@register.simple_tag
+def collage_rows(images):
+    """Group images into rows for a collage layout with no empty cells."""
+    images = list(images) if images else []
+    count = len(images)
+    row_sizes = _COLLAGE_LAYOUT.get(count, [3] * (count // 3) + ([count % 3] if count % 3 else []))
+    rows = []
+    idx = 0
+    for size in row_sizes:
+        rows.append(images[idx:idx + size])
+        idx += size
+    return rows

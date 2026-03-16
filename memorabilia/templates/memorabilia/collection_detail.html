@@ -34,17 +34,44 @@
 {% endblock breadcrumb %}
 
 {% block content %}
-    {% if collection.image %}
-        {% getmediaurl collection.image as image_url %}
+    {% if collection.image or collection.image_link %}
+        {% if collection.image %}
+            {% getmediaurl collection.image as hero_url %}
+        {% else %}
+            {% getmediaurl collection.image_link as hero_url %}
+        {% endif %}
+        <section style="background-image: url('{{ hero_url }}');" class="rounded-lg bg-center bg-cover bg-no-repeat bg-gray-500 bg-blend-multiply">
+            <div class="px-4 mx-auto max-w-screen-xl text-center py-24 lg:py-56">
+                <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl">{{ collection.title }}</h1>
+                <p class="mb-8 text-lg font-normal text-gray-300 lg:text-xl sm:px-16 lg:px-48">{{ collection.description }}</p>
+            </div>
+        </section>
     {% else %}
-        {% getmediaurl collection.image_link as image_url %}
+        {% with collage_images=collection.get_collage_images %}
+        {% static 'memorabilia/hockey_placeholder.svg' as hockey_placeholder_url %}
+        <section class="relative rounded-lg overflow-hidden bg-gray-900">
+            {% if collage_images %}
+                {% collage_rows collage_images as rows %}
+                <div class="absolute inset-0 flex flex-col gap-0.5 opacity-50">
+                    {% for row in rows %}
+                    <div class="flex flex-1 gap-0.5">
+                        {% for img in row %}
+                            {% getmediaurl img as img_url %}
+                            <div class="flex-1 bg-center bg-cover bg-no-repeat" style="background-image: url('{{ img_url }}')"></div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="absolute inset-0 bg-center bg-cover bg-no-repeat opacity-25" style="background-image: url('{{ hockey_placeholder_url }}')"></div>
+            {% endif %}
+            <div class="relative px-4 mx-auto max-w-screen-xl text-center py-24 lg:py-56">
+                <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl">{{ collection.title }}</h1>
+                <p class="mb-8 text-lg font-normal text-gray-300 lg:text-xl sm:px-16 lg:px-48">{{ collection.description }}</p>
+            </div>
+        </section>
+        {% endwith %}
     {% endif %}
-    <section style="background-image: url('{{ image_url }}');" class="rounded-lg bg-center bg-cover bg-no-repeat bg-gray-500 bg-blend-multiply">
-        <div class="px-4 mx-auto max-w-screen-xl text-center py-24 lg:py-56">
-            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl">{{ collection.title }}</h1>
-            <p class="mb-8 text-lg font-normal text-gray-300 lg:text-xl sm:px-16 lg:px-48">{{ collection.description }}</p>
-        </div>
-    </section>
 
     <div class="flex flex-wrap gap-4 py-4 justify-evenly">
         {% for collectible in collectibles %}

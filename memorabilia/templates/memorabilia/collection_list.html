@@ -21,13 +21,9 @@
     <div class="collection-list-container">
         {% for collection in collection_list %}
             {% url 'memorabilia:collection' collection.id as the_url %}
-            {% if collection.image %}
-                {% getmediaurl collection.image as image_url %}
-            {% else %}
-                {% getmediaurl collection.image_link as image_url %}
-            {% endif %}
-
-            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=image_url description=collection.description owner=collection.owner_email owner_username=collection.owner_username %}
+            {% with header_url=collection.get_header_image_url %}
+            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=header_url collage_images=collection.get_collage_images description=collection.description owner=collection.owner_email owner_username=collection.owner_username %}
+            {% endwith %}
         {% endfor %}
     </div>
 {% endblock content %}

@@ -27,9 +27,13 @@ class Collection(RulesModel):
     title = models.CharField(max_length=100)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     image_link = models.CharField(max_length=255, blank=True, null=True)
+    collage_collectible_ids = models.JSONField(blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
+        indexes = [
+            models.Index(fields=['owner_uid'], name='mem_collection_owner_idx'),
+        ]
         rules_permissions = {
             'create': rules.is_authenticated,
             'update': rules.is_authenticated & is_collection_owner,
@@ -39,11 +43,71 @@ class Collection(RulesModel):
     def __str__(self):
         return self.title
 
-    # @admin.display(
-    #         boolean = True,
-    #         ordering="pub_date",
-    #         description="Published recently?"
-    # )
+    def get_header_image_url(self):
+        """Return the collection's own header image URL, or None if not set."""
+        if self.image and self.image.name:
+            return self.image.url
+        if self.image_link:
+            return self.image_link
+        return None
+
+    def get_collage_images(self, max_count=9):
+        """Return up to max_count primary image objects for the collage.
+
+        If collage_collectible_ids is set, use those specific collectibles (in order).
+        Otherwise fall back to the first max_count collectibles that have a primary image.
+        """
+        if self.collage_collectible_ids:
+            return self._get_collage_images_by_ids(self.collage_collectible_ids)
+
+        from itertools import chain
+        images = []
+        for collectible in chain(
+            self.playergearitem_set.prefetch_related('gear_images').all(),
+            self.playeritem_set.prefetch_related('images').all(),
+            self.otheritem_set.prefetch_related('images').all(),
+        ):
+            img = collectible.get_primary_image()
+            if img:
+                images.append(img)
+            if len(images) >= max_count:
+                break
+        return images
+
+    def _get_collage_images_by_ids(self, id_list):
+        # Ownership is enforced implicitly: <type>_set managers are FK-scoped to this
+        # collection — never replace these with global lookups (e.g. PlayerItem.objects.get).
+        from collections import defaultdict
+
+        by_type = defaultdict(list)
+        for entry in id_list:
+            ctype = entry.get('type')
+            cid = entry.get('id')
+            if ctype in ('playergearitem', 'playeritem', 'otheritem') and isinstance(cid, int):
+                by_type[ctype].append(cid)
+
+        # Fetch each type in two queries (SELECT + prefetch) rather than one per item.
+        fetched = {}  # (type, pk) -> collectible
+        if by_type['playergearitem']:
+            for c in self.playergearitem_set.filter(pk__in=by_type['playergearitem']).prefetch_related('gear_images'):
+                fetched[('playergearitem', c.pk)] = c
+        if by_type['playeritem']:
+            for c in self.playeritem_set.filter(pk__in=by_type['playeritem']).prefetch_related('images'):
+                fetched[('playeritem', c.pk)] = c
+        if by_type['otheritem']:
+            for c in self.otheritem_set.filter(pk__in=by_type['otheritem']).prefetch_related('images'):
+                fetched[('otheritem', c.pk)] = c
+
+        # Reconstruct in the original requested order; missing IDs are silently skipped.
+        images = []
+        for entry in id_list:
+            collectible = fetched.get((entry.get('type'), entry.get('id')))
+            if collectible is None:
+                continue
+            img = collectible.get_primary_image()
+            if img:
+                images.append(img)
+        return images
 
 
 class ExternalResource(RulesModel):
@@ -116,6 +180,11 @@ class BasePlayerItem(Collectible):
 class PlayerItem(BasePlayerItem):
     collectible_type = 'playeritem'
 
+    class Meta(BasePlayerItem.Meta):
+        indexes = [
+            models.Index(fields=['last_updated'], name='mem_playeritem_updated_idx'),
+        ]
+
     def __str__(self):
         return self.title
 
@@ -126,6 +195,11 @@ class PlayerGearItem(BasePlayerItem):
     game_type = models.ForeignKey('GameType', to_field='key', on_delete=models.PROTECT, db_column='game_type')
     usage_type = models.ForeignKey('UsageType', to_field='key', on_delete=models.PROTECT, db_column='usage_type')
     collectible_type = 'playergearitem'
+
+    class Meta(BasePlayerItem.Meta):
+        indexes = [
+            models.Index(fields=['last_updated'], name='mem_playergearitem_updated_idx'),
+        ]
 
     def __str__(self):
         return self.title
@@ -139,8 +213,12 @@ class PlayerGearItem(BasePlayerItem):
 
 class OtherItem(Collectible):
     collectible_type = 'otheritem'
-    ...
-    
+
+    class Meta(Collectible.Meta):
+        indexes = [
+            models.Index(fields=['last_updated'], name='mem_otheritem_updated_idx'),
+        ]
+
     def __str__(self):
         return self.title
 

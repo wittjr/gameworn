@@ -44,7 +44,14 @@ class IndexView(generic.ListView):
     def get_context_data(self, **kwargs):
         context = super(IndexView, self).get_context_data(**kwargs)
         user_subquery = User.objects.filter(id=OuterRef('owner_uid'))
-        context['collection_list'] = context['collection_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
+        context['collection_list'] = context['collection_list'].annotate(
+            owner_email=Subquery(user_subquery.values('email')),
+            owner_username=Subquery(user_subquery.values('username')),
+        ).prefetch_related(
+            'playergearitem_set__gear_images',
+            'playeritem_set__images',
+            'otheritem_set__images',
+        )
         return context
 
 
@@ -118,7 +125,7 @@ def search_collectibles(request):
         }
         player_qs = _apply_collectible_filters(player_qs, player_data)
     results = sorted(
-        list(gear_qs) + list(player_qs),
+        list(gear_qs.prefetch_related('gear_images')) + list(player_qs.prefetch_related('images')),
         key=lambda x: x.last_updated,
         reverse=True,
     )
@@ -143,6 +150,37 @@ class ExternalResourceListView(generic.ListView):
     #     user_subquery = User.objects.filter(id=OuterRef('owner_uid'))
     #     context['resource_list'] = context['resource_list'].annotate(owner_email=Subquery(user_subquery.values('email')), owner_username=Subquery(user_subquery.values('username')))
     #     return context
+
+def _get_all_collage_images(collection):
+    """Return (picker_items, default_collage_images).
+
+    picker_items — list of dicts with type/id/url/title for every collectible with a primary image.
+    default_collage_images — first 9 primary image objects, for the collage card preview when no
+        custom collage_collectible_ids are set.  Both are built in a single DB round-trip.
+    """
+    picker_items = []
+    default_collage_images = []
+    for collectible in chain(
+        collection.playergearitem_set.prefetch_related('gear_images').all(),
+        collection.playeritem_set.prefetch_related('images').all(),
+        collection.otheritem_set.prefetch_related('images').all(),
+    ):
+        img = collectible.get_primary_image()
+        if img is None:
+            continue
+        url = collectible.get_primary_image_url()
+        if not url:
+            continue
+        picker_items.append({
+            'type': collectible.collectible_type,
+            'id': collectible.id,
+            'url': url,
+            'title': collectible.title,
+        })
+        if len(default_collage_images) < 9:
+            default_collage_images.append(img)
+    return picker_items, default_collage_images
+
 
 @login_required
 @permission_required('memorabilia.create_collection')
@@ -170,14 +208,22 @@ def create_collection(request):
 def edit_collection(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     if request.method == "POST":
-        form = CollectionForm(request.POST, request.FILES, instance = collection)
+        form = CollectionForm(request.POST, request.FILES, instance=collection)
         if form.is_valid():
             form.save()
             return redirect('memorabilia:collection', pk=collection_id)
     else:
-        form = CollectionForm(instance = collection)
+        form = CollectionForm(instance=collection)
 
-    return render(request, 'memorabilia/collection_form.html', {'form': form, 'title': 'Edit Collection'})
+    all_collage_images, default_collage_images = _get_all_collage_images(collection)
+    collage_images = collection.get_collage_images() if collection.collage_collectible_ids else default_collage_images
+    return render(request, 'memorabilia/collection_form.html', {
+        'form': form,
+        'title': 'Edit Collection',
+        'collection': collection,
+        'all_collage_images': all_collage_images,
+        'collage_images': collage_images,
+    })
 
 
 @login_required
@@ -220,11 +266,14 @@ class CollectibleView(generic.DetailView):
         collectible_type = self.kwargs.get('collectible_type')
 
         if collectible_type == 'playeritem':
-            return get_object_or_404(PlayerItem, pk=pk, collection_id=collection_id)
+            return get_object_or_404(PlayerItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
         elif collectible_type == 'otheritem':
-            return get_object_or_404(OtherItem, pk=pk, collection_id=collection_id)
+            return get_object_or_404(OtherItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
         elif collectible_type == 'playergearitem':
-            return get_object_or_404(PlayerGearItem, pk=pk, collection_id=collection_id)
+            return get_object_or_404(
+                PlayerGearItem.objects.select_related('game_type', 'usage_type').prefetch_related('gear_images'),
+                pk=pk, collection_id=collection_id,
+            )
 
         raise Http404("Collectible not found")
     
@@ -249,13 +298,12 @@ class CollectibleView(generic.DetailView):
             except League.DoesNotExist:
                 context['league'] = None
 
-        image_qs = collectible.gear_images if isinstance(collectible, PlayerGearItem) else collectible.images
-        primary = image_qs.filter(primary=True).first()
+        images = list(collectible.gear_images.all() if isinstance(collectible, PlayerGearItem) else collectible.images.all())
+        primary = next((img for img in images if img.primary), None)
         if primary:
             context['primary_image'] = primary.image if primary.image else primary.link
         else:
-            first = image_qs.first()
-            context['primary_image'] = first.image if first else None
+            context['primary_image'] = images[0].image if images else None
 
         return context
 
@@ -571,9 +619,9 @@ def bulk_edit_collectibles(request, collection_id):
     GearFormSet = modelformset_factory(PlayerGearItem, form=BulkPlayerGearItemForm, extra=0, can_delete=False)
     PlayerFormSet = modelformset_factory(PlayerItem, form=BulkCollectibleForm, extra=0, can_delete=False)
     OtherFormSet = modelformset_factory(OtherItem, form=BulkOtherItemForm, extra=0, can_delete=False)
-    gear_qs = PlayerGearItem.objects.filter(collection=collection).order_by('id')
-    player_qs = PlayerItem.objects.filter(collection=collection).order_by('id')
-    other_qs = OtherItem.objects.filter(collection=collection).order_by('id')
+    gear_qs = PlayerGearItem.objects.filter(collection=collection).select_related('game_type', 'usage_type').prefetch_related('gear_images').order_by('id')
+    player_qs = PlayerItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
+    other_qs = OtherItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
     if request.method == 'POST':
         if request.POST.get('action') == 'delete_selected':
             for entry in request.POST.getlist('delete_ids'):

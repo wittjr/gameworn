@@ -47,8 +47,6 @@ class FlowbiteImageDropzoneField(forms.MultiValueField):
 
 
     def compress(self, data_list):
-        print(self)
-        print(data_list)
         if not data_list:
             return None
         
@@ -59,14 +57,13 @@ class FlowbiteImageDropzoneField(forms.MultiValueField):
     
     def clean(self, value):
         file_value, url_value = value[0], value[1]
-        
-        if not file_value and not url_value:
+
+        if self.required and not file_value and not url_value:
             raise ValidationError(
                 _('Please provide either an image file or an image URL.'),
                 code='required'
             )
-        
-        # Call parent's clean method to validate individual fields
+
         return super().clean(value)
 
 

@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
@@ -34,13 +36,15 @@ class MultipleFileField(FileField):
 class CollectionForm(ModelForm):
     header_image = FlowbiteImageDropzoneField(
         label=False,
-        help_text="Upload a file or enter an image URL",
-        # required=False,
-        # max_file_size=5*1024*1024,  # 2MB
-        # allowed_extensions=['jpg', 'jpeg', 'png']
+        help_text="Upload a file or enter an image URL (optional)",
+        required=False,
         file_field_name='image',
         url_field_name='image_link'
     )
+    # Tracks which image option the user selected: 'current', 'new', or 'collage'
+    image_mode = forms.CharField(widget=forms.HiddenInput(), required=False)
+    # JSON list of {"type": ..., "id": ...} for user-picked collage images (>9 collectibles)
+    collage_selection = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
         model = Collection
@@ -54,23 +58,67 @@ class CollectionForm(ModelForm):
             "title": flowbite_widgets.FlowbiteTextInput(),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.collage_collectible_ids:
+            self.initial['collage_selection'] = json.dumps(self.instance.collage_collectible_ids)
+
+    def clean_collage_selection(self):
+        raw = self.cleaned_data.get('collage_selection', '').strip()
+        if not raw:
+            return None
+        try:
+            data = json.loads(raw)
+        except (ValueError, TypeError):
+            raise forms.ValidationError('Invalid collage selection data.')
+        if not isinstance(data, list):
+            raise forms.ValidationError('Invalid collage selection data.')
+        if len(data) > 9:
+            raise forms.ValidationError('Cannot select more than 9 images for the collage.')
+        valid_types = {'playergearitem', 'playeritem', 'otheritem'}
+        for entry in data:
+            if not isinstance(entry, dict) or set(entry.keys()) != {'type', 'id'}:
+                raise forms.ValidationError('Invalid collage selection data.')
+            if entry['type'] not in valid_types:
+                raise forms.ValidationError('Invalid collage selection data.')
+            if not isinstance(entry['id'], int) or entry['id'] <= 0:
+                raise forms.ValidationError('Invalid collage selection data.')
+        return data
+
+    def clean(self):
+        cleaned_data = super().clean()
+        mode = cleaned_data.get('image_mode') or 'current'
+        header_image = cleaned_data.get('header_image')
+        file_value, url_value = header_image if header_image else (None, None)
+
+        if mode == 'new' and not file_value and not url_value:
+            self.add_error('header_image', 'Please provide an image file or URL.')
+
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        file_value, url_value = self.cleaned_data['header_image']
+        mode = self.cleaned_data.get('image_mode') or 'current'
+        header_image = self.cleaned_data.get('header_image')
+        file_value, url_value = header_image if header_image else (None, None)
+
         if file_value:
             instance.image = file_value
             instance.image_link = None
         elif url_value:
             instance.image_link = url_value
             instance.image = None
-        else:
-            return 
-        
+        elif mode == 'collage':
+            instance.image = None
+            instance.image_link = None
+            # clean_collage_selection already validated and parsed this to a list or None
+            instance.collage_collectible_ids = self.cleaned_data.get('collage_selection') or None
+        # else 'current' or 'new' (validation already enforced) → preserve existing
+
         if commit:
             instance.save()
-        
+
         return instance
 
 
