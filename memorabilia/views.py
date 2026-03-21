@@ -112,20 +112,39 @@ def _apply_collectible_filters(qs, data):
 
 
 def search_collectibles(request):
+    # Fields that only exist on PlayerGearItem
+    _GEAR_ONLY = ('brand', 'season', 'game_type', 'usage_type')
+    # Fields that exist on PlayerItem + PlayerGearItem but NOT OtherItem
+    _PLAYER_FIELDS = ('league', 'player', 'team', 'number')
+
     form = CollectibleSearchForm(request.GET or None)
     gear_qs = PlayerGearItem.objects.all()
     player_qs = PlayerItem.objects.all()
+    other_qs = OtherItem.objects.all()
     if form.is_valid():
         data = form.cleaned_data
+        has_gear_filter = any(data.get(f) not in (None, '') for f in _GEAR_ONLY)
+        has_player_filter = any(data.get(f) not in (None, '') for f in _PLAYER_FIELDS)
+
         gear_qs = _apply_collectible_filters(gear_qs, data)
-        # PlayerItem has no gear-specific fields; strip them before filtering
-        player_data = {
-            k: v for k, v in data.items()
-            if k not in ('brand', 'season', 'game_type', 'usage_type')
-        }
+
+        player_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY}
         player_qs = _apply_collectible_filters(player_qs, player_data)
+
+        other_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY + _PLAYER_FIELDS}
+        other_qs = _apply_collectible_filters(other_qs, other_data)
+
+        # Exclude types that don't have the filtered fields
+        if has_gear_filter:
+            player_qs = PlayerItem.objects.none()
+            other_qs = OtherItem.objects.none()
+        elif has_player_filter:
+            other_qs = OtherItem.objects.none()
+
     results = sorted(
-        list(gear_qs.prefetch_related('gear_images')) + list(player_qs.prefetch_related('images')),
+        list(gear_qs.prefetch_related('gear_images')) +
+        list(player_qs.prefetch_related('images')) +
+        list(other_qs.prefetch_related('images')),
         key=lambda x: x.last_updated,
         reverse=True,
     )

@@ -432,8 +432,8 @@ class CollectibleSearchForm(forms.Form):
             'list': 'team-list',
             'placeholder': 'Start typing a team...'
         })
-        self.fields['game_type'].choices = [('', 'Any')] + [(g.key, g.name) for g in GameType.objects.all()]
-        self.fields['usage_type'].choices = [('', 'Any')] + [(u.key, u.name) for u in UsageType.objects.all()]
+        self.fields['game_type'].choices = [('', '')] + [(g.key, g.name) for g in GameType.objects.all()]
+        self.fields['usage_type'].choices = [('', '')] + [(u.key, u.name) for u in UsageType.objects.all()]
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]
 
 
