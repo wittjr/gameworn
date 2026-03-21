@@ -1,7 +1,8 @@
 <div class="max-w-sm w-full h-full bg-white border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
     <div class="relative">
-        {% include "memorabilia/elements/modal.html" with image_url=image_url %} {% if request.user.id == object.collection.owner_uid or
-        request.user.is_superuser %} {% url 'memorabilia:edit_photo_match' object.collection.id object.id image.id as edit_match_url %}
+        {% include "memorabilia/elements/modal.html" with image_url=image_url %}
+        {% if request.user.id == object.collection.owner_uid or request.user.is_superuser %}
+        {% url 'memorabilia:edit_photo_match' object.collection.id object.id image.id as edit_match_url %}
         <a
             href="{{ edit_match_url }}"
             class="absolute bottom-2 right-2 bg-white/80 dark:bg-gray-800/80 p-2 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors">
