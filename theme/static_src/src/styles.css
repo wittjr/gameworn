@@ -20,4 +20,33 @@
   .btn-primary-red {
     @apply text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800 disabled:opacity-50;
   }
+
+  /* Collection form: error state on inputs */
+  .field-has-error input,
+  .field-has-error textarea,
+  .field-has-error select {
+    border-color: #f87171 !important;
+  }
+
+  /* Collage picker: check indicator */
+  .check-indicator:not(.hidden) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Collectible form: error state on table rows */
+  tr.field-row.field-error {
+    background-color: rgb(254 242 242) !important;
+  }
+
+  tr.field-row.field-error th {
+    color: rgb(185 28 28) !important;
+  }
+
+  tr.field-row.field-error input,
+  tr.field-row.field-error select,
+  tr.field-row.field-error textarea {
+    border-color: #f87171 !important;
+  }
 }

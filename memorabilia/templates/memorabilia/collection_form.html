@@ -26,15 +26,15 @@
         {% endif %}
 
         <div class="mb-4{% if form.title.errors %} bg-red-50 rounded-lg p-2 field-has-error{% endif %}">
-            <label class="block mb-2 text-sm font-medium {% if form.title.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Title</label>
+            <label for="{{ form.title.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.title.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Title</label>
             {{ form.title }}
             {% for error in form.title.errors %}
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
             {% endfor %}
         </div>
 
         <div class="mb-4{% if form.header_image.errors %} bg-red-50 rounded-lg p-2{% endif %}">
-            <label class="block mb-2 text-sm font-medium {% if form.header_image.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Header Image</label>
+            <label for="{{ form.header_image.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.header_image.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Header Image</label>
 
             {# --- Image option cards --- #}
             <div class="flex gap-3 mb-4" id="image-option-cards">
@@ -111,7 +111,7 @@
 
             {# Header image errors — shown below cards/dropzone #}
             {% for error in form.header_image.errors %}
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
             {% endfor %}
 
             {# Collage image picker — available when there are more than 1 collectible with images #}
@@ -146,23 +146,14 @@
 
         <div class="mx-auto flex">
             <button type="submit" class="btn-primary grow me-2 mb-2">Save</button>
-            <button type="button" class="btn-primary grow me-2 mb-2" onclick="history.back()">Cancel</button>
+            {% if collection %}
+            <a href="{% url 'memorabilia:collection' collection.id %}" class="btn-primary grow me-2 mb-2 text-center">Cancel</a>
+            {% else %}
+            <a href="{% url 'memorabilia:list_collections' %}" class="btn-primary grow me-2 mb-2 text-center">Cancel</a>
+            {% endif %}
         </div>
     </form>
 </div>
-
-<style>
-    .field-has-error input,
-    .field-has-error textarea,
-    .field-has-error select {
-        border-color: #f87171 !important;
-    }
-    .check-indicator:not(.hidden) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-</style>
 
 <script>
 (function () {

@@ -97,7 +97,7 @@
             {% if form.non_field_errors %}
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                     {% for error in form.non_field_errors %}
-                        <p class="text-red-700">{{ error }}</p>
+                        <p class="text-red-700" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -185,7 +185,7 @@
                                 {% endif %}
                                 {% if field.errors %}
                                     {% for error in field.errors %}
-                                        <p class="field-error-msg mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+                                        <p class="field-error-msg mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
                                     {% endfor %}
                                 {% endif %}
                             </td>
@@ -199,26 +199,16 @@
             </table>
 
             <div class="flex justify-end space-x-4 mt-6">
-                <button type="button" onclick="history.back()" class="btn-primary-white">Cancel</button>
+                {% if collectible %}
+                <a href="{% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type=collectible.collectible_type pk=collectible.id %}" class="btn-primary-white">Cancel</a>
+                {% else %}
+                <a href="{% url 'memorabilia:collection' collection.id %}" class="btn-primary-white">Cancel</a>
+                {% endif %}
                 <button type="submit" class="btn-primary">Save Changes</button>
             </div>
     </div>
     </div>
 </form>
-
-<style>
-    tr.field-row.field-error {
-        background-color: rgb(254 242 242) !important;
-    }
-    tr.field-row.field-error th {
-        color: rgb(185 28 28) !important;
-    }
-    tr.field-row.field-error input,
-    tr.field-row.field-error select,
-    tr.field-row.field-error textarea {
-        border-color: #f87171 !important;
-    }
-</style>
 
 <script>
     // Clear field error state on blur when field has a value

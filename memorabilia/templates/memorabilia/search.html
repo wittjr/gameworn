@@ -146,11 +146,12 @@
       {% url 'memorabilia:collectible' collection_id=c.collection.id collectible_type=c.collectible_type pk=c.id as detail_url %}
       {% getmediaurl c.get_primary_image as image_url %}
       {% include "memorabilia/collectible_card.html" with link=detail_url label=c.title image=image_url %}
-    {% empty %}
-      <p>No results.</p>
     {% endfor %}
   </div>
 {% else %}
-  <p>No results.</p>
+  <div class="text-center py-16 text-gray-500">
+    <p class="text-lg font-medium">No results found</p>
+    <p class="text-sm mt-1">Try adjusting your filters or <a href="{{ request.path }}" class="text-blue-600 underline">clear the search</a>.</p>
+  </div>
 {% endif %}
 {% endblock content %}

@@ -69,7 +69,6 @@
     {% for image in object.photomatches.all %}
         {% getmediaurl image as image_url %}
         {% include 'memorabilia/photomatch_card.html' with image_url=image_url %}
-    </div>
     {% endfor %}
 </div>
 {% endif %}
