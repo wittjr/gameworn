@@ -755,7 +755,7 @@ def bulk_add_flickr_album(request, collection_id):
     except Exception:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     title = body.get('title', '').strip()
-    description = body.get('description', '').strip()
+    description = body.get('description', '').strip() or title
     username = body.get('username', '').strip()
     album_id = body.get('album_id', '').strip()
     if not title:
@@ -800,7 +800,7 @@ def _process_albums_background(collection_id, username, albums):
         collection = Collection.objects.get(pk=collection_id)
         for album in albums:
             title = album.get('title', '').strip()
-            description = album.get('description', '').strip()
+            description = album.get('description', '').strip() or title
             album_id = album.get('album_id', '').strip()
             if not title:
                 continue
@@ -842,7 +842,7 @@ def _import_flickr_album_photos(item, username, album_id):
         link = photo.get('url_l') or photo.get('url_m') or photo.get('url_s') or ''
         if not link:
             continue
-        is_primary = first or photo.get('id') == primary_id
+        is_primary = photo.get('id') == primary_id if primary_id else first
         OtherItemImage.objects.create(
             collectible=item,
             link=link,
