@@ -3,7 +3,7 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, UsageType, PlayerItem, PlayerItemImage, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkOtherItemForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -380,6 +380,8 @@ def create_collectible(request, collection_id):
         'title': 'New Collectible',
         'collection': collection,
         'leagues': League.objects.all(),
+        'how_obtained_options': HowObtainedOption.objects.all(),
+        'users': User.objects.filter(is_superuser=False),
         'selected_collectible_type': collectible_type,
     })
 
@@ -535,7 +537,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'how_obtained', 'loa']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = PlayerGearItemForm(initial=initial, current_user=request.user)
@@ -549,6 +551,8 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'title': 'Edit Collectible',
         'collectible': collectible,
         'leagues': League.objects.all(),
+        'how_obtained_options': HowObtainedOption.objects.all(),
+        'users': User.objects.filter(is_superuser=False),
         'selected_collectible_type': selected_collectible_type,
     })
 

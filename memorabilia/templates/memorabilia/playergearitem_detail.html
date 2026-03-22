@@ -53,6 +53,8 @@
                 {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
                 {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
+                {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
+                {% include 'memorabilia/tablerow.html' with label='LOA' value=object.loa %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
                 {% endif %}

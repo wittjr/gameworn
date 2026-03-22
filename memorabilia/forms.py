@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -122,11 +122,27 @@ class CollectionForm(ModelForm):
         return instance
 
 
-class CollectibleForm(ModelForm):
+HOW_OBTAINED_SEPARATOR = '──── Users ────'
+
+
+class HowObtainedValidationMixin:
+    def clean_how_obtained(self):
+        value = self.cleaned_data.get('how_obtained', '') or ''
+        if value.strip() == HOW_OBTAINED_SEPARATOR:
+            raise forms.ValidationError('Please select a valid value.')
+        return value.strip()
+
+
+class CollectibleForm(HowObtainedValidationMixin, ModelForm):
     league = forms.CharField(
         required=False,
         widget=flowbite_widgets.FlowbiteTextInput(),
         help_text="Select from the list or type a custom value",
+    )
+    loa = ModelChoiceField(
+        queryset=LoaType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
     class Meta:
@@ -144,6 +160,7 @@ class CollectibleForm(ModelForm):
             "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
             "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
+            "how_obtained": flowbite_widgets.FlowbiteTextInput(),
         }
 
 
@@ -160,6 +177,10 @@ class CollectibleForm(ModelForm):
         self.fields['team'].widget.attrs.update({
             'list': 'team-list',
             'placeholder': 'Start typing a team...'
+        })
+        self.fields['how_obtained'].widget.attrs.update({
+            'list': 'how-obtained-list',
+            'placeholder': 'Select or type how this was obtained...'
         })
         
 
@@ -200,8 +221,14 @@ class OtherItemImageForm(ModelForm):
         }
 
 
-class OtherItemForm(ModelForm):
+class OtherItemForm(HowObtainedValidationMixin, ModelForm):
     """Form for OtherItem - contains only base Collectible fields"""
+    loa = ModelChoiceField(
+        queryset=LoaType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
     class Meta:
         model = OtherItem
         fields = "__all__"
@@ -210,12 +237,17 @@ class OtherItemForm(ModelForm):
             "title": flowbite_widgets.FlowbiteTextInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
+            "how_obtained": flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        self.fields['how_obtained'].widget.attrs.update({
+            'list': 'how-obtained-list',
+            'placeholder': 'Select or type how this was obtained...'
+        })
 
 
 class PlayerGearItemImageForm(ModelForm):
@@ -230,7 +262,7 @@ class PlayerGearItemImageForm(ModelForm):
         }
 
 
-class PlayerGearItemForm(ModelForm):
+class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
     """Form for PlayerGearItem - includes all PlayerItem fields plus gear-specific fields"""
     league = forms.CharField(
         required=True,
@@ -243,6 +275,11 @@ class PlayerGearItemForm(ModelForm):
     )
     usage_type = ModelChoiceField(
         queryset=UsageType.objects.all(),
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    loa = ModelChoiceField(
+        queryset=LoaType.objects.all(),
+        required=False,
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
@@ -260,6 +297,7 @@ class PlayerGearItemForm(ModelForm):
             "number": flowbite_widgets.FlowbiteNumberInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
+            "how_obtained": flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -273,6 +311,10 @@ class PlayerGearItemForm(ModelForm):
         self.fields['team'].widget.attrs.update({
             'list': 'team-list',
             'placeholder': 'Start typing a team...'
+        })
+        self.fields['how_obtained'].widget.attrs.update({
+            'list': 'how-obtained-list',
+            'placeholder': 'Select or type how this was obtained...'
         })
 
     def clean_league(self):

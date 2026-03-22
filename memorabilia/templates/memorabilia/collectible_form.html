@@ -116,6 +116,19 @@
                                         {% endfor %}
                                     </datalist>
                                 {% endif %}
+                                {% if field.name == 'how_obtained' %}
+                                    <datalist id="how-obtained-list">
+                                        {% for opt in how_obtained_options %}
+                                            <option value="{{ opt.name }}"></option>
+                                        {% endfor %}
+                                        {% if users %}
+                                            <option value="──── Users ────"></option>
+                                            {% for u in users %}
+                                                <option value="{{ u.username }}"></option>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </datalist>
+                                {% endif %}
                                 {% if field.name == 'team' %}
                                     <datalist id="team-list"></datalist>
                                     <script>

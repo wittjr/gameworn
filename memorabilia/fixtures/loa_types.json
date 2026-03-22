@@ -1,0 +1,30 @@
+[
+    {
+        "model": "memorabilia.loatype",
+        "pk": "paper",
+        "fields": {
+            "name": "Paper Document"
+        }
+    },
+    {
+        "model": "memorabilia.loatype",
+        "pk": "tag",
+        "fields": {
+            "name": "Tag on Jersey"
+        }
+    },
+    {
+        "model": "memorabilia.loatype",
+        "pk": "both",
+        "fields": {
+            "name": "Paper Document and Tag on Jersey"
+        }
+    },
+    {
+        "model": "memorabilia.loatype",
+        "pk": "none",
+        "fields": {
+            "name": "None"
+        }
+    }
+]

@@ -1,0 +1,30 @@
+[
+    {
+        "model": "memorabilia.howobtainedoption",
+        "pk": 1,
+        "fields": {
+            "name": "Team Store/Auction"
+        }
+    },
+    {
+        "model": "memorabilia.howobtainedoption",
+        "pk": 2,
+        "fields": {
+            "name": "NHL Auctions"
+        }
+    },
+    {
+        "model": "memorabilia.howobtainedoption",
+        "pk": 3,
+        "fields": {
+            "name": "MeiGray"
+        }
+    },
+    {
+        "model": "memorabilia.howobtainedoption",
+        "pk": 4,
+        "fields": {
+            "name": "MeiGray Consignment"
+        }
+    }
+]

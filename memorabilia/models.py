@@ -131,6 +131,21 @@ class WantedItem(RulesModel):
     def __str__(self):
         return self.title
 
+class LoaType(models.Model):
+    key = models.CharField(max_length=10, primary_key=True)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
+class HowObtainedOption(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Collectible(RulesModel):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
@@ -139,6 +154,8 @@ class Collectible(RulesModel):
     for_trade = models.BooleanField(blank=True, null=True)
     asking_price = models.FloatField(blank=True, null=True)
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
+    how_obtained = models.CharField(max_length=255, blank=True, null=True)
+    loa = models.ForeignKey('LoaType', to_field='key', on_delete=models.PROTECT, db_column='loa', blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
