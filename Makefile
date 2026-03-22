@@ -1,25 +1,40 @@
 VENV := source ~/Development/gameworn/venv/bin/activate
-DEV_SETTINGS := DJANGO_SETTINGS_MODULE=gameworn.dev_settings
+SETTINGS ?= dev
 
-.PHONY: test migrations migrate loadfixtures run shell
+ifeq ($(SETTINGS),dev)
+  DJANGO_SETTINGS := gameworn.dev_settings
+else ifeq ($(SETTINGS),test)
+  DJANGO_SETTINGS := gameworn.test_settings
+else ifeq ($(SETTINGS),prod)
+  DJANGO_SETTINGS := gameworn.settings
+else
+  $(error Unknown SETTINGS value '$(SETTINGS)'. Use dev, test, or prod)
+endif
+
+DJANGO_ENV := DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS)
+
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check
 
 test:
-	$(VENV) && $(DEV_SETTINGS) python manage.py test memorabilia
+	$(VENV) && $(DJANGO_ENV) python manage.py test memorabilia
 
 migrations:
-	$(VENV) && $(DEV_SETTINGS) python manage.py makemigrations
+	$(VENV) && $(DJANGO_ENV) python manage.py makemigrations
 
 migrate:
-	$(VENV) && $(DEV_SETTINGS) python manage.py migrate
+	$(VENV) && $(DJANGO_ENV) python manage.py migrate
 
 loadfixtures:
-	$(VENV) && $(DEV_SETTINGS) python manage.py loaddata leagues game_types usage_types loa_types how_obtained_options
+	$(VENV) && $(DJANGO_ENV) python manage.py loaddata leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets
 
 collectstatic:
-	$(VENV) && $(DEV_SETTINGS) python manage.py collectstatic --noinput
+	$(VENV) && $(DJANGO_ENV) python manage.py collectstatic --noinput
 
 run:
-	$(VENV) && $(DEV_SETTINGS) python manage.py runserver
+	$(VENV) && $(DJANGO_ENV) python manage.py runserver
 
 shell:
-	$(VENV) && $(DEV_SETTINGS) python manage.py shell
+	$(VENV) && $(DJANGO_ENV) python manage.py shell
+
+check:
+	$(VENV) && $(DJANGO_ENV) python manage.py check memorabilia

@@ -63,7 +63,8 @@ class Collection(RulesModel):
         from itertools import chain
         images = []
         for collectible in chain(
-            self.playergearitem_set.prefetch_related('gear_images').all(),
+            self.playergear_set.prefetch_related('gear_images').all(),
+            self.hockeyjersey_set.prefetch_related('gear_images').all(),
             self.playeritem_set.prefetch_related('images').all(),
             self.generalitem_set.prefetch_related('images').all(),
         ):
@@ -83,14 +84,17 @@ class Collection(RulesModel):
         for entry in id_list:
             ctype = entry.get('type')
             cid = entry.get('id')
-            if ctype in ('playergearitem', 'playeritem', 'generalitem') and isinstance(cid, int):
+            if ctype in ('playergear', 'playeritem', 'generalitem', 'hockeyjersey') and isinstance(cid, int):
                 by_type[ctype].append(cid)
 
         # Fetch each type in two queries (SELECT + prefetch) rather than one per item.
         fetched = {}  # (type, pk) -> collectible
-        if by_type['playergearitem']:
-            for c in self.playergearitem_set.filter(pk__in=by_type['playergearitem']).prefetch_related('gear_images'):
-                fetched[('playergearitem', c.pk)] = c
+        if by_type['playergear']:
+            for c in self.playergear_set.filter(pk__in=by_type['playergear']).prefetch_related('gear_images'):
+                fetched[('playergear', c.pk)] = c
+        if by_type['hockeyjersey']:
+            for c in self.hockeyjersey_set.filter(pk__in=by_type['hockeyjersey']).prefetch_related('gear_images'):
+                fetched[('hockeyjersey', c.pk)] = c
         if by_type['playeritem']:
             for c in self.playeritem_set.filter(pk__in=by_type['playeritem']).prefetch_related('images'):
                 fetched[('playeritem', c.pk)] = c
@@ -211,12 +215,43 @@ class PlayerGearItem(BasePlayerItem):
     season = models.CharField(max_length=10)
     game_type = models.ForeignKey('GameType', to_field='key', on_delete=models.PROTECT, db_column='game_type')
     usage_type = models.ForeignKey('UsageType', to_field='key', on_delete=models.PROTECT, db_column='usage_type')
-    collectible_type = 'playergearitem'
+    gear_type = models.ForeignKey('GearType', to_field='key', on_delete=models.PROTECT, db_column='gear_type', blank=True, null=True)
 
     class Meta(BasePlayerItem.Meta):
+        abstract = True
+
+
+class PlayerGear(PlayerGearItem):
+    collectible_type = 'playergear'
+
+    class Meta(PlayerGearItem.Meta):
         indexes = [
-            models.Index(fields=['last_updated'], name='mem_playergearitem_updated_idx'),
+            models.Index(fields=['last_updated'], name='mem_playergear_updated_idx'),
         ]
+
+    def __str__(self):
+        return self.title
+
+    def get_primary_image(self):
+        images = list(self.gear_images.all())
+        primary = next((img for img in images if img.primary), None)
+        if primary:
+            return primary.image if primary.image else primary.link
+        return images[0].image if images else None
+
+
+class HockeyJersey(PlayerGearItem):
+    season_set = models.ForeignKey('SeasonSet', to_field='key', on_delete=models.PROTECT, db_column='season_set', blank=True, null=True)
+    collectible_type = 'hockeyjersey'
+
+    class Meta(PlayerGearItem.Meta):
+        indexes = [
+            models.Index(fields=['last_updated'], name='mem_hockeyjersey_updated_idx'),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.gear_type_id = 'JRS'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -252,8 +287,11 @@ class CollectibleImage(RulesModel):
 class PlayerItemImage(CollectibleImage):
     collectible = models.ForeignKey(PlayerItem, on_delete=models.CASCADE, related_name='images')
 
-class PlayerGearItemImage(CollectibleImage):
-    collectible = models.ForeignKey(PlayerGearItem, on_delete=models.CASCADE, related_name='gear_images')
+class PlayerGearImage(CollectibleImage):
+    collectible = models.ForeignKey(PlayerGear, on_delete=models.CASCADE, related_name='gear_images')
+
+class HockeyJerseyImage(CollectibleImage):
+    collectible = models.ForeignKey(HockeyJersey, on_delete=models.CASCADE, related_name='gear_images')
 
 class GeneralItemImage(CollectibleImage):
     collectible = models.ForeignKey(GeneralItem, on_delete=models.CASCADE, related_name='images')
@@ -263,7 +301,7 @@ class PhotoMatch(RulesModel):
     link = models.CharField(max_length=255, blank=True, null=True)
     description = models.CharField(max_length=500, blank=True, null=True)
     game_date = models.DateField()
-    collectible = models.ForeignKey(PlayerGearItem, on_delete=models.CASCADE, related_name='photomatches')
+    collectible = models.ForeignKey(PlayerGear, on_delete=models.CASCADE, related_name='photomatches')
 
     class Meta:
         rules_permissions = {
@@ -293,6 +331,22 @@ class UsageType(models.Model):
 
 
 class GameType(models.Model):
+    key = models.CharField(max_length=5, primary_key=True)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
+class GearType(models.Model):
+    key = models.CharField(max_length=5, primary_key=True)
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
+class SeasonSet(models.Model):
     key = models.CharField(max_length=5, primary_key=True)
     name = models.CharField(max_length=100)
 

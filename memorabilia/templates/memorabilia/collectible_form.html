@@ -49,38 +49,12 @@
     <!-- Item Type Selection -->
     <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <h3 class="text-lg font-semibold mb-3 text-gray-900">Item Type</h3>
-        <div class="flex items-center space-x-6">
-            <div class="flex items-center">
-                <input
-                    id="type-playergearitem"
-                    type="radio"
-                    name="collectible_type"
-                    value="PlayerGearItem"
-                    {% if selected_collectible_type == 'PlayerGearItem' %}checked{% endif %}
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
-                <label for="type-playergearitem" class="ml-2 text-sm font-medium text-gray-900">Player Gear Item</label>
-            </div>
-            <div class="flex items-center">
-                <input
-                    id="type-playeritem"
-                    type="radio"
-                    name="collectible_type"
-                    value="PlayerItem"
-                    {% if selected_collectible_type == 'PlayerItem' %}checked{% endif %}
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
-                <label for="type-playeritem" class="ml-2 text-sm font-medium text-gray-900">Player Item</label>
-            </div>
-            <div class="flex items-center">
-                <input
-                    id="type-generalitem"
-                    type="radio"
-                    name="collectible_type"
-                    value="GeneralItem"
-                    {% if selected_collectible_type == 'GeneralItem' %}checked{% endif %}
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
-                <label for="type-generalitem" class="ml-2 text-sm font-medium text-gray-900">General Item</label>
-            </div>
-        </div>
+        <select name="collectible_type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+            <option value="PlayerGear" {% if selected_collectible_type == 'PlayerGear' %}selected{% endif %}>Player Gear</option>
+            <option value="HockeyJersey" {% if selected_collectible_type == 'HockeyJersey' %}selected{% endif %}>Hockey Jersey</option>
+            <option value="PlayerItem" {% if selected_collectible_type == 'PlayerItem' %}selected{% endif %}>Player Item</option>
+            <option value="GeneralItem" {% if selected_collectible_type == 'GeneralItem' %}selected{% endif %}>General Item</option>
+        </select>
     </div>
     
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
@@ -252,24 +226,33 @@
         }
 
         function toggleFields() {
-            const selectedType = document.querySelector('input[name="collectible_type"]:checked').value;
-            if (selectedType === 'PlayerGearItem') {
+            const selectedType = document.querySelector('select[name="collectible_type"]').value;
+            if (selectedType === 'PlayerGear') {
                 setVisible(playerFields, true);
                 setVisible(gearFields, true);
+                setVisible(['gear_type'], true);
+                setVisible(['season_set'], false);
+            } else if (selectedType === 'HockeyJersey') {
+                setVisible(playerFields, true);
+                setVisible(gearFields, true);
+                setVisible(['gear_type'], false);
+                setVisible(['season_set'], true);
             } else if (selectedType === 'PlayerItem') {
                 setVisible(playerFields, true);
                 setVisible(gearFields, false);
+                setVisible(['gear_type'], false);
+                setVisible(['season_set'], false);
             } else {
                 // GeneralItem
                 setVisible(playerFields, false);
                 setVisible(gearFields, false);
+                setVisible(['gear_type'], false);
+                setVisible(['season_set'], false);
             }
         }
 
         document.addEventListener('DOMContentLoaded', toggleFields);
-        document.querySelectorAll('input[name="collectible_type"]').forEach(radio => {
-            radio.addEventListener('change', toggleFields);
-        });
+        document.querySelector('select[name="collectible_type"]').addEventListener('change', toggleFields);
     })();
 </script>
 

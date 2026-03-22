@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -75,7 +75,7 @@ class CollectionForm(ModelForm):
             raise forms.ValidationError('Invalid collage selection data.')
         if len(data) > 9:
             raise forms.ValidationError('Cannot select more than 9 images for the collage.')
-        valid_types = {'playergearitem', 'playeritem', 'generalitem'}
+        valid_types = {'playergear', 'playeritem', 'generalitem', 'hockeyjersey'}
         for entry in data:
             if not isinstance(entry, dict) or set(entry.keys()) != {'type', 'id'}:
                 raise forms.ValidationError('Invalid collage selection data.')
@@ -250,10 +250,10 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
         })
 
 
-class PlayerGearItemImageForm(ModelForm):
-    """Form for PlayerGearItem images"""
+class PlayerGearImageForm(ModelForm):
+    """Form for PlayerGear images"""
     class Meta:
-        model = PlayerGearItemImage
+        model = PlayerGearImage
         fields = "__all__"
         widgets = {
             "link": flowbite_widgets.FlowbiteTextInput(),
@@ -262,8 +262,20 @@ class PlayerGearItemImageForm(ModelForm):
         }
 
 
-class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
-    """Form for PlayerGearItem - includes all PlayerItem fields plus gear-specific fields"""
+class HockeyJerseyImageForm(ModelForm):
+    """Form for HockeyJersey images"""
+    class Meta:
+        model = HockeyJerseyImage
+        fields = "__all__"
+        widgets = {
+            "link": flowbite_widgets.FlowbiteTextInput(),
+            "primary": flowbite_widgets.FlowbiteCheckboxInput(),
+            "flickrObject": flowbite_widgets.FlowbiteTextarea(),
+        }
+
+
+class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
+    """Form for PlayerGear - includes all PlayerItem fields plus gear-specific fields"""
     league = forms.CharField(
         required=True,
         widget=flowbite_widgets.FlowbiteTextInput(),
@@ -277,6 +289,11 @@ class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
         queryset=UsageType.objects.all(),
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
+    gear_type = ModelChoiceField(
+        queryset=GearType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
     loa = ModelChoiceField(
         queryset=LoaType.objects.all(),
         required=False,
@@ -284,7 +301,7 @@ class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
     )
 
     class Meta:
-        model = PlayerGearItem
+        model = PlayerGear
         fields = "__all__"
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
         widgets = {
@@ -321,12 +338,31 @@ class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
         return self.cleaned_data.get("league", "").strip()
 
 
+class HockeyJerseyForm(PlayerGearForm):
+    """Form for HockeyJersey - all PlayerGear fields plus season_set; gear_type is auto-set."""
+    gear_type = ModelChoiceField(
+        queryset=GearType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    season_set = ModelChoiceField(
+        queryset=SeasonSet.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    class Meta(PlayerGearForm.Meta):
+        model = HockeyJersey
+
+
 def get_collectible_form_class(collectible_type='PlayerItem'):
     """Factory function to get the appropriate form class based on type"""
     if collectible_type == 'GeneralItem':
         return GeneralItemForm
-    if collectible_type == 'PlayerGearItem':
-        return PlayerGearItemForm
+    if collectible_type == 'PlayerGear':
+        return PlayerGearForm
+    if collectible_type == 'HockeyJersey':
+        return HockeyJerseyForm
     return CollectibleForm
 
 
@@ -380,10 +416,20 @@ CollectibleImageFormSet = inlineformset_factory(
     # validate_max=True
 )
 
-PlayerGearItemImageFormSet = inlineformset_factory(
-    PlayerGearItem,
-    PlayerGearItemImage,
-    form=PlayerGearItemImageForm,
+PlayerGearImageFormSet = inlineformset_factory(
+    PlayerGear,
+    PlayerGearImage,
+    form=PlayerGearImageForm,
+    formset=CustomCollectibleImageFormSet,
+    fk_name='collectible',
+    extra=0,
+    can_delete=True,
+)
+
+HockeyJerseyImageFormSet = inlineformset_factory(
+    HockeyJersey,
+    HockeyJerseyImage,
+    form=HockeyJerseyImageForm,
     formset=CustomCollectibleImageFormSet,
     fk_name='collectible',
     extra=0,
@@ -504,15 +550,43 @@ class BulkCollectibleForm(ModelForm):
         })
 
 
-class BulkPlayerGearItemForm(ModelForm):
-    """Simplified form for bulk editing PlayerGearItems in a formset."""
+class BulkPlayerGearForm(ModelForm):
+    """Simplified form for bulk editing PlayerGear items in a formset."""
 
     game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+    gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
 
     class Meta:
-        model = PlayerGearItem
-        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description']
+        model = PlayerGear
+        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'description']
+        widgets = {
+            'title': flowbite_widgets.FlowbiteTextInput(),
+            'league': flowbite_widgets.FlowbiteTextInput(),
+            'player': flowbite_widgets.FlowbiteTextInput(),
+            'team': flowbite_widgets.FlowbiteTextInput(),
+            'number': flowbite_widgets.FlowbiteNumberInput(),
+            'brand': flowbite_widgets.FlowbiteTextInput(),
+            'size': flowbite_widgets.FlowbiteTextInput(),
+            'season': flowbite_widgets.FlowbiteTextInput(),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['league'].widget.attrs.update({'placeholder': 'e.g., NHL, AHL...'})
+        self.fields['team'].widget.attrs.update({'placeholder': 'Start typing a team...'})
+
+
+class BulkHockeyJerseyForm(ModelForm):
+    """Simplified form for bulk editing HockeyJersey items in a formset."""
+    game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+    usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+    season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
+
+    class Meta:
+        model = HockeyJersey
+        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'season_set', 'description']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),

@@ -16,11 +16,12 @@
     {% csrf_token %}
     <input type="hidden" name="action" id="formAction" value="save" />
     {{ gear_formset.management_form }}
+    {{ hockey_jersey_formset.management_form }}
     {{ player_formset.management_form }}
     {{ other_formset.management_form }}
 
     {% if gear_formset.total_form_count %}
-    <h2 class="text-lg font-semibold mt-6 mb-1">Player Gear Items</h2>
+    <h2 class="text-lg font-semibold mt-6 mb-1">Player Gear</h2>
     <label class="flex items-center gap-2 py-1 mb-1 text-sm text-gray-500 cursor-pointer">
       <input type="checkbox" class="select-all-cb" data-group="gear" />
       Select all
@@ -29,7 +30,7 @@
     <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
       <div class="flex items-center pt-5 w-4 shrink-0">
         <input type="checkbox" class="delete-cb" data-group="gear"
-          name="delete_ids" value="playergearitem:{{ form.instance.pk }}"
+          name="delete_ids" value="playergear:{{ form.instance.pk }}"
           aria-label="Select {{ form.instance.title }} for deletion" />
       </div>
       {% with thumb=form.instance.get_primary_image_url %}
@@ -41,7 +42,49 @@
       <div class="shrink-0 w-28">
         <div class="text-xs text-gray-500 mb-1">Type</div>
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
-          <option value="playergearitem" selected>Player Gear</option>
+          <option value="playergear" selected>Player Gear</option>
+          <option value="hockeyjersey">Hockey Jersey</option>
+          <option value="playeritem">Player Item</option>
+          <option value="generalitem">General Item</option>
+        </select>
+      </div>
+      {{ form.id }}
+      {% for field in form.visible_fields %}
+      <div class="flex-1 min-w-[8rem]" data-field="{{ field.name }}">
+        <div class="text-xs text-gray-500 mb-1">{{ field.label }}</div>
+        {{ field }}
+        {% if field.name == 'team' %}<datalist id="team-list-{{ form.prefix }}"></datalist>{% endif %}
+        {% if field.errors %}<div class="text-xs text-red-500">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if hockey_jersey_formset.total_form_count %}
+    <h2 class="text-lg font-semibold mt-6 mb-1">Hockey Jerseys</h2>
+    <label class="flex items-center gap-2 py-1 mb-1 text-sm text-gray-500 cursor-pointer">
+      <input type="checkbox" class="select-all-cb" data-group="hockeyjersey" />
+      Select all
+    </label>
+    {% for form in hockey_jersey_formset %}
+    <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
+      <div class="flex items-center pt-5 w-4 shrink-0">
+        <input type="checkbox" class="delete-cb" data-group="hockeyjersey"
+          name="delete_ids" value="hockeyjersey:{{ form.instance.pk }}"
+          aria-label="Select {{ form.instance.title }} for deletion" />
+      </div>
+      {% with thumb=form.instance.get_primary_image_url %}
+      <div class="shrink-0 w-14 h-14 rounded overflow-hidden bg-gray-100 flex items-center justify-center mt-1">
+        {% if thumb %}<img src="{{ thumb }}" class="w-full h-full object-cover" alt="{{ form.instance.title }}" />
+        {% else %}<svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 4-6 4 6M4 20h16M4 4h16v12H4z"/></svg>{% endif %}
+      </div>
+      {% endwith %}
+      <div class="shrink-0 w-28">
+        <div class="text-xs text-gray-500 mb-1">Type</div>
+        <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
+          <option value="playergear">Player Gear</option>
+          <option value="hockeyjersey" selected>Hockey Jersey</option>
           <option value="playeritem">Player Item</option>
           <option value="generalitem">General Item</option>
         </select>
@@ -81,7 +124,8 @@
       <div class="shrink-0 w-28">
         <div class="text-xs text-gray-500 mb-1">Type</div>
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
-          <option value="playergearitem">Player Gear</option>
+          <option value="playergear">Player Gear</option>
+          <option value="hockeyjersey">Hockey Jersey</option>
           <option value="playeritem" selected>Player Item</option>
           <option value="generalitem">General Item</option>
         </select>
@@ -121,6 +165,13 @@
           {% for ut in usage_types %}<option value="{{ ut.key }}">{{ ut.name }}</option>{% endfor %}
         </select>
       </div>
+      <div class="flex-1 min-w-[7rem]" data-field="season_set">
+        <div class="text-xs text-gray-500 mb-1">Season Set</div>
+        <select name="{{ form.prefix }}-season_set" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for ss in season_sets %}<option value="{{ ss.key }}">{{ ss.name }}</option>{% endfor %}
+        </select>
+      </div>
     </div>
     {% endfor %}
     {% endif %}
@@ -147,7 +198,8 @@
       <div class="shrink-0 w-28">
         <div class="text-xs text-gray-500 mb-1">Type</div>
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
-          <option value="playergearitem">Player Gear</option>
+          <option value="playergear">Player Gear</option>
+          <option value="hockeyjersey">Hockey Jersey</option>
           <option value="playeritem">Player Item</option>
           <option value="generalitem" selected>General Item</option>
         </select>
@@ -203,11 +255,18 @@
           {% for ut in usage_types %}<option value="{{ ut.key }}">{{ ut.name }}</option>{% endfor %}
         </select>
       </div>
+      <div class="flex-1 min-w-[7rem]" data-field="season_set">
+        <div class="text-xs text-gray-500 mb-1">Season Set</div>
+        <select name="{{ form.prefix }}-season_set" data-extra disabled class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+          <option value="">---------</option>
+          {% for ss in season_sets %}<option value="{{ ss.key }}">{{ ss.name }}</option>{% endfor %}
+        </select>
+      </div>
     </div>
     {% endfor %}
     {% endif %}
 
-    {% if not gear_formset.total_form_count and not player_formset.total_form_count and not other_formset.total_form_count %}
+    {% if not gear_formset.total_form_count and not hockey_jersey_formset.total_form_count and not player_formset.total_form_count and not other_formset.total_form_count %}
       <div class="text-center py-16 text-gray-500">
         <p class="text-lg font-medium">No collectibles in this collection yet.</p>
         <p class="text-sm mt-1"><a href="{% url 'memorabilia:create_collectible' collection.id %}" class="text-blue-600 underline">Add your first collectible</a> to get started.</p>
@@ -232,9 +291,10 @@
   <script>
     // Fields visible per item type
     const TYPE_FIELDS = {
-      playergearitem: ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description'],
-      playeritem:     ['title', 'league', 'player', 'team', 'number', 'description'],
-      generalitem:    ['title', 'description'],
+      playergear: ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description'],
+      hockeyjersey: ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'season_set', 'description'],
+      playeritem: ['title', 'league', 'player', 'team', 'number', 'description'],
+      generalitem: ['title', 'description'],
     };
 
     function applyTypeVisibility(selectEl) {

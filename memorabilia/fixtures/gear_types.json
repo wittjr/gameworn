@@ -1,0 +1,65 @@
+[
+    {
+        "model": "memorabilia.geartype",
+        "pk": "STK",
+        "fields": {
+            "name": "Stick"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "PNT",
+        "fields": {
+            "name": "Pants"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "HLM",
+        "fields": {
+            "name": "Helmet"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "SOC",
+        "fields": {
+            "name": "Socks"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "HOO",
+        "fields": {
+            "name": "Hoodie"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "SKT",
+        "fields": {
+            "name": "Skates"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "JRS",
+        "fields": {
+            "name": "Jersey"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "GLV",
+        "fields": {
+            "name": "Gloves"
+        }
+    },
+    {
+        "model": "memorabilia.geartype",
+        "pk": "OTH",
+        "fields": {
+            "name": "Other"
+        }
+    }
+]

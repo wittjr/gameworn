@@ -1,0 +1,8 @@
+[
+    {"model": "memorabilia.seasonset", "pk": "SET1", "fields": {"name": "Set 1"}},
+    {"model": "memorabilia.seasonset", "pk": "SET2", "fields": {"name": "Set 2"}},
+    {"model": "memorabilia.seasonset", "pk": "SET3", "fields": {"name": "Set 3"}},
+    {"model": "memorabilia.seasonset", "pk": "SET4", "fields": {"name": "Set 4"}},
+    {"model": "memorabilia.seasonset", "pk": "PLY", "fields": {"name": "Playoff"}},
+    {"model": "memorabilia.seasonset", "pk": "SCF", "fields": {"name": "Stanley Cup Final"}}
+]
