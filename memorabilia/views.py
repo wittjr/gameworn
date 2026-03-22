@@ -3,7 +3,7 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
+from .models import Collection, PhotoMatch, League, GameType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm, HockeyJerseyImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -112,14 +112,22 @@ def _apply_collectible_filters(qs, data):
         qs = qs.filter(for_trade=True)
     elif for_trade == 'false':
         qs = qs.filter(for_trade=False)
+    season_set = data.get('season_set')
+    if season_set and _model_has_field(qs, 'season_set'):
+        qs = qs.filter(season_set=season_set)
+    gear_type = data.get('gear_type')
+    if gear_type and _model_has_field(qs, 'gear_type'):
+        qs = qs.filter(gear_type=gear_type)
     return qs
 
 
 def search_collectibles(request):
-    # Fields that only exist on PlayerGear
-    _GEAR_ONLY = ('brand', 'season', 'game_type', 'usage_type')
-    # Fields that exist on PlayerItem + PlayerGear but NOT OtherItem
+    # Fields that only exist on PlayerGear/HockeyJersey
+    _GEAR_ONLY = ('brand', 'season', 'game_type', 'usage_type', 'gear_type')
+    # Fields that exist on PlayerItem + PlayerGear but NOT GeneralItem
     _PLAYER_FIELDS = ('league', 'player', 'team', 'number')
+    # Fields that only exist on HockeyJersey
+    _JERSEY_ONLY = ('season_set',)
 
     form = CollectibleSearchForm(request.GET or None)
     gear_qs = PlayerGear.objects.all()
@@ -130,18 +138,31 @@ def search_collectibles(request):
         data = form.cleaned_data
         has_gear_filter = any(data.get(f) not in (None, '') for f in _GEAR_ONLY)
         has_player_filter = any(data.get(f) not in (None, '') for f in _PLAYER_FIELDS)
+        has_jersey_filter = any(data.get(f) not in (None, '') for f in _JERSEY_ONLY)
+
+        # Filter by item type first
+        item_type = data.get('item_type')
+        if item_type:
+            gear_qs = gear_qs if item_type == 'playergear' else PlayerGear.objects.none()
+            hockey_qs = hockey_qs if item_type == 'hockeyjersey' else HockeyJersey.objects.none()
+            player_qs = player_qs if item_type == 'playeritem' else PlayerItem.objects.none()
+            other_qs = other_qs if item_type == 'generalitem' else GeneralItem.objects.none()
 
         gear_qs = _apply_collectible_filters(gear_qs, data)
         hockey_qs = _apply_collectible_filters(hockey_qs, data)
 
-        player_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY}
+        player_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY + _JERSEY_ONLY}
         player_qs = _apply_collectible_filters(player_qs, player_data)
 
-        other_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY + _PLAYER_FIELDS}
+        other_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY + _PLAYER_FIELDS + _JERSEY_ONLY}
         other_qs = _apply_collectible_filters(other_qs, other_data)
 
         # Exclude types that don't have the filtered fields
-        if has_gear_filter:
+        if has_jersey_filter:
+            gear_qs = PlayerGear.objects.none()
+            player_qs = PlayerItem.objects.none()
+            other_qs = GeneralItem.objects.none()
+        elif has_gear_filter:
             player_qs = PlayerItem.objects.none()
             other_qs = GeneralItem.objects.none()
         elif has_player_filter:
@@ -568,7 +589,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'how_obtained', 'loa']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'how_obtained', 'coa']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)

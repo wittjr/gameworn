@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -139,9 +139,10 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         widget=flowbite_widgets.FlowbiteTextInput(),
         help_text="Select from the list or type a custom value",
     )
-    loa = ModelChoiceField(
-        queryset=LoaType.objects.all(),
+    coa = ModelChoiceField(
+        queryset=CoaType.objects.all(),
         required=False,
+        label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
@@ -223,9 +224,10 @@ class GeneralItemImageForm(ModelForm):
 
 class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
     """Form for GeneralItem - contains only base Collectible fields"""
-    loa = ModelChoiceField(
-        queryset=LoaType.objects.all(),
+    coa = ModelChoiceField(
+        queryset=CoaType.objects.all(),
         required=False,
+        label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
@@ -294,9 +296,10 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
         required=False,
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
-    loa = ModelChoiceField(
-        queryset=LoaType.objects.all(),
+    coa = ModelChoiceField(
+        queryset=CoaType.objects.all(),
         required=False,
+        label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
 
@@ -507,6 +510,20 @@ class CollectibleSearchForm(forms.Form):
         choices=[('', 'Any'), ('true', 'Yes'), ('false', 'No')],
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
+    item_type = forms.ChoiceField(
+        required=False,
+        label="Item Type",
+        choices=[
+            ('', 'Any'),
+            ('generalitem', 'General Item'),
+            ('hockeyjersey', 'Hockey Jersey'),
+            ('playergear', 'Player Gear'),
+            ('playeritem', 'Player Item'),
+        ],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    season_set = forms.ChoiceField(required=False, label="Season Set", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    gear_type = forms.ChoiceField(required=False, label="Gear Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -523,6 +540,8 @@ class CollectibleSearchForm(forms.Form):
         self.fields['game_type'].choices = [('', '')] + [(g.key, g.name) for g in GameType.objects.all()]
         self.fields['usage_type'].choices = [('', '')] + [(u.key, u.name) for u in UsageType.objects.all()]
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]
+        self.fields['season_set'].choices = [('', '')] + [(s.key, s.name) for s in SeasonSet.objects.all()]
+        self.fields['gear_type'].choices = [('', '')] + [(g.key, g.name) for g in GearType.objects.all()]
 
 
 class BulkCollectibleForm(ModelForm):

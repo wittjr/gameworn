@@ -16,6 +16,7 @@
 <h1 class="mb-6 text-4xl text-center font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl">{{ title }}</h1>
 
 <form method="get" class="bg-white rounded-lg shadow p-4 mb-6">
+
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     <div>
       <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.query.label }}</label>
@@ -134,11 +135,49 @@
       {{ form.for_trade }}
     </div> -->
   </div>
+
+  <!-- Bottom row: same column width as the grid above, centered -->
+  <div class="flex flex-wrap justify-center gap-4 mt-4">
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.item_type.label }}</label>
+      {{ form.item_type }}
+    </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]" id="gear-type-filter" style="display:none">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.gear_type.label }}</label>
+      {{ form.gear_type }}
+    </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.season_set.label }}</label>
+      {{ form.season_set }}
+    </div>
+  </div>
+
   <div class="flex justify-end mt-4 space-x-2">
     <a href="{{ request.path }}" class="px-4 py-2 border border-gray-300 rounded-md text-sm">Clear</a>
     <button type="submit" class="btn-primary">Search</button>
   </div>
 </form>
+
+<script>
+(function() {
+  function updateGearTypeVisibility() {
+    var itemType = document.querySelector('[name="item_type"]');
+    var gearDiv = document.getElementById('gear-type-filter');
+    if (!itemType || !gearDiv) return;
+    var isGear = itemType.value === 'playergear';
+    gearDiv.style.display = isGear ? '' : 'none';
+    if (!isGear) {
+      var gearSelect = gearDiv.querySelector('select');
+      if (gearSelect) gearSelect.value = '';
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    var itemType = document.querySelector('[name="item_type"]');
+    if (itemType) itemType.addEventListener('change', updateGearTypeVisibility);
+    updateGearTypeVisibility();
+  });
+})();
+</script>
 
 {% if results %}
   <div class="flex flex-wrap gap-4 py-4 justify-evenly">

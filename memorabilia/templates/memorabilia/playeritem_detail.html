@@ -40,20 +40,20 @@
     <div class="w-full relative overflow-x-auto">
         <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <tbody>
-                {% include 'memorabilia/tablerow.html' with label='League' value=league %}
-                {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
-                {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
-                {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
                 {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
-                <!-- {% include 'memorabilia/tablerow.html' with label='Collection' value=collectible.collection %} -->
-                <!-- {% include 'memorabilia/tablerow.html' with label='For Sale' value=collectible.for_sale %} -->
-                <!-- {% include 'memorabilia/tablerow.html' with label='For Trade' value=collectible.for_trade %} -->
+                {% include 'memorabilia/tablerow.html' with label='Collection' value=object.collection %}
+                {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
+                {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
+                {% include 'memorabilia/tablerow.html' with label='League' value=league %}
+                {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
+                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
+                {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
                 {% endif %}
                 {% if object.for_trade %}
                     {% include 'memorabilia/tablerow.html' with label='Looking for' value=object.looking_for %}
-                {% endif %}    
+                {% endif %}
             </tbody>
         </table>
         

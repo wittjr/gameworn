@@ -1878,6 +1878,10 @@ tr.field-row.field-error input,
   width: 100%;
 }
 
+.w-44 {
+  width: 11rem;
+}
+
 .min-w-\[5rem\] {
   min-width: 5rem;
 }
@@ -3354,6 +3358,10 @@ tr.field-row.field-error input,
 
   .md\:w-auto {
     width: auto;
+  }
+
+  .md\:w-\[calc\(33\.333\%-0\.667rem\)\] {
+    width: calc(33.333% - 0.667rem);
   }
 
   .md\:basis-48 {

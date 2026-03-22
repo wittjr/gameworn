@@ -1,27 +1,27 @@
 [
     {
-        "model": "memorabilia.loatype",
+        "model": "memorabilia.coatype",
         "pk": "paper",
         "fields": {
             "name": "Paper Document"
         }
     },
     {
-        "model": "memorabilia.loatype",
+        "model": "memorabilia.coatype",
         "pk": "tag",
         "fields": {
             "name": "Tag on Jersey"
         }
     },
     {
-        "model": "memorabilia.loatype",
+        "model": "memorabilia.coatype",
         "pk": "both",
         "fields": {
             "name": "Paper Document and Tag on Jersey"
         }
     },
     {
-        "model": "memorabilia.loatype",
+        "model": "memorabilia.coatype",
         "pk": "none",
         "fields": {
             "name": "None"

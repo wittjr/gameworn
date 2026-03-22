@@ -43,19 +43,20 @@
     <div class="w-full relative overflow-x-auto">
         <table class="table-auto sm:rounded-lg border shadow-md w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <tbody>
+                {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
+                {% include 'memorabilia/tablerow.html' with label='Collection' value=object.collection %}
+                {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
+                {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
                 {% include 'memorabilia/tablerow.html' with label='League' value=league %}
+                {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
+                {% include 'memorabilia/tablerow.html' with label='Season' value=object.season %}
                 {% include 'memorabilia/tablerow.html' with label='Brand' value=object.brand %}
                 {% include 'memorabilia/tablerow.html' with label='Size' value=object.size %}
-                {% include 'memorabilia/tablerow.html' with label='Player' value=object.player %}
-                {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
-                {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
-                {% include 'memorabilia/tablerow.html' with label='Season' value=object.season %}
-                {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
-                {% include 'memorabilia/tablerow.html' with label='Gear Type' value=object.gear_type %}
                 {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
+                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
-                {% include 'memorabilia/tablerow.html' with label='LOA' value=object.loa %}
+                {% include 'memorabilia/tablerow.html' with label='Gear Type' value=object.gear_type %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
                 {% endif %}

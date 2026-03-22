@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import GeneralItem, PlayerItem, PlayerGear, Collection, PhotoMatch, WantedItem, ExternalResource, Team, League, GameType, GearType, UsageType, LoaType, HowObtainedOption, SeasonSet, HockeyJersey
+from .models import GeneralItem, PlayerItem, PlayerGear, Collection, PhotoMatch, WantedItem, ExternalResource, Team, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, SeasonSet, HockeyJersey
 
 # Register your models here.
 admin.site.register(Collection)
@@ -16,5 +16,5 @@ admin.site.register(League)
 admin.site.register(GameType)
 admin.site.register(GearType)
 admin.site.register(UsageType)
-admin.site.register(LoaType)
+admin.site.register(CoaType)
 admin.site.register(HowObtainedOption)
