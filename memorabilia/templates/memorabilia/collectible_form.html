@@ -46,16 +46,15 @@
 <form method="post" enctype="multipart/form-data" novalidate class="bg-white rounded-lg shadow p-4">
     {% csrf_token %}
 
-    <!-- Item Type Selection - Fix 1 (label), 15 (bg-white + border-2), 16 (w-full on select) -->
-    <div class="mb-6 p-4 bg-white rounded-lg border-2 border-gray-300">
-        <h3 class="text-lg font-semibold mb-3 text-gray-900">Item Type</h3>
-        <label for="id_collectible_type" class="block mb-1 text-sm font-medium text-gray-900">Select type</label>
-        <select name="collectible_type" id="id_collectible_type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-            <option value="GeneralItem" {% if selected_collectible_type == 'GeneralItem' %}selected{% endif %}>General Item</option>
-            <option value="HockeyJersey" {% if selected_collectible_type == 'HockeyJersey' %}selected{% endif %}>Hockey Jersey</option>
-            <option value="PlayerGear" {% if selected_collectible_type == 'PlayerGear' %}selected{% endif %}>Player Gear</option>
-            <option value="PlayerItem" {% if selected_collectible_type == 'PlayerItem' %}selected{% endif %}>Player Item</option>
-        </select>
+    <!-- Item Type Selection -->
+    <div class="mb-6">
+        <input type="hidden" name="collectible_type" id="id_collectible_type" value="{{ selected_collectible_type }}">
+        <div class="flex gap-2" role="group" aria-label="Item type">
+            <button type="button" data-type="GeneralItem" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">General Item</button>
+            <button type="button" data-type="HockeyJersey" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Hockey Jersey</button>
+            <button type="button" data-type="PlayerGear" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Player Gear</button>
+            <button type="button" data-type="PlayerItem" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Player Item</button>
+        </div>
     </div>
 
     <!-- Fix 12: fields column order-1 on mobile, images column order-2 on mobile; reversed on md+ -->
@@ -232,6 +231,34 @@
 </script>
 
 <script>
+    // Pill-based item type selector
+    (function() {
+        const input = document.getElementById('id_collectible_type');
+        const pills = document.querySelectorAll('.type-pill');
+        const active = ['bg-blue-600', 'text-white', 'border-blue-600'];
+        const inactive = ['bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-50'];
+
+        function updatePills(value) {
+            pills.forEach(function(pill) {
+                const on = pill.dataset.type === value;
+                active.forEach(function(c) { pill.classList.toggle(c, on); });
+                inactive.forEach(function(c) { pill.classList.toggle(c, !on); });
+            });
+        }
+
+        updatePills(input.value);
+
+        pills.forEach(function(pill) {
+            pill.addEventListener('click', function() {
+                input.value = this.dataset.type;
+                updatePills(this.dataset.type);
+                input.dispatchEvent(new Event('change'));
+            });
+        });
+    })();
+</script>
+
+<script>
     // Handle toggling form fields based on collectible type
     (function() {
         const playerFields = ['league', 'player', 'team', 'number'];
@@ -252,7 +279,7 @@
         }
 
         function toggleFields() {
-            const selectedType = document.querySelector('select[name="collectible_type"]').value;
+            const selectedType = document.getElementById('id_collectible_type').value;
             if (selectedType === 'PlayerGear') {
                 setVisible(playerFields, true);
                 setVisible(gearFields, true);
@@ -279,7 +306,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', toggleFields);
-        document.querySelector('select[name="collectible_type"]').addEventListener('change', toggleFields);
+        document.getElementById('id_collectible_type').addEventListener('change', toggleFields);
     })();
 </script>
 

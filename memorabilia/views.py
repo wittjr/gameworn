@@ -387,7 +387,7 @@ def create_collectible(request, collection_id):
             display_form._errors = form.errors
             form = display_form
     else:
-        collectible_type = 'PlayerGear'
+        collectible_type = 'HockeyJersey'
         form = HockeyJerseyForm(initial={'collection': collection}, current_user=request.user)
         image_formset = HockeyJerseyImageFormSet(prefix='images')
 
