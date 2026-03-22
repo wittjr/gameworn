@@ -40,12 +40,16 @@
         class="btn-primary w-full flex items-center justify-center">
         <span id="queryFlickrText">Query Flickr</span>
         <span id="queryFlickrSpinner" class="hidden ml-2">
+
             <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
         </span>
     </button>
+    <div id="flickr-error" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mt-2" role="alert">
+        <p class="text-red-700">Failed to fetch Flickr album. Please try again.</p>
+    </div>
     </div>
     <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="link" role="tabpanel" aria-labelledby="link-tab">
         <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
@@ -61,6 +65,8 @@
             the content visibility and styling.</p>
     </div>
 </div>
+<fieldset>
+<legend class="sr-only">Select primary image</legend>
 <div id="album" class="flex flex-row gap-4 w-full flex-wrap ">
     {% for image_form in formset %}
         <div class="image-form grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -71,7 +77,7 @@
                         {{ image_form.link }}
                     </div>
                     {% getmediaurl image_form.link.value as image_url %}
-                    <img class="w-full h-auto rounded" src="{{ image_url }}" />
+                    <img class="w-full h-auto rounded" src="{{ image_url }}" alt="Collectible image" />
                 </div>
             {% elif image_form.image %}
                 <div class="form-group">
@@ -82,7 +88,7 @@
             <div class="form-group flex items-center gap-2">
                 <div class="hidden">{{ image_form.primary }}</div>
                 <input type="radio" name="primary_choice" value="{{ forloop.counter0 }}" id="primary-{{ forloop.counter0 }}" class="form-radio" {% if image_form.primary.value %}checked{% endif %}>
-                <label for="primary-{{ forloop.counter0 }}" class="cursor-pointer">Primary</label>
+                <label for="primary-{{ forloop.counter0 }}" class="cursor-pointer">Cover photo</label>
             </div>
 
             <div class="hidden">{{ image_form.DELETE }}</div>
@@ -91,11 +97,12 @@
                        id="include-{{ forloop.counter0 }}"
                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                        {% if image_form.DELETE.value %}{% else %}checked{% endif %}>
-                <label for="include-{{ forloop.counter0 }}" class="cursor-pointer">Include</label>
+                <label for="include-{{ forloop.counter0 }}" class="cursor-pointer">Keep</label>
             </div>
         </div>
     {% endfor %}
 </div>
+</fieldset>
 
 <script>
     function queryFlickr() {
@@ -126,6 +133,10 @@
             button.disabled = false;
             buttonText.textContent = 'Query Flickr'
             spinner.classList.add('hidden')
+
+            // Hide any previous error
+            var errEl = document.getElementById('flickr-error');
+            if (errEl) errEl.classList.add('hidden');
 
             // Populate title and description fields if they are empty
             if (data.title) {
@@ -171,7 +182,7 @@
                 const img = document.createElement('img');
                 img.src = photoData.square_150 || photoData.thumbnail;
                 img.className = 'w-full h-auto rounded';
-                img.alt = 'Flickr image';
+                img.alt = photoData.title || 'Flickr photo';
                 imgPreview.appendChild(img);
                                 
                 // Hidden fields
@@ -205,7 +216,7 @@
                 
                 const primaryLabel = document.createElement('label');
                 primaryLabel.htmlFor = `primary-${formCount}`;
-                primaryLabel.textContent = 'Primary';
+                primaryLabel.textContent = 'Cover photo';
                 primaryLabel.className = 'cursor-pointer';
                 
                 primaryDiv.appendChild(primaryInput);
@@ -221,7 +232,7 @@
                 includeInput.checked = true; // Included by default
                 const includeLabel = document.createElement('label');
                 includeLabel.htmlFor = `include-${formCount}`;
-                includeLabel.textContent = 'Include';
+                includeLabel.textContent = 'Keep';
                 includeLabel.className = 'cursor-pointer';
                 includeDiv.appendChild(includeInput);
                 includeDiv.appendChild(includeLabel);
@@ -283,8 +294,9 @@
             buttonText.textContent = 'Query Flickr';
             spinner.classList.add('hidden');
             
-            // Show error message to user (optional)
-            alert('Failed to fetch Flickr album. Please try again.');
+            // Show inline error message
+            var errEl = document.getElementById('flickr-error');
+            if (errEl) errEl.classList.remove('hidden');
         });
     }
 </script>
@@ -338,5 +350,65 @@
             }
         });
     }
+})();
+</script>
+<script>
+(function() {
+    function allCards() {
+        return Array.from(document.querySelectorAll('#album .image-form'));
+    }
+    function keepCb(card) {
+        return card.querySelector('input[id^="include-"]');
+    }
+    function isKept(card) {
+        const cb = keepCb(card);
+        return cb && cb.checked;
+    }
+    function setDim(card, kept) {
+        card.classList.toggle('opacity-40', !kept);
+        card.classList.toggle('grayscale', !kept);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial dim state for server-rendered cards
+        allCards().forEach(function(card) { setDim(card, isKept(card)); });
+
+        const albumEl = document.getElementById('album');
+        if (!albumEl) return;
+
+        albumEl.addEventListener('change', function(e) {
+            const card = e.target.closest('.image-form');
+            if (!card) return;
+
+            // Keep checkbox changed
+            if (e.target.matches('input[id^="include-"]')) {
+                const kept = e.target.checked;
+                setDim(card, kept);
+                if (!kept) {
+                    // If this card was the cover photo, move it to the next kept card
+                    const radio = card.querySelector('input[name="primary_choice"]');
+                    if (radio && radio.checked) {
+                        radio.checked = false;
+                        const cards = allCards();
+                        const idx = cards.indexOf(card);
+                        const candidates = [...cards.slice(idx + 1), ...cards.slice(0, idx)];
+                        const next = candidates.find(isKept);
+                        if (next) {
+                            const nextRadio = next.querySelector('input[name="primary_choice"]');
+                            if (nextRadio) nextRadio.checked = true;
+                        }
+                    }
+                }
+            }
+
+            // Cover photo radio selected — ensure the card is kept
+            if (e.target.matches('input[name="primary_choice"]') && e.target.checked) {
+                if (!isKept(card)) {
+                    const cb = keepCb(card);
+                    if (cb) { cb.checked = true; setDim(card, true); }
+                }
+            }
+        });
+    });
 })();
 </script>
