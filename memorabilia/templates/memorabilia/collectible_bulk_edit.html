@@ -43,7 +43,7 @@
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
           <option value="playergearitem" selected>Player Gear</option>
           <option value="playeritem">Player Item</option>
-          <option value="otheritem">Other</option>
+          <option value="generalitem">General Item</option>
         </select>
       </div>
       {{ form.id }}
@@ -83,7 +83,7 @@
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
           <option value="playergearitem">Player Gear</option>
           <option value="playeritem" selected>Player Item</option>
-          <option value="otheritem">Other</option>
+          <option value="generalitem">General Item</option>
         </select>
       </div>
       {{ form.id }}
@@ -135,7 +135,7 @@
     <div class="flex flex-wrap gap-x-3 gap-y-2 border rounded-md p-3 mb-2 items-start" data-row-prefix="{{ form.prefix }}">
       <div class="flex items-center pt-5 w-4 shrink-0">
         <input type="checkbox" class="delete-cb" data-group="other"
-          name="delete_ids" value="otheritem:{{ form.instance.pk }}"
+          name="delete_ids" value="generalitem:{{ form.instance.pk }}"
           aria-label="Select {{ form.instance.title }} for deletion" />
       </div>
       {% with thumb=form.instance.get_primary_image_url %}
@@ -149,7 +149,7 @@
         <select name="item_type_{{ form.prefix }}" class="item-type-select text-xs border rounded px-1 py-2 bg-white w-full">
           <option value="playergearitem">Player Gear</option>
           <option value="playeritem">Player Item</option>
-          <option value="otheritem" selected>Other</option>
+          <option value="generalitem" selected>General Item</option>
         </select>
       </div>
       {{ form.id }}
@@ -234,7 +234,7 @@
     const TYPE_FIELDS = {
       playergearitem: ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'description'],
       playeritem:     ['title', 'league', 'player', 'team', 'number', 'description'],
-      otheritem:      ['title', 'description'],
+      generalitem:    ['title', 'description'],
     };
 
     function applyTypeVisibility(selectEl) {

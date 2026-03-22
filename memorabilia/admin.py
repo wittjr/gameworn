@@ -1,11 +1,11 @@
 from django.contrib import admin
-from .models import OtherItem, PlayerItem, PlayerGearItem, Collection, PhotoMatch, WantedItem, ExternalResource, Team, League, GameType, UsageType, LoaType, HowObtainedOption
+from .models import GeneralItem, PlayerItem, PlayerGearItem, Collection, PhotoMatch, WantedItem, ExternalResource, Team, League, GameType, UsageType, LoaType, HowObtainedOption
 
 # Register your models here.
 admin.site.register(Collection)
 admin.site.register(PlayerItem)
 admin.site.register(PlayerGearItem)
-admin.site.register(OtherItem)
+admin.site.register(GeneralItem)
 admin.site.register(PhotoMatch)
 admin.site.register(WantedItem)
 admin.site.register(ExternalResource)

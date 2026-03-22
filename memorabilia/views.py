@@ -3,8 +3,8 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkOtherItemForm, get_collectible_form_class, OtherItemForm, OtherItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
+from .models import Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGearItem, PlayerGearItemImage
+from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearItemForm, BulkGeneralItemForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearItemForm, PlayerGearItemImageFormSet
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -20,8 +20,8 @@ from django.db import connection as _db_connection
 def _get_collectible(request, **view_kwargs):
     collectible_id = view_kwargs['collectible_id']
     collectible_type = view_kwargs.get('collectible_type', 'playeritem')
-    if collectible_type == 'otheritem':
-        return get_object_or_404(OtherItem, pk=collectible_id)
+    if collectible_type == 'generalitem':
+        return get_object_or_404(GeneralItem, pk=collectible_id)
     elif collectible_type == 'playergearitem':
         return get_object_or_404(PlayerGearItem, pk=collectible_id)
     return get_object_or_404(PlayerItem, pk=collectible_id)
@@ -33,7 +33,7 @@ def home(request):
     print(request)
     recent = PlayerItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
     recent_gear = PlayerGearItem.objects.prefetch_related('gear_images').order_by('-last_updated')[:6]
-    recent_other = OtherItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
+    recent_other = GeneralItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
     data = sorted(chain(recent, recent_gear, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
 
@@ -50,7 +50,7 @@ class IndexView(generic.ListView):
         ).prefetch_related(
             'playergearitem_set__gear_images',
             'playeritem_set__images',
-            'otheritem_set__images',
+            'generalitem_set__images',
         )
         return context
 
@@ -120,7 +120,7 @@ def search_collectibles(request):
     form = CollectibleSearchForm(request.GET or None)
     gear_qs = PlayerGearItem.objects.all()
     player_qs = PlayerItem.objects.all()
-    other_qs = OtherItem.objects.all()
+    other_qs = GeneralItem.objects.all()
     if form.is_valid():
         data = form.cleaned_data
         has_gear_filter = any(data.get(f) not in (None, '') for f in _GEAR_ONLY)
@@ -137,9 +137,9 @@ def search_collectibles(request):
         # Exclude types that don't have the filtered fields
         if has_gear_filter:
             player_qs = PlayerItem.objects.none()
-            other_qs = OtherItem.objects.none()
+            other_qs = GeneralItem.objects.none()
         elif has_player_filter:
-            other_qs = OtherItem.objects.none()
+            other_qs = GeneralItem.objects.none()
 
     results = sorted(
         list(gear_qs.prefetch_related('gear_images')) +
@@ -182,7 +182,7 @@ def _get_all_collage_images(collection):
     for collectible in chain(
         collection.playergearitem_set.prefetch_related('gear_images').all(),
         collection.playeritem_set.prefetch_related('images').all(),
-        collection.otheritem_set.prefetch_related('images').all(),
+        collection.generalitem_set.prefetch_related('images').all(),
     ):
         img = collectible.get_primary_image()
         if img is None:
@@ -261,7 +261,7 @@ class CollectionView(generic.DetailView):
         
         player_gear_items = list(collection.playergearitem_set.prefetch_related('gear_images').all())
         player_items = list(collection.playeritem_set.prefetch_related('images').all())
-        other_items = list(collection.otheritem_set.prefetch_related('images').all())
+        other_items = list(collection.generalitem_set.prefetch_related('images').all())
 
         # Merge and sort by title
         collectibles = player_items + player_gear_items + other_items
@@ -286,8 +286,8 @@ class CollectibleView(generic.DetailView):
 
         if collectible_type == 'playeritem':
             return get_object_or_404(PlayerItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
-        elif collectible_type == 'otheritem':
-            return get_object_or_404(OtherItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+        elif collectible_type == 'generalitem':
+            return get_object_or_404(GeneralItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
         elif collectible_type == 'playergearitem':
             return get_object_or_404(
                 PlayerGearItem.objects.select_related('game_type', 'usage_type').prefetch_related('gear_images'),
@@ -299,7 +299,7 @@ class CollectibleView(generic.DetailView):
     _COLLECTIBLE_TEMPLATES = {
         'playergearitem': 'memorabilia/playergearitem_detail.html',
         'playeritem': 'memorabilia/playeritem_detail.html',
-        'otheritem': 'memorabilia/otheritem_detail.html',
+        'generalitem': 'memorabilia/generalitem_detail.html',
     }
 
     def get_template_names(self):
@@ -339,11 +339,11 @@ def create_collectible(request, collection_id):
         FormClass = get_collectible_form_class(collectible_type)
         
         # Select appropriate formset based on type
-        if collectible_type == 'OtherItem':
+        if collectible_type == 'GeneralItem':
             ImageFormSet = inlineformset_factory(
-                OtherItem,
-                OtherItemImage,
-                form=OtherItemImageForm,
+                GeneralItem,
+                GeneralItemImage,
+                form=GeneralItemImageForm,
                 extra=0,
                 can_delete=True,
             )
@@ -386,8 +386,8 @@ def create_collectible(request, collection_id):
     })
 
 def _get_image_formset_class(ctype):
-    if ctype == 'otheritem':
-        return inlineformset_factory(OtherItem, OtherItemImage, form=OtherItemImageForm, extra=0, can_delete=True)
+    if ctype == 'generalitem':
+        return inlineformset_factory(GeneralItem, GeneralItemImage, form=GeneralItemImageForm, extra=0, can_delete=True)
     elif ctype == 'playergearitem':
         return PlayerGearItemImageFormSet
     return CollectibleImageFormSet
@@ -431,8 +431,8 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
         gear_extra['game_type_id'] = get_fk_id('game_type')
         gear_extra['usage_type_id'] = get_fk_id('usage_type')
         new_instance = PlayerGearItem(**player_base, **gear_extra)
-    else:  # otheritem
-        new_instance = OtherItem(**base)
+    else:  # generalitem
+        new_instance = GeneralItem(**base)
 
     new_instance.save()
     _copy_images(old_instance, new_instance)
@@ -451,7 +451,7 @@ def _copy_images(old_collectible, new_collectible):
     elif isinstance(new_collectible, PlayerItem):
         NewImage = PlayerItemImage
     else:
-        NewImage = OtherItemImage
+        NewImage = GeneralItemImage
 
     for img in old_images:
         NewImage.objects.create(
@@ -466,7 +466,7 @@ def _copy_images(old_collectible, new_collectible):
 _TYPE_NORMALIZE = {
     'PlayerGearItem': 'playergearitem',
     'PlayerItem': 'playeritem',
-    'OtherItem': 'otheritem',
+    'GeneralItem': 'generalitem',
 }
 _TYPE_DISPLAY = {v: k for k, v in _TYPE_NORMALIZE.items()}
 
@@ -474,8 +474,8 @@ _TYPE_DISPLAY = {v: k for k, v in _TYPE_NORMALIZE.items()}
 @login_required
 @permission_required('memorabilia.update_collectible', fn=_get_collectible, raise_exception=True)
 def edit_collectible(request, collection_id, collectible_type, collectible_id):
-    if collectible_type == 'otheritem':
-        collectible = get_object_or_404(OtherItem, pk=collectible_id)
+    if collectible_type == 'generalitem':
+        collectible = get_object_or_404(GeneralItem, pk=collectible_id)
     elif collectible_type == 'playergearitem':
         collectible = get_object_or_404(PlayerGearItem, pk=collectible_id)
     else:
@@ -561,8 +561,8 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
 @login_required
 @permission_required('memorabilia.delete_collectible', fn=_get_collectible, raise_exception=True)
 def delete_collectible(request, collection_id, collectible_type, collectible_id):
-    if collectible_type == 'otheritem':
-        get_object_or_404(OtherItem, pk=collectible_id).delete()
+    if collectible_type == 'generalitem':
+        get_object_or_404(GeneralItem, pk=collectible_id).delete()
     elif collectible_type == 'playergearitem':
         get_object_or_404(PlayerGearItem, pk=collectible_id).delete()
     else:
@@ -641,10 +641,10 @@ def bulk_edit_collectibles(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     GearFormSet = modelformset_factory(PlayerGearItem, form=BulkPlayerGearItemForm, extra=0, can_delete=False)
     PlayerFormSet = modelformset_factory(PlayerItem, form=BulkCollectibleForm, extra=0, can_delete=False)
-    OtherFormSet = modelformset_factory(OtherItem, form=BulkOtherItemForm, extra=0, can_delete=False)
+    OtherFormSet = modelformset_factory(GeneralItem, form=BulkGeneralItemForm, extra=0, can_delete=False)
     gear_qs = PlayerGearItem.objects.filter(collection=collection).select_related('game_type', 'usage_type').prefetch_related('gear_images').order_by('id')
     player_qs = PlayerItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
-    other_qs = OtherItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
+    other_qs = GeneralItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
     if request.method == 'POST':
         if request.POST.get('action') == 'delete_selected':
             for entry in request.POST.getlist('delete_ids'):
@@ -654,8 +654,8 @@ def bulk_edit_collectibles(request, collection_id):
                         PlayerGearItem.objects.filter(pk=pk, collection=collection).delete()
                     elif kind == 'playeritem':
                         PlayerItem.objects.filter(pk=pk, collection=collection).delete()
-                    elif kind == 'otheritem':
-                        OtherItem.objects.filter(pk=pk, collection=collection).delete()
+                    elif kind == 'generalitem':
+                        GeneralItem.objects.filter(pk=pk, collection=collection).delete()
                 except (ValueError, Exception):
                     pass
             return redirect('memorabilia:bulk_edit_collectibles', collection_id=collection_id)
@@ -683,8 +683,8 @@ def bulk_edit_collectibles(request, collection_id):
                     player_converted.add(pk)
 
             for form in other_formset.initial_forms:
-                new_type = request.POST.get(f'item_type_{form.prefix}', 'otheritem')
-                if new_type != 'otheritem':
+                new_type = request.POST.get(f'item_type_{form.prefix}', 'generalitem')
+                if new_type != 'generalitem':
                     pk = form.instance.pk
                     _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
                     other_converted.add(pk)
@@ -768,7 +768,7 @@ def bulk_add_from_flickr(request, collection_id):
 @login_required
 @permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def bulk_add_flickr_album(request, collection_id):
-    """Create a single OtherItem from one Flickr album. Called via fetch for each selected album."""
+    """Create a single GeneralItem from one Flickr album. Called via fetch for each selected album."""
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     collection = get_object_or_404(Collection, pk=collection_id)
@@ -783,7 +783,7 @@ def bulk_add_flickr_album(request, collection_id):
     album_id = body.get('album_id', '').strip()
     if not title:
         return JsonResponse({'error': 'title required'}, status=400)
-    item = OtherItem.objects.create(
+    item = GeneralItem.objects.create(
         title=title,
         description=description,
         collection=collection,
@@ -818,7 +818,7 @@ def bulk_add_flickr_batch(request, collection_id):
 
 
 def _process_albums_background(collection_id, username, albums):
-    """Background thread: create OtherItems and import Flickr photos for each album."""
+    """Background thread: create GeneralItems and import Flickr photos for each album."""
     try:
         collection = Collection.objects.get(pk=collection_id)
         for album in albums:
@@ -827,7 +827,7 @@ def _process_albums_background(collection_id, username, albums):
             album_id = album.get('album_id', '').strip()
             if not title:
                 continue
-            item = OtherItem.objects.create(
+            item = GeneralItem.objects.create(
                 title=title,
                 description=description,
                 collection=collection,
@@ -841,7 +841,7 @@ def _process_albums_background(collection_id, username, albums):
 
 
 def _import_flickr_album_photos(item, username, album_id):
-    """Fetch all photos from a Flickr album and create OtherItemImage records. Returns photo count."""
+    """Fetch all photos from a Flickr album and create GeneralItemImage records. Returns photo count."""
     url = (
         f'https://www.flickr.com/services/rest/'
         f'?method=flickr.photosets.getPhotos'
@@ -866,7 +866,7 @@ def _import_flickr_album_photos(item, username, album_id):
         if not link:
             continue
         is_primary = photo.get('id') == primary_id if primary_id else first
-        OtherItemImage.objects.create(
+        GeneralItemImage.objects.create(
             collectible=item,
             link=link,
             primary=is_primary,

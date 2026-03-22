@@ -72,13 +72,13 @@
             </div>
             <div class="flex items-center">
                 <input
-                    id="type-otheritem"
+                    id="type-generalitem"
                     type="radio"
                     name="collectible_type"
-                    value="OtherItem"
-                    {% if selected_collectible_type == 'OtherItem' %}checked{% endif %}
+                    value="GeneralItem"
+                    {% if selected_collectible_type == 'GeneralItem' %}checked{% endif %}
                     class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2">
-                <label for="type-otheritem" class="ml-2 text-sm font-medium text-gray-900">Other Item</label>
+                <label for="type-generalitem" class="ml-2 text-sm font-medium text-gray-900">General Item</label>
             </div>
         </div>
     </div>
@@ -260,7 +260,7 @@
                 setVisible(playerFields, true);
                 setVisible(gearFields, false);
             } else {
-                // OtherItem
+                // GeneralItem
                 setVisible(playerFields, false);
                 setVisible(gearFields, false);
             }

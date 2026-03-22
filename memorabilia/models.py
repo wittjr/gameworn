@@ -65,7 +65,7 @@ class Collection(RulesModel):
         for collectible in chain(
             self.playergearitem_set.prefetch_related('gear_images').all(),
             self.playeritem_set.prefetch_related('images').all(),
-            self.otheritem_set.prefetch_related('images').all(),
+            self.generalitem_set.prefetch_related('images').all(),
         ):
             img = collectible.get_primary_image()
             if img:
@@ -83,7 +83,7 @@ class Collection(RulesModel):
         for entry in id_list:
             ctype = entry.get('type')
             cid = entry.get('id')
-            if ctype in ('playergearitem', 'playeritem', 'otheritem') and isinstance(cid, int):
+            if ctype in ('playergearitem', 'playeritem', 'generalitem') and isinstance(cid, int):
                 by_type[ctype].append(cid)
 
         # Fetch each type in two queries (SELECT + prefetch) rather than one per item.
@@ -94,9 +94,9 @@ class Collection(RulesModel):
         if by_type['playeritem']:
             for c in self.playeritem_set.filter(pk__in=by_type['playeritem']).prefetch_related('images'):
                 fetched[('playeritem', c.pk)] = c
-        if by_type['otheritem']:
-            for c in self.otheritem_set.filter(pk__in=by_type['otheritem']).prefetch_related('images'):
-                fetched[('otheritem', c.pk)] = c
+        if by_type['generalitem']:
+            for c in self.generalitem_set.filter(pk__in=by_type['generalitem']).prefetch_related('images'):
+                fetched[('generalitem', c.pk)] = c
 
         # Reconstruct in the original requested order; missing IDs are silently skipped.
         images = []
@@ -228,12 +228,12 @@ class PlayerGearItem(BasePlayerItem):
             return primary.image if primary.image else primary.link
         return images[0].image if images else None
 
-class OtherItem(Collectible):
-    collectible_type = 'otheritem'
+class GeneralItem(Collectible):
+    collectible_type = 'generalitem'
 
     class Meta(Collectible.Meta):
         indexes = [
-            models.Index(fields=['last_updated'], name='mem_otheritem_updated_idx'),
+            models.Index(fields=['last_updated'], name='mem_generalitem_updated_idx'),
         ]
 
     def __str__(self):
@@ -255,8 +255,8 @@ class PlayerItemImage(CollectibleImage):
 class PlayerGearItemImage(CollectibleImage):
     collectible = models.ForeignKey(PlayerGearItem, on_delete=models.CASCADE, related_name='gear_images')
 
-class OtherItemImage(CollectibleImage):
-    collectible = models.ForeignKey(OtherItem, on_delete=models.CASCADE, related_name='images')
+class GeneralItemImage(CollectibleImage):
+    collectible = models.ForeignKey(GeneralItem, on_delete=models.CASCADE, related_name='images')
 
 class PhotoMatch(RulesModel):
     image = models.ImageField(upload_to='images', blank=True, null=True)

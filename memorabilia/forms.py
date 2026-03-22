@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, OtherItem, OtherItemImage, PlayerGearItem, PlayerGearItemImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, LoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGearItem, PlayerGearItemImage
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -75,7 +75,7 @@ class CollectionForm(ModelForm):
             raise forms.ValidationError('Invalid collage selection data.')
         if len(data) > 9:
             raise forms.ValidationError('Cannot select more than 9 images for the collage.')
-        valid_types = {'playergearitem', 'playeritem', 'otheritem'}
+        valid_types = {'playergearitem', 'playeritem', 'generalitem'}
         for entry in data:
             if not isinstance(entry, dict) or set(entry.keys()) != {'type', 'id'}:
                 raise forms.ValidationError('Invalid collage selection data.')
@@ -209,10 +209,10 @@ class CollectibleImageForm(ModelForm):
         }
 
 
-class OtherItemImageForm(ModelForm):
-    """Form for OtherItem images"""
+class GeneralItemImageForm(ModelForm):
+    """Form for GeneralItem images"""
     class Meta:
-        model = OtherItemImage
+        model = GeneralItemImage
         fields = "__all__"
         widgets = {
             "link": flowbite_widgets.FlowbiteTextInput(),
@@ -221,8 +221,8 @@ class OtherItemImageForm(ModelForm):
         }
 
 
-class OtherItemForm(HowObtainedValidationMixin, ModelForm):
-    """Form for OtherItem - contains only base Collectible fields"""
+class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
+    """Form for GeneralItem - contains only base Collectible fields"""
     loa = ModelChoiceField(
         queryset=LoaType.objects.all(),
         required=False,
@@ -230,7 +230,7 @@ class OtherItemForm(HowObtainedValidationMixin, ModelForm):
     )
 
     class Meta:
-        model = OtherItem
+        model = GeneralItem
         fields = "__all__"
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
         widgets = {
@@ -323,8 +323,8 @@ class PlayerGearItemForm(HowObtainedValidationMixin, ModelForm):
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
     """Factory function to get the appropriate form class based on type"""
-    if collectible_type == 'OtherItem':
-        return OtherItemForm
+    if collectible_type == 'GeneralItem':
+        return GeneralItemForm
     if collectible_type == 'PlayerGearItem':
         return PlayerGearItemForm
     return CollectibleForm
@@ -531,11 +531,11 @@ class BulkPlayerGearItemForm(ModelForm):
         self.fields['team'].widget.attrs.update({'placeholder': 'Start typing a team...'})
 
 
-class BulkOtherItemForm(ModelForm):
-    """Simplified form for bulk editing OtherItems in a formset."""
+class BulkGeneralItemForm(ModelForm):
+    """Simplified form for bulk editing GeneralItems in a formset."""
 
     class Meta:
-        model = OtherItem
+        model = GeneralItem
         fields = ['title', 'description']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),

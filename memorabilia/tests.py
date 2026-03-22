@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from .models import Collection, PlayerItem, PlayerGearItem, OtherItem, League, GameType, UsageType
+from .models import Collection, PlayerItem, PlayerGearItem, GeneralItem, League, GameType, UsageType
 
 
 class BaseTestCase(TestCase):
@@ -41,7 +41,7 @@ class BaseTestCase(TestCase):
             usage_type=cls.usage_type,
         )
 
-        cls.other_item = OtherItem.objects.create(
+        cls.general_item = GeneralItem.objects.create(
             title='Test Puck',
             description='A test puck',
             collection=cls.collection,
@@ -86,10 +86,10 @@ class BaseTestCase(TestCase):
         data.update(overrides)
         return data
 
-    def _other_item_post_data(self, **overrides):
-        """Return valid POST data for creating/editing an OtherItem."""
+    def _general_item_post_data(self, **overrides):
+        """Return valid POST data for creating/editing a GeneralItem."""
         data = {
-            'collectible_type': 'OtherItem',
+            'collectible_type': 'GeneralItem',
             'title': 'New Puck',
             'description': 'A new test puck',
             'collection': self.collection.id,
@@ -139,13 +139,13 @@ class PublicViewTests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 200)
 
-    def test_otheritem_detail(self):
+    def test_generalitem_detail(self):
         response = self.client.get(reverse(
             'memorabilia:collectible',
             kwargs={
                 'collection_id': self.collection.id,
-                'collectible_type': 'otheritem',
-                'pk': self.other_item.id,
+                'collectible_type': 'generalitem',
+                'pk': self.general_item.id,
             },
         ))
         self.assertEqual(response.status_code, 200)
@@ -344,45 +344,45 @@ class PlayerGearItemCRUDTests(BaseTestCase):
         self.assertFalse(PlayerGearItem.objects.filter(pk=temp.id).exists())
 
 
-class OtherItemCRUDTests(BaseTestCase):
+class GeneralItemCRUDTests(BaseTestCase):
     def setUp(self):
         self.client.force_login(self.owner)
 
     def test_create_post(self):
         response = self.client.post(
             reverse('memorabilia:create_collectible', args=[self.collection.id]),
-            self._other_item_post_data(title='Created Puck'),
+            self._general_item_post_data(title='Created Puck'),
         )
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(OtherItem.objects.filter(title='Created Puck').exists())
+        self.assertTrue(GeneralItem.objects.filter(title='Created Puck').exists())
 
     def test_edit_get(self):
         response = self.client.get(reverse(
             'memorabilia:edit_collectible',
-            args=[self.collection.id, 'otheritem', self.other_item.id],
+            args=[self.collection.id, 'generalitem', self.general_item.id],
         ))
         self.assertEqual(response.status_code, 200)
 
     def test_edit_post(self):
         response = self.client.post(
             reverse('memorabilia:edit_collectible',
-                    args=[self.collection.id, 'otheritem', self.other_item.id]),
-            self._other_item_post_data(title='Edited Puck'),
+                    args=[self.collection.id, 'generalitem', self.general_item.id]),
+            self._general_item_post_data(title='Edited Puck'),
         )
         self.assertEqual(response.status_code, 302)
-        self.other_item.refresh_from_db()
-        self.assertEqual(self.other_item.title, 'Edited Puck')
+        self.general_item.refresh_from_db()
+        self.assertEqual(self.general_item.title, 'Edited Puck')
 
     def test_delete_post(self):
-        temp = OtherItem.objects.create(
+        temp = GeneralItem.objects.create(
             title='Temp Puck', description='temp', collection=self.collection,
         )
         response = self.client.post(reverse(
             'memorabilia:delete_collectible',
-            args=[self.collection.id, 'otheritem', temp.id],
+            args=[self.collection.id, 'generalitem', temp.id],
         ))
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(OtherItem.objects.filter(pk=temp.id).exists())
+        self.assertFalse(GeneralItem.objects.filter(pk=temp.id).exists())
 
 
 class CollectiblePermissionTests(BaseTestCase):
@@ -434,19 +434,19 @@ class CollectiblePermissionTests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 403)
 
-    def test_delete_otheritem_other_user_forbidden(self):
+    def test_delete_generalitem_other_user_forbidden(self):
         self.client.force_login(self.other_user)
         response = self.client.post(reverse(
             'memorabilia:delete_collectible',
-            args=[self.collection.id, 'otheritem', self.other_item.id],
+            args=[self.collection.id, 'generalitem', self.general_item.id],
         ))
         self.assertEqual(response.status_code, 403)
 
-    def test_edit_otheritem_other_user_forbidden(self):
+    def test_edit_generalitem_other_user_forbidden(self):
         self.client.force_login(self.other_user)
         response = self.client.get(reverse(
             'memorabilia:edit_collectible',
-            args=[self.collection.id, 'otheritem', self.other_item.id],
+            args=[self.collection.id, 'generalitem', self.general_item.id],
         ))
         self.assertEqual(response.status_code, 403)
 
@@ -478,7 +478,7 @@ class CollectibleTypeConversionTests(BaseTestCase):
         self.assertFalse(PlayerItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerGearItem.objects.filter(title='Convert Me', collection=self.collection).exists())
 
-    def test_playeritem_to_otheritem(self):
+    def test_playeritem_to_generalitem(self):
         item = PlayerItem.objects.create(
             title='Convert To Other', description='desc', collection=self.collection,
             league='NHL', player='P',
@@ -486,11 +486,11 @@ class CollectibleTypeConversionTests(BaseTestCase):
         old_pk = item.pk
         response = self.client.post(
             reverse('memorabilia:edit_collectible', args=[self.collection.id, 'playeritem', item.id]),
-            self._other_item_post_data(title='Convert To Other'),
+            self._general_item_post_data(title='Convert To Other'),
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PlayerItem.objects.filter(pk=old_pk).exists())
-        self.assertTrue(OtherItem.objects.filter(title='Convert To Other', collection=self.collection).exists())
+        self.assertTrue(GeneralItem.objects.filter(title='Convert To Other', collection=self.collection).exists())
 
     def test_playergearitem_to_playeritem(self):
         item = PlayerGearItem.objects.create(
@@ -507,7 +507,7 @@ class CollectibleTypeConversionTests(BaseTestCase):
         self.assertFalse(PlayerGearItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerItem.objects.filter(title='Gear To Player', collection=self.collection).exists())
 
-    def test_playergearitem_to_otheritem(self):
+    def test_playergearitem_to_generalitem(self):
         item = PlayerGearItem.objects.create(
             title='Gear To Other', description='desc', collection=self.collection,
             league='NHL', player='P', brand='Nike', size='M', season='2020',
@@ -516,36 +516,36 @@ class CollectibleTypeConversionTests(BaseTestCase):
         old_pk = item.pk
         response = self.client.post(
             reverse('memorabilia:edit_collectible', args=[self.collection.id, 'playergearitem', item.id]),
-            self._other_item_post_data(title='Gear To Other'),
+            self._general_item_post_data(title='Gear To Other'),
         )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PlayerGearItem.objects.filter(pk=old_pk).exists())
-        self.assertTrue(OtherItem.objects.filter(title='Gear To Other', collection=self.collection).exists())
+        self.assertTrue(GeneralItem.objects.filter(title='Gear To Other', collection=self.collection).exists())
 
-    def test_otheritem_to_playeritem(self):
-        item = OtherItem.objects.create(
+    def test_generalitem_to_playeritem(self):
+        item = GeneralItem.objects.create(
             title='Other To Player', description='desc', collection=self.collection,
         )
         old_pk = item.pk
         response = self.client.post(
-            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'otheritem', item.id]),
+            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'generalitem', item.id]),
             self._player_item_post_data(title='Other To Player'),
         )
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(OtherItem.objects.filter(pk=old_pk).exists())
+        self.assertFalse(GeneralItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerItem.objects.filter(title='Other To Player', collection=self.collection).exists())
 
-    def test_otheritem_to_playergearitem(self):
-        item = OtherItem.objects.create(
+    def test_generalitem_to_playergearitem(self):
+        item = GeneralItem.objects.create(
             title='Other To Gear', description='desc', collection=self.collection,
         )
         old_pk = item.pk
         response = self.client.post(
-            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'otheritem', item.id]),
+            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'generalitem', item.id]),
             self._player_gear_item_post_data(title='Other To Gear'),
         )
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(OtherItem.objects.filter(pk=old_pk).exists())
+        self.assertFalse(GeneralItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerGearItem.objects.filter(title='Other To Gear', collection=self.collection).exists())
 
     def test_type_conversion_invalid_data_returns_form(self):
@@ -581,7 +581,7 @@ class BulkEditViewTests(BaseTestCase):
             title='Bulk Player', description='desc', collection=cls.bulk_collection,
             league='NHL', player='Q',
         )
-        cls.bulk_other = OtherItem.objects.create(
+        cls.bulk_other = GeneralItem.objects.create(
             title='Bulk Other', description='desc', collection=cls.bulk_collection,
         )
 
@@ -734,7 +734,7 @@ class BulkEditViewTests(BaseTestCase):
         self.assertFalse(PlayerGearItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerItem.objects.filter(title='Gear2Player', collection=self.bulk_collection).exists())
 
-    def test_post_type_conversion_gear_to_other(self):
+    def test_post_type_conversion_gear_to_general(self):
         self.client.force_login(self.owner)
         item = PlayerGearItem.objects.create(
             title='Gear2Other', description='desc', collection=self.bulk_collection,
@@ -743,16 +743,16 @@ class BulkEditViewTests(BaseTestCase):
         )
         old_pk = item.pk
         post = (
-            self._gear_formset(item, **{'item_type_gear-0': 'otheritem'})
+            self._gear_formset(item, **{'item_type_gear-0': 'generalitem'})
             | self._empty_formset('player')
             | self._empty_formset('other')
         )
         response = self.client.post(self._bulk_url(), post)
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PlayerGearItem.objects.filter(pk=old_pk).exists())
-        self.assertTrue(OtherItem.objects.filter(title='Gear2Other', collection=self.bulk_collection).exists())
+        self.assertTrue(GeneralItem.objects.filter(title='Gear2Other', collection=self.bulk_collection).exists())
 
-    def test_post_type_conversion_player_to_other(self):
+    def test_post_type_conversion_player_to_general(self):
         self.client.force_login(self.owner)
         item = PlayerItem.objects.create(
             title='Player2Other', description='desc', collection=self.bulk_collection,
@@ -761,17 +761,17 @@ class BulkEditViewTests(BaseTestCase):
         old_pk = item.pk
         post = (
             self._empty_formset('gear')
-            | self._player_formset(item, **{'item_type_player-0': 'otheritem'})
+            | self._player_formset(item, **{'item_type_player-0': 'generalitem'})
             | self._empty_formset('other')
         )
         response = self.client.post(self._bulk_url(), post)
         self.assertEqual(response.status_code, 302)
         self.assertFalse(PlayerItem.objects.filter(pk=old_pk).exists())
-        self.assertTrue(OtherItem.objects.filter(title='Player2Other', collection=self.bulk_collection).exists())
+        self.assertTrue(GeneralItem.objects.filter(title='Player2Other', collection=self.bulk_collection).exists())
 
-    def test_post_type_conversion_other_to_player(self):
+    def test_post_type_conversion_general_to_player(self):
         self.client.force_login(self.owner)
-        item = OtherItem.objects.create(
+        item = GeneralItem.objects.create(
             title='Other2Player', description='desc', collection=self.bulk_collection,
         )
         old_pk = item.pk
@@ -786,7 +786,7 @@ class BulkEditViewTests(BaseTestCase):
         )
         response = self.client.post(self._bulk_url(), post)
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(OtherItem.objects.filter(pk=old_pk).exists())
+        self.assertFalse(GeneralItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerItem.objects.filter(title='Other2Player', collection=self.bulk_collection).exists())
 
 
@@ -806,10 +806,10 @@ class CollectibleDetailContextTests(BaseTestCase):
         self.assertIn('league', response.context)
         self.assertIn('primary_image', response.context)
 
-    def test_otheritem_detail_no_league_in_context(self):
+    def test_generalitem_detail_no_league_in_context(self):
         response = self.client.get(reverse(
             'memorabilia:collectible',
-            kwargs={'collection_id': self.collection.id, 'collectible_type': 'otheritem', 'pk': self.other_item.id},
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'generalitem', 'pk': self.general_item.id},
         ))
         self.assertNotIn('league', response.context)
 
@@ -827,12 +827,12 @@ class CollectibleDetailContextTests(BaseTestCase):
         ))
         self.assertTemplateUsed(response, 'memorabilia/playergearitem_detail.html')
 
-    def test_otheritem_uses_correct_template(self):
+    def test_generalitem_uses_correct_template(self):
         response = self.client.get(reverse(
             'memorabilia:collectible',
-            kwargs={'collection_id': self.collection.id, 'collectible_type': 'otheritem', 'pk': self.other_item.id},
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'generalitem', 'pk': self.general_item.id},
         ))
-        self.assertTemplateUsed(response, 'memorabilia/otheritem_detail.html')
+        self.assertTemplateUsed(response, 'memorabilia/generalitem_detail.html')
 
 
 class Collectible404Tests(BaseTestCase):
@@ -858,10 +858,10 @@ class Collectible404Tests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 404)
 
-    def test_otheritem_wrong_pk(self):
+    def test_generalitem_wrong_pk(self):
         response = self.client.get(reverse(
             'memorabilia:collectible',
-            kwargs={'collection_id': self.collection.id, 'collectible_type': 'otheritem', 'pk': 999999},
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'generalitem', 'pk': 999999},
         ))
         self.assertEqual(response.status_code, 404)
 
@@ -873,11 +873,11 @@ class Collectible404Tests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 404)
 
-    def test_otheritem_wrong_collection(self):
+    def test_generalitem_wrong_collection(self):
         other_collection = Collection.objects.create(owner_uid=self.owner.id, title='Other')
         response = self.client.get(reverse(
             'memorabilia:collectible',
-            kwargs={'collection_id': other_collection.id, 'collectible_type': 'otheritem', 'pk': self.other_item.id},
+            kwargs={'collection_id': other_collection.id, 'collectible_type': 'generalitem', 'pk': self.general_item.id},
         ))
         self.assertEqual(response.status_code, 404)
 
@@ -919,22 +919,22 @@ class CollectibleFormValidationTests(BaseTestCase):
         self.player_gear_item.refresh_from_db()
         self.assertNotEqual(self.player_gear_item.title, '')
 
-    def test_create_otheritem_missing_title_returns_200(self):
+    def test_create_generalitem_missing_title_returns_200(self):
         response = self.client.post(
             reverse('memorabilia:create_collectible', args=[self.collection.id]),
-            self._other_item_post_data(title=''),
+            self._general_item_post_data(title=''),
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(OtherItem.objects.filter(title='').exists())
+        self.assertFalse(GeneralItem.objects.filter(title='').exists())
 
-    def test_edit_otheritem_missing_title_returns_200(self):
+    def test_edit_generalitem_missing_title_returns_200(self):
         response = self.client.post(
-            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'otheritem', self.other_item.id]),
-            self._other_item_post_data(title=''),
+            reverse('memorabilia:edit_collectible', args=[self.collection.id, 'generalitem', self.general_item.id]),
+            self._general_item_post_data(title=''),
         )
         self.assertEqual(response.status_code, 200)
-        self.other_item.refresh_from_db()
-        self.assertNotEqual(self.other_item.title, '')
+        self.general_item.refresh_from_db()
+        self.assertNotEqual(self.general_item.title, '')
 
 
 class CollectionModelTests(BaseTestCase):
@@ -1003,8 +1003,8 @@ class CollectionModelTests(BaseTestCase):
         self.assertEqual(len(result), 2)
 
     def test_get_collage_images_includes_all_collectible_types(self):
-        """Images from PlayerItem, PlayerGearItem, and OtherItem are all collected."""
-        from memorabilia.models import PlayerItemImage, PlayerGearItemImage, OtherItemImage
+        """Images from PlayerItem, PlayerGearItem, and GeneralItem are all collected."""
+        from memorabilia.models import PlayerItemImage, PlayerGearItemImage, GeneralItemImage
         col = Collection.objects.create(owner_uid=self.owner.id, title='Mixed Types')
 
         pi = PlayerItem.objects.create(
@@ -1023,8 +1023,8 @@ class CollectionModelTests(BaseTestCase):
             collectible=pgi, link='https://example.com/pgi.jpg', primary=True,
         )
 
-        oi = OtherItem.objects.create(title='OI', description='', collection=col)
-        OtherItemImage.objects.create(
+        oi = GeneralItem.objects.create(title='OI', description='', collection=col)
+        GeneralItemImage.objects.create(
             collectible=oi, link='https://example.com/oi.jpg', primary=True,
         )
 
@@ -1050,7 +1050,7 @@ class CollectionModelTests(BaseTestCase):
 
     def test_get_collage_images_uses_collage_collectible_ids_when_set(self):
         """When collage_collectible_ids is set, only those collectibles are used."""
-        from memorabilia.models import PlayerItemImage, OtherItemImage
+        from memorabilia.models import PlayerItemImage, GeneralItemImage
         col = Collection.objects.create(owner_uid=self.owner.id, title='Collage IDs')
         pi = PlayerItem.objects.create(
             title='Included', description='', collection=col, league='NHL', player='P',
@@ -1059,8 +1059,8 @@ class CollectionModelTests(BaseTestCase):
             collectible=pi, link='https://example.com/included.jpg', primary=True,
         )
         # Second item exists in the collection but is NOT listed in collage_collectible_ids
-        oi = OtherItem.objects.create(title='Excluded', description='', collection=col)
-        OtherItemImage.objects.create(
+        oi = GeneralItem.objects.create(title='Excluded', description='', collection=col)
+        GeneralItemImage.objects.create(
             collectible=oi, link='https://example.com/excluded.jpg', primary=True,
         )
         col.collage_collectible_ids = [{'type': 'playeritem', 'id': pi.pk}]
