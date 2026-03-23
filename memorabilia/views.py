@@ -3,8 +3,8 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm, HockeyJerseyImageFormSet
+from .models import Collection, PhotoMatch, League, GameType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
+from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -34,7 +34,7 @@ def _get_collectible(request, **view_kwargs):
 def home(request):
     print(request)
     recent = PlayerItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
-    recent_gear = PlayerGear.objects.prefetch_related('gear_images').order_by('-last_updated')[:6]
+    recent_gear = PlayerGear.objects.exclude(gear_type_id='JRS').prefetch_related('gear_images').order_by('-last_updated')[:6]
     recent_jersey = HockeyJersey.objects.prefetch_related('gear_images').order_by('-last_updated')[:6]
     recent_other = GeneralItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
     data = sorted(chain(recent, recent_gear, recent_jersey, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
@@ -52,7 +52,6 @@ class IndexView(generic.ListView):
             owner_username=Subquery(user_subquery.values('username')),
         ).prefetch_related(
             'playergear_set__gear_images',
-            'hockeyjersey_set__gear_images',
             'playeritem_set__images',
             'generalitem_set__images',
         )
@@ -130,7 +129,7 @@ def search_collectibles(request):
     _JERSEY_ONLY = ('season_set',)
 
     form = CollectibleSearchForm(request.GET or None)
-    gear_qs = PlayerGear.objects.all()
+    gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS')
     hockey_qs = HockeyJersey.objects.all()
     player_qs = PlayerItem.objects.all()
     other_qs = GeneralItem.objects.all()
@@ -142,11 +141,24 @@ def search_collectibles(request):
 
         # Filter by item type first
         item_type = data.get('item_type')
-        if item_type:
-            gear_qs = gear_qs if item_type == 'playergear' else PlayerGear.objects.none()
-            hockey_qs = hockey_qs if item_type == 'hockeyjersey' else HockeyJersey.objects.none()
-            player_qs = player_qs if item_type == 'playeritem' else PlayerItem.objects.none()
-            other_qs = other_qs if item_type == 'generalitem' else GeneralItem.objects.none()
+        if item_type == 'playergear':
+            gear_qs = PlayerGear.objects.all()
+            hockey_qs = HockeyJersey.objects.none()
+            player_qs = PlayerItem.objects.none()
+            other_qs = GeneralItem.objects.none()
+        elif item_type == 'hockeyjersey':
+            gear_qs = PlayerGear.objects.none()
+            hockey_qs = HockeyJersey.objects.all()
+            player_qs = PlayerItem.objects.none()
+            other_qs = GeneralItem.objects.none()
+        elif item_type == 'playeritem':
+            gear_qs = PlayerGear.objects.none()
+            hockey_qs = HockeyJersey.objects.none()
+            other_qs = GeneralItem.objects.none()
+        elif item_type == 'generalitem':
+            gear_qs = PlayerGear.objects.none()
+            hockey_qs = HockeyJersey.objects.none()
+            player_qs = PlayerItem.objects.none()
 
         gear_qs = _apply_collectible_filters(gear_qs, data)
         hockey_qs = _apply_collectible_filters(hockey_qs, data)
@@ -208,8 +220,8 @@ def _get_all_collage_images(collection):
     picker_items = []
     default_collage_images = []
     for collectible in chain(
-        collection.playergear_set.prefetch_related('gear_images').all(),
-        collection.hockeyjersey_set.prefetch_related('gear_images').all(),
+        PlayerGear.objects.filter(collection=collection).exclude(gear_type_id='JRS').prefetch_related('gear_images').all(),
+        HockeyJersey.objects.filter(collection=collection).prefetch_related('gear_images').all(),
         collection.playeritem_set.prefetch_related('images').all(),
         collection.generalitem_set.prefetch_related('images').all(),
     ):
@@ -288,8 +300,8 @@ class CollectionView(generic.DetailView):
         context = super(CollectionView, self).get_context_data(**kwargs)
         collection = context['object']
         
-        player_gear_items = list(collection.playergear_set.prefetch_related('gear_images').all())
-        hockey_jerseys = list(collection.hockeyjersey_set.prefetch_related('gear_images').all())
+        player_gear_items = list(PlayerGear.objects.filter(collection=collection).exclude(gear_type_id='JRS').prefetch_related('gear_images').all())
+        hockey_jerseys = list(HockeyJersey.objects.filter(collection=collection).prefetch_related('gear_images').all())
         player_items = list(collection.playeritem_set.prefetch_related('images').all())
         other_items = list(collection.generalitem_set.prefetch_related('images').all())
 
@@ -386,7 +398,7 @@ def create_collectible(request, collection_id):
         elif collectible_type == 'PlayerGear':
             ImageFormSet = PlayerGearImageFormSet
         elif collectible_type == 'HockeyJersey':
-            ImageFormSet = HockeyJerseyImageFormSet
+            ImageFormSet = PlayerGearImageFormSet
         else:
             ImageFormSet = CollectibleImageFormSet
         
@@ -410,7 +422,7 @@ def create_collectible(request, collection_id):
     else:
         collectible_type = 'HockeyJersey'
         form = HockeyJerseyForm(initial={'collection': collection}, current_user=request.user)
-        image_formset = HockeyJerseyImageFormSet(prefix='images')
+        image_formset = PlayerGearImageFormSet(prefix='images')
 
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
@@ -429,7 +441,7 @@ def _get_image_formset_class(ctype):
     elif ctype == 'playergear':
         return PlayerGearImageFormSet
     elif ctype == 'hockeyjersey':
-        return HockeyJerseyImageFormSet
+        return PlayerGearImageFormSet
     return CollectibleImageFormSet
 
 
@@ -493,9 +505,7 @@ def _copy_images(old_collectible, new_collectible):
     else:
         old_images = list(old_collectible.images.all())
 
-    if isinstance(new_collectible, HockeyJersey):
-        NewImage = HockeyJerseyImage
-    elif isinstance(new_collectible, PlayerGear):
+    if isinstance(new_collectible, PlayerGear):
         NewImage = PlayerGearImage
     elif isinstance(new_collectible, PlayerItem):
         NewImage = PlayerItemImage
@@ -697,7 +707,7 @@ def bulk_edit_collectibles(request, collection_id):
     HockeyJerseyBulkFormSet = modelformset_factory(HockeyJersey, form=BulkHockeyJerseyForm, extra=0, can_delete=False)
     PlayerFormSet = modelformset_factory(PlayerItem, form=BulkCollectibleForm, extra=0, can_delete=False)
     OtherFormSet = modelformset_factory(GeneralItem, form=BulkGeneralItemForm, extra=0, can_delete=False)
-    gear_qs = PlayerGear.objects.filter(collection=collection).select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images').order_by('id')
+    gear_qs = PlayerGear.objects.filter(collection=collection).exclude(gear_type_id='JRS').select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images').order_by('id')
     hockey_jersey_qs = HockeyJersey.objects.filter(collection=collection).select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images').order_by('id')
     player_qs = PlayerItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')
     other_qs = GeneralItem.objects.filter(collection=collection).prefetch_related('images').order_by('id')

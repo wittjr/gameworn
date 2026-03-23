@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, HockeyJerseyImage
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -264,18 +264,6 @@ class PlayerGearImageForm(ModelForm):
         }
 
 
-class HockeyJerseyImageForm(ModelForm):
-    """Form for HockeyJersey images"""
-    class Meta:
-        model = HockeyJerseyImage
-        fields = "__all__"
-        widgets = {
-            "link": flowbite_widgets.FlowbiteTextInput(),
-            "primary": flowbite_widgets.FlowbiteCheckboxInput(),
-            "flickrObject": flowbite_widgets.FlowbiteTextarea(),
-        }
-
-
 class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     """Form for PlayerGear - includes all PlayerItem fields plus gear-specific fields"""
     league = forms.CharField(
@@ -306,7 +294,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -356,6 +344,7 @@ class HockeyJerseyForm(PlayerGearForm):
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
 
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
@@ -428,17 +417,6 @@ PlayerGearImageFormSet = inlineformset_factory(
     extra=0,
     can_delete=True,
 )
-
-HockeyJerseyImageFormSet = inlineformset_factory(
-    HockeyJersey,
-    HockeyJerseyImage,
-    form=HockeyJerseyImageForm,
-    formset=CustomCollectibleImageFormSet,
-    fk_name='collectible',
-    extra=0,
-    can_delete=True,
-)
-
 
 class PhotoMatchForm(ModelForm):
 
