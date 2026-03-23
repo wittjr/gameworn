@@ -525,15 +525,18 @@ class CollectibleSearchForm(forms.Form):
 class BulkCollectibleForm(ModelForm):
     """Simplified form for bulk editing PlayerItems in a formset."""
 
+    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+
     class Meta:
         model = PlayerItem
-        fields = ['title', 'league', 'player', 'team', 'number', 'description']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
             'player': flowbite_widgets.FlowbiteTextInput(),
             'team': flowbite_widgets.FlowbiteTextInput(),
-            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+            'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
             'number': flowbite_widgets.FlowbiteNumberInput(),
         }
 
@@ -553,10 +556,11 @@ class BulkPlayerGearForm(ModelForm):
     game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
+    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
 
     class Meta:
         model = PlayerGear
-        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'description']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -566,7 +570,8 @@ class BulkPlayerGearForm(ModelForm):
             'brand': flowbite_widgets.FlowbiteTextInput(),
             'size': flowbite_widgets.FlowbiteTextInput(),
             'season': flowbite_widgets.FlowbiteTextInput(),
-            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+            'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -579,11 +584,13 @@ class BulkHockeyJerseyForm(ModelForm):
     """Simplified form for bulk editing HockeyJersey items in a formset."""
     game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
+    gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
+    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
 
     class Meta:
         model = HockeyJersey
-        fields = ['title', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'season_set', 'description']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -593,7 +600,8 @@ class BulkHockeyJerseyForm(ModelForm):
             'brand': flowbite_widgets.FlowbiteTextInput(),
             'size': flowbite_widgets.FlowbiteTextInput(),
             'season': flowbite_widgets.FlowbiteTextInput(),
-            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+            'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -605,10 +613,13 @@ class BulkHockeyJerseyForm(ModelForm):
 class BulkGeneralItemForm(ModelForm):
     """Simplified form for bulk editing GeneralItems in a formset."""
 
+    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+
     class Meta:
         model = GeneralItem
-        fields = ['title', 'description']
+        fields = ['title', 'description', 'how_obtained', 'coa']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
-            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 1}),
+            'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
+            'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
         }

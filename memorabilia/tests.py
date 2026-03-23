@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from .models import Collection, PlayerItem, PlayerGear, GeneralItem, League, GameType, UsageType
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType
 
 
 class BaseTestCase(TestCase):
@@ -795,6 +795,39 @@ class BulkEditViewTests(BaseTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(GeneralItem.objects.filter(pk=old_pk).exists())
         self.assertTrue(PlayerItem.objects.filter(title='Other2Player', collection=self.bulk_collection).exists())
+
+    def test_post_type_conversion_gear_to_hockeyjersey_no_duplication(self):
+        """Converting a PlayerGear to HockeyJersey must create exactly 1 new item."""
+        self.client.force_login(self.owner)
+        gear_type_other, _ = GearType.objects.get_or_create(key='OTH', defaults={'name': 'Other'})
+        GearType.objects.get_or_create(key='JRS', defaults={'name': 'Jersey'})
+        item = PlayerGear.objects.create(
+            title='GearToJersey', description='desc', collection=self.bulk_collection,
+            league='NHL', player='V', brand='Nike', size='L', season='2021',
+            game_type=self.game_type, usage_type=self.usage_type,
+            gear_type=gear_type_other,
+        )
+        old_pk = item.pk
+        # Include coa='' to trigger the ModelChoiceField.has_changed(None, '') edge case
+        post = (
+            self._gear_formset(item, **{
+                'item_type_gear-0': 'hockeyjersey',
+                'gear-0-gear_type': 'OTH',
+                'gear-0-coa': '',
+            })
+            | self._empty_formset('hockeyjersey')
+            | self._empty_formset('player')
+            | self._empty_formset('other')
+        )
+        response = self.client.post(self._bulk_url(), post)
+        self.assertEqual(response.status_code, 302)
+        # Old PlayerGear row should be gone
+        self.assertFalse(PlayerGear.objects.filter(pk=old_pk).exists())
+        # Exactly 1 HockeyJersey with this title
+        jerseys = HockeyJersey.objects.filter(title='GearToJersey', collection=self.bulk_collection)
+        self.assertEqual(jerseys.count(), 1)
+        # No stray PlayerGear
+        self.assertFalse(PlayerGear.objects.filter(title='GearToJersey', collection=self.bulk_collection).exclude(gear_type_id='JRS').exists())
 
 
 class CollectibleDetailContextTests(BaseTestCase):

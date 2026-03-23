@@ -3,7 +3,7 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
+from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -464,6 +464,7 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
         'title': get_field('title') or old_instance.title,
         'description': get_field('description') or '',
         'collection': collection,
+        'how_obtained': get_field('how_obtained') or '',
     }
     player_base = dict(base)
     for field in ['league', 'player', 'team', 'number']:
@@ -475,6 +476,10 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
         if hasattr(val, 'pk'):
             return val.pk
         return val or getattr(old_instance, f'{name}_id', None)
+
+    coa_id = get_fk_id('coa')
+    base['coa_id'] = coa_id
+    player_base['coa_id'] = coa_id
 
     if new_type == 'playeritem':
         new_instance = PlayerItem(**player_base)
@@ -732,7 +737,8 @@ def bulk_edit_collectibles(request, collection_id):
         player_formset = PlayerFormSet(request.POST, queryset=player_qs, prefix='player')
         other_formset = OtherFormSet(request.POST, queryset=other_qs, prefix='other')
         if gear_formset.is_valid() and hockey_jersey_formset.is_valid() and player_formset.is_valid() and other_formset.is_valid():
-            # Process type conversions first
+            # Process type conversions first; track converted forms by object
+            # reference (not pk) because Django sets pk=None after delete().
             gear_converted = set()
             hockey_jersey_converted = set()
             player_converted = set()
@@ -741,52 +747,48 @@ def bulk_edit_collectibles(request, collection_id):
             for form in gear_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'playergear')
                 if new_type != 'playergear':
-                    pk = form.instance.pk
                     _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    gear_converted.add(pk)
+                    gear_converted.add(id(form))
 
             for form in hockey_jersey_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'hockeyjersey')
                 if new_type != 'hockeyjersey':
-                    pk = form.instance.pk
                     _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    hockey_jersey_converted.add(pk)
+                    hockey_jersey_converted.add(id(form))
 
             for form in player_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'playeritem')
                 if new_type != 'playeritem':
-                    pk = form.instance.pk
                     _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    player_converted.add(pk)
+                    player_converted.add(id(form))
 
             for form in other_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'generalitem')
                 if new_type != 'generalitem':
-                    pk = form.instance.pk
                     _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    other_converted.add(pk)
+                    other_converted.add(id(form))
 
             # Save non-converted items
             for form in gear_formset.initial_forms:
-                if form.instance.pk not in gear_converted and form.has_changed():
+                if id(form) not in gear_converted and form.has_changed():
                     obj = form.save(commit=False)
                     obj.collection = collection
                     obj.save()
 
             for form in hockey_jersey_formset.initial_forms:
-                if form.instance.pk not in hockey_jersey_converted and form.has_changed():
+                if id(form) not in hockey_jersey_converted and form.has_changed():
                     obj = form.save(commit=False)
                     obj.collection = collection
                     obj.save()
 
             for form in player_formset.initial_forms:
-                if form.instance.pk not in player_converted and form.has_changed():
+                if id(form) not in player_converted and form.has_changed():
                     obj = form.save(commit=False)
                     obj.collection = collection
                     obj.save()
 
             for form in other_formset.initial_forms:
-                if form.instance.pk not in other_converted and form.has_changed():
+                if id(form) not in other_converted and form.has_changed():
                     obj = form.save(commit=False)
                     obj.collection = collection
                     obj.save()
@@ -808,7 +810,9 @@ def bulk_edit_collectibles(request, collection_id):
         'leagues': League.objects.all(),
         'game_types': GameType.objects.all(),
         'usage_types': UsageType.objects.all(),
+        'gear_types': GearType.objects.all(),
         'season_sets': SeasonSet.objects.all(),
+        'how_obtained_options': HowObtainedOption.objects.all(),
     }
     return render(request, 'memorabilia/collectible_bulk_edit.html', context)
 
