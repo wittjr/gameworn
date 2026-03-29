@@ -41,21 +41,98 @@
 {% block content %}
 
 
-<h1 class="mb-6 text-2xl text-center font-bold tracking-tight leading-none md:text-3xl">{{ title }}</h1>
+{% if collectible %}
+<div class="mb-6">
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <h1 class="text-2xl text-center font-bold tracking-tight leading-none md:text-3xl">{{ title }}</h1>
+        <span id="type-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">{{ type_display_label }}</span>
+        <button type="button" id="convert-type-btn" class="text-sm text-blue-600 hover:underline">Convert type &rarr;</button>
+    </div>
+    <div id="convert-type-panel" class="hidden mt-4 p-4 rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Choose a new type — shared fields will be kept, type-specific fields may not carry over.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {% for type_key, type_label in convertible_types %}
+            <button type="button" data-convert-to="{{ type_key }}"
+                class="convert-type-card w-full p-4 rounded-lg border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-sm transition-all text-left group dark:bg-gray-700 dark:border-gray-600">
+                <div class="font-semibold text-gray-900 group-hover:text-blue-600 dark:text-white">{{ type_label }}</div>
+            </button>
+            {% endfor %}
+        </div>
+        <button type="button" id="convert-type-cancel" class="mt-3 text-sm text-gray-500 hover:underline">Cancel</button>
+    </div>
+</div>
+{% else %}
+<h1 class="mb-2 text-2xl text-center font-bold tracking-tight leading-none md:text-3xl">{{ title }}</h1>
+<div id="wizard-step-indicator" class="flex items-center justify-center mb-6 gap-4 text-sm">
+    <div id="step1-indicator" class="flex items-center gap-2 font-semibold text-blue-600">
+        <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+        Choose Type
+    </div>
+    <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    <div id="step2-indicator" class="flex items-center gap-2 text-gray-400">
+        <span class="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold">2</span>
+        Fill Details
+    </div>
+</div>
+{% endif %}
 
 <form method="post" enctype="multipart/form-data" novalidate class="bg-white rounded-lg shadow p-4">
     {% csrf_token %}
 
-    <!-- Item Type Selection -->
-    <div class="mb-6">
-        <input type="hidden" name="collectible_type" id="id_collectible_type" value="{{ selected_collectible_type }}">
-        <div class="flex gap-2" role="group" aria-label="Item type">
-            <button type="button" data-type="GeneralItem" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">General Item</button>
-            <button type="button" data-type="HockeyJersey" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Hockey Jersey</button>
-            <button type="button" data-type="PlayerGear" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Player Gear</button>
-            <button type="button" data-type="PlayerItem" class="type-pill flex-1 px-4 py-2 rounded-full text-sm font-medium border transition-colors">Player Item</button>
+    {# Hidden type input — always submitted with the form #}
+    <input type="hidden" name="collectible_type" id="id_collectible_type" value="{{ selected_collectible_type }}">
+
+    {% if collectible %}
+    <div id="conversion-notice" class="hidden mb-4 p-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 items-start sm:items-center justify-between gap-4">
+        <p class="text-sm text-amber-800 dark:text-amber-200">
+            Converting to <strong id="conversion-notice-type"></strong> — review the fields below, then save to confirm.
+        </p>
+        <button type="button" id="conversion-undo-btn" class="shrink-0 text-sm font-medium text-amber-700 hover:underline dark:text-amber-300">Undo</button>
+    </div>
+    {% endif %}
+
+    {% if not collectible %}
+    {# STEP 1: Type selection cards — visible until a type is chosen #}
+    <div id="wizard-step1" class="mb-8">
+        <p class="text-center text-gray-500 dark:text-gray-400 mb-4">What kind of item are you adding?</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button type="button" data-type="GeneralItem"
+                class="type-card w-full p-6 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all text-left group dark:bg-gray-800 dark:border-gray-700">
+                <div class="font-semibold text-gray-900 text-lg mb-1 group-hover:text-blue-600 dark:text-white">General Item</div>
+                <div class="text-sm text-gray-500">Signed photos, pucks, programs, and other memorabilia not tied to specific player gear.</div>
+            </button>
+            <button type="button" data-type="HockeyJersey"
+                class="type-card w-full p-6 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all text-left group dark:bg-gray-800 dark:border-gray-700">
+                <div class="font-semibold text-gray-900 text-lg mb-1 group-hover:text-blue-600 dark:text-white">Hockey Jersey</div>
+                <div class="text-sm text-gray-500">Game-worn or team-issued hockey jerseys with player and season set details.</div>
+            </button>
+            <button type="button" data-type="PlayerGear"
+                class="type-card w-full p-6 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all text-left group dark:bg-gray-800 dark:border-gray-700">
+                <div class="font-semibold text-gray-900 text-lg mb-1 group-hover:text-blue-600 dark:text-white">Player Gear</div>
+                <div class="text-sm text-gray-500">Sticks, gloves, pads, helmets, and other game-used equipment with gear type tracking.</div>
+            </button>
+            <button type="button" data-type="PlayerItem"
+                class="type-card w-full p-6 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all text-left group dark:bg-gray-800 dark:border-gray-700">
+                <div class="font-semibold text-gray-900 text-lg mb-1 group-hover:text-blue-600 dark:text-white">Player Item</div>
+                <div class="text-sm text-gray-500">Player-attributed items that are not gear: cards, autographs, or personal items.</div>
+            </button>
         </div>
     </div>
+
+    {# STEP 2 wrapper: hidden until a type card is clicked #}
+    <div id="wizard-step2" class="hidden">
+        <div class="flex items-center mb-4 gap-3">
+            <button type="button" id="wizard-back-btn"
+                class="inline-flex items-center text-sm text-blue-600 hover:underline">
+                <svg class="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to type
+            </button>
+            <span class="text-gray-400">&mdash;</span>
+            <span id="wizard-chosen-label" class="text-sm font-medium text-gray-700 dark:text-gray-300"></span>
+        </div>
+    {% endif %}
 
     <!-- Fix 12: fields column order-1 on mobile, images column order-2 on mobile; reversed on md+ -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
@@ -199,6 +276,7 @@
             </div>
     </div>
     </div>
+    {% if not collectible %}</div>{% endif %}{# end wizard-step2 #}
 </form>
 
 <script>
@@ -230,33 +308,79 @@
     });
 </script>
 
+{% if not collectible %}
 <script>
-    // Pill-based item type selector
-    (function() {
-        const input = document.getElementById('id_collectible_type');
-        const pills = document.querySelectorAll('.type-pill');
-        const active = ['bg-blue-600', 'text-white', 'border-blue-600'];
-        const inactive = ['bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-50'];
+(function() {
+    const TYPE_LABELS = {
+        'GeneralItem':  'General Item',
+        'HockeyJersey': 'Hockey Jersey',
+        'PlayerGear':   'Player Gear',
+        'PlayerItem':   'Player Item',
+    };
 
-        function updatePills(value) {
-            pills.forEach(function(pill) {
-                const on = pill.dataset.type === value;
-                active.forEach(function(c) { pill.classList.toggle(c, on); });
-                inactive.forEach(function(c) { pill.classList.toggle(c, !on); });
-            });
-        }
+    const hiddenInput  = document.getElementById('id_collectible_type');
+    const step1Panel   = document.getElementById('wizard-step1');
+    const step2Panel   = document.getElementById('wizard-step2');
+    const step1Ind     = document.getElementById('step1-indicator');
+    const step2Ind     = document.getElementById('step2-indicator');
+    const chosenLabel  = document.getElementById('wizard-chosen-label');
+    const backBtn      = document.getElementById('wizard-back-btn');
+    const isPostError  = {{ is_post_error|yesno:"true,false" }};
 
-        updatePills(input.value);
+    function goToStep2(typeValue) {
+        hiddenInput.value = typeValue;
+        chosenLabel.textContent = TYPE_LABELS[typeValue] || typeValue;
 
-        pills.forEach(function(pill) {
-            pill.addEventListener('click', function() {
-                input.value = this.dataset.type;
-                updatePills(this.dataset.type);
-                input.dispatchEvent(new Event('change'));
-            });
+        step1Panel.classList.add('hidden');
+        step2Panel.classList.remove('hidden');
+
+        // Update step indicator: step 1 → inactive, step 2 → active
+        step1Ind.classList.remove('font-semibold', 'text-blue-600');
+        step1Ind.classList.add('text-gray-400');
+        step1Ind.querySelector('span').className = 'w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold';
+        step2Ind.classList.remove('text-gray-400');
+        step2Ind.classList.add('font-semibold', 'text-blue-600');
+        step2Ind.querySelector('span').className = 'w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold';
+
+        // Highlight selected card
+        document.querySelectorAll('.type-card').forEach(function(c) {
+            const active = c.dataset.type === typeValue;
+            c.classList.toggle('border-blue-500', active);
+            c.classList.toggle('bg-blue-50', active);
+            c.classList.toggle('border-gray-200', !active);
         });
-    })();
+
+        hiddenInput.dispatchEvent(new Event('change'));
+    }
+
+    function goToStep1() {
+        step1Panel.classList.remove('hidden');
+        step2Panel.classList.add('hidden');
+
+        // Update step indicator: step 1 → active, step 2 → inactive
+        step1Ind.classList.add('font-semibold', 'text-blue-600');
+        step1Ind.classList.remove('text-gray-400');
+        step1Ind.querySelector('span').className = 'w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold';
+        step2Ind.classList.add('text-gray-400');
+        step2Ind.classList.remove('font-semibold', 'text-blue-600');
+        step2Ind.querySelector('span').className = 'w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold';
+    }
+
+    document.querySelectorAll('.type-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            goToStep2(this.dataset.type);
+        });
+    });
+
+    backBtn.addEventListener('click', goToStep1);
+
+    // On POST re-render with validation errors: skip directly to step 2
+    if (isPostError) {
+        goToStep2(hiddenInput.value);
+    }
+})();
 </script>
+{% endif %}
 
 <script>
     // Handle toggling form fields based on collectible type
@@ -309,5 +433,77 @@
         document.getElementById('id_collectible_type').addEventListener('change', toggleFields);
     })();
 </script>
+
+{% if collectible %}
+<script>
+(function() {
+    const convertBtn    = document.getElementById('convert-type-btn');
+    const convertPanel  = document.getElementById('convert-type-panel');
+    const cancelBtn     = document.getElementById('convert-type-cancel');
+    const hiddenInput   = document.getElementById('id_collectible_type');
+    const badge         = document.getElementById('type-badge');
+    const notice        = document.getElementById('conversion-notice');
+    const noticeType    = document.getElementById('conversion-notice-type');
+    const undoBtn       = document.getElementById('conversion-undo-btn');
+
+    const originalType  = hiddenInput.value;
+    const originalLabel = badge.textContent.trim();
+
+    const TYPE_LABELS = {
+        'GeneralItem':  'General Item',
+        'HockeyJersey': 'Hockey Jersey',
+        'PlayerGear':   'Player Gear',
+        'PlayerItem':   'Player Item',
+    };
+
+    function showNotice(label) {
+        noticeType.textContent = label;
+        notice.classList.remove('hidden');
+        notice.classList.add('flex');
+    }
+
+    function hideNotice() {
+        notice.classList.add('hidden');
+        notice.classList.remove('flex');
+    }
+
+    convertBtn.addEventListener('click', function() {
+        convertPanel.classList.toggle('hidden');
+    });
+
+    cancelBtn.addEventListener('click', function() {
+        convertPanel.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.convert-type-card').forEach(function(card) {
+        card.addEventListener('click', function() {
+            const newType  = this.dataset.convertTo;
+            const newLabel = TYPE_LABELS[newType] || newType;
+
+            // Update hidden input and trigger field visibility toggle
+            hiddenInput.value = newType;
+            hiddenInput.dispatchEvent(new Event('change'));
+
+            // Update badge to amber to signal pending conversion
+            badge.textContent = newLabel;
+            badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
+
+            showNotice(newLabel);
+            convertPanel.classList.add('hidden');
+        });
+    });
+
+    undoBtn.addEventListener('click', function() {
+        hiddenInput.value = originalType;
+        hiddenInput.dispatchEvent(new Event('change'));
+
+        badge.textContent = originalLabel;
+        badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+
+        hideNotice();
+    });
+})();
+</script>
+{% endif %}
 
 {% endblock content %}

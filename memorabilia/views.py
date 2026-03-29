@@ -433,6 +433,7 @@ def create_collectible(request, collection_id):
         'how_obtained_options': HowObtainedOption.objects.all(),
         'users': User.objects.filter(is_superuser=False),
         'selected_collectible_type': collectible_type,
+        'is_post_error': request.method == 'POST',
     })
 
 def _get_image_formset_class(ctype):
@@ -612,15 +613,24 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         image_formset = ImageFormSet(instance=collectible, prefix='images')
         selected_collectible_type = _TYPE_DISPLAY.get(collectible_type, 'HockeyJersey')
 
+    _type_labels = {
+        'HockeyJersey': 'Hockey Jersey',
+        'PlayerGear': 'Player Gear',
+        'PlayerItem': 'Player Item',
+        'GeneralItem': 'General Item',
+    }
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
         'image_formset': image_formset,
         'title': 'Edit Collectible',
         'collectible': collectible,
+        'collection': collectible.collection,
         'leagues': League.objects.all(),
         'how_obtained_options': HowObtainedOption.objects.all(),
         'users': User.objects.filter(is_superuser=False),
         'selected_collectible_type': selected_collectible_type,
+        'type_display_label': _type_labels.get(selected_collectible_type, selected_collectible_type),
+        'convertible_types': [(k, v) for k, v in _type_labels.items() if k != selected_collectible_type],
     })
 
 
