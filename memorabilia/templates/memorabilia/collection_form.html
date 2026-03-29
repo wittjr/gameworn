@@ -144,13 +144,13 @@
 
         </div>{# end header image section #}
 
-        <div class="mx-auto flex">
-            <button type="submit" class="btn-primary grow me-2 mb-2">Save</button>
+        <div class="flex justify-end gap-3">
             {% if collection %}
-            <a href="{% url 'memorabilia:collection' collection.id %}" class="btn-primary grow me-2 mb-2 text-center">Cancel</a>
+            <a href="{% url 'memorabilia:collection' collection.id %}" class="btn-primary-white">Cancel</a>
             {% else %}
-            <a href="{% url 'memorabilia:list_collections' %}" class="btn-primary grow me-2 mb-2 text-center">Cancel</a>
+            <a href="{% url 'memorabilia:list_collections' %}" class="btn-primary-white">Cancel</a>
             {% endif %}
+            <button type="submit" class="btn-primary">Save</button>
         </div>
     </form>
 </div>

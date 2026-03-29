@@ -9,15 +9,6 @@
 {% block page_navigation %}
     {% if user.is_authenticated %}
         {% if user.id == collection.owner_uid or user.is_superuser %}
-            {% url 'memorabilia:edit_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Edit Collection" %}
-
-            {% url 'memorabilia:delete_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Delete Collection" %}
-
-            {% url 'memorabilia:create_collectible' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
-
             {% url 'memorabilia:bulk_edit_collectibles' collection.id as the_url %}
             {% include "memorabilia/navitem.html" with link=the_url label="Edit All Collectibles" %}
 
@@ -26,6 +17,21 @@
         {% endif %}
     {% endif %}
 {% endblock page_navigation %}
+
+{% block page_actions %}
+    {% if user.is_authenticated %}
+        {% if user.id == collection.owner_uid or user.is_superuser %}
+        <div class="flex flex-wrap items-center justify-end gap-2 mb-4">
+            {% url 'memorabilia:create_collectible' collection.id as add_url %}
+            <a href="{{ add_url }}" class="btn-primary">+ Add Collectible</a>
+            {% url 'memorabilia:edit_collection' collection.id as edit_url %}
+            <a href="{{ edit_url }}" class="btn-primary-white">Edit Collection</a>
+            {% url 'memorabilia:delete_collection' collection.id as delete_url %}
+            <a href="{{ delete_url }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collection</a>
+        </div>
+        {% endif %}
+    {% endif %}
+{% endblock page_actions %}
 
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
@@ -77,7 +83,11 @@
         {% for collectible in collectibles %}
             {% url 'memorabilia:collectible' collection.id collectible.collectible_type collectible.id as the_url %}
             {% getmediaurl collectible.get_primary_image as image_url %}
-            {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url %}
+            {% if user.id == collection.owner_uid or user.is_superuser %}
+                {% url 'memorabilia:edit_collectible' collection.id collectible.collectible_type collectible.id as card_edit_url %}
+                {% url 'memorabilia:delete_collectible' collection.id collectible.collectible_type collectible.id as card_delete_url %}
+            {% endif %}
+            {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url edit_url=card_edit_url delete_url=card_delete_url %}
         {% endfor %}
     </div>    
 

@@ -117,6 +117,9 @@
                 <div class="text-sm text-gray-500">Player-attributed items that are not gear: cards, autographs, or personal items.</div>
             </button>
         </div>
+        <div class="flex justify-end mt-4">
+            <a href="{% url 'memorabilia:collection' collection.id %}" class="btn-primary-white">Cancel</a>
+        </div>
     </div>
 
     {# STEP 2 wrapper: hidden until a type card is clicked #}

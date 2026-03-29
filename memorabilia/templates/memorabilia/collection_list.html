@@ -6,23 +6,31 @@
     <link rel="stylesheet" href="{% static 'memorabilia/collection.css' %}">
 {% endblock page_css %}
 	
-{% block page_navigation %}
-    <!-- {% if user.is_authenticated %}
-        {% url 'memorabilia:create_collection' as the_url %}
-        {% include 'memorabilia/navitem.html' with link=the_url label="Add" %}
-    {% endif %} -->
-{% endblock page_navigation %}
+{% block page_navigation %}{% endblock page_navigation %}
 
 {% block breadcrumb %}
     {% include 'memorabilia/breadcrumb.html' with label="Collections" %}
 {% endblock breadcrumb %}
 
+{% block page_actions %}
+    {% if user.is_authenticated %}
+    <div class="flex justify-end mb-4">
+        {% url 'memorabilia:create_collection' as add_url %}
+        <a href="{{ add_url }}" class="btn-primary">+ Add Collection</a>
+    </div>
+    {% endif %}
+{% endblock page_actions %}
+
 {% block content %}
     <div class="collection-list-container">
         {% for collection in collection_list %}
             {% url 'memorabilia:collection' collection.id as the_url %}
+            {% if user.id == collection.owner_uid or user.is_superuser %}
+                {% url 'memorabilia:edit_collection' collection.id as card_edit_url %}
+                {% url 'memorabilia:delete_collection' collection.id as card_delete_url %}
+            {% endif %}
             {% with header_url=collection.get_header_image_url %}
-            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=header_url collage_images=collection.get_collage_images description=collection.description owner=collection.owner_email owner_username=collection.owner_username %}
+            {% include "memorabilia/collection_card.html" with link=the_url label=collection.title image=header_url collage_images=collection.get_collage_images description=collection.description owner=collection.owner_email owner_username=collection.owner_username edit_url=card_edit_url delete_url=card_delete_url %}
             {% endwith %}
         {% endfor %}
     </div>

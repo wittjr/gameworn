@@ -36,9 +36,9 @@
 <form enctype="multipart/form-data" method="post" novalidate>
 	{% csrf_token %}
 	{{ form }}
-	<div class="mx-auto flex">
-		<button type="submit" class="btn-primary grow me-2 mb-2">Save</button>
-		<button type="button" class="btn-primary grow me-2 mb-2" onclick="history.back()">Cancel</button>
+	<div class="flex justify-end gap-3">
+		<button type="button" class="btn-primary-white" onclick="history.back()">Cancel</button>
+		<button type="submit" class="btn-primary">Save</button>
 	</div>
 </form>
 {% endblock content %}
