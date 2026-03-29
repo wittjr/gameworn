@@ -12,7 +12,7 @@
             {% url 'memorabilia:create_photo_match' object.collection.id object.collectible_type object.id as photo_url %}
             <a href="{{ photo_url }}" class="btn-primary-white">Add Photo Match</a>
             {% url 'memorabilia:delete_collectible' object.collection.id object.collectible_type object.id as delete_url %}
-            <a href="{{ delete_url }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collectible</a>
+            <a href="{{ delete_url }}" data-delete-label="{{ object.title }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collectible</a>
         </div>
         {% endif %}
     {% endif %}

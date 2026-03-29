@@ -252,7 +252,7 @@
        const message = document.getElementById('delete-modal-message');
 
        function showModal(href, label) {
-           message.textContent = 'Are you sure you want to ' + label.toLowerCase() + '? This cannot be undone.';
+           message.textContent = 'Are you sure you want to delete this item? This cannot be undone.';
            confirm.href = href;
            modal.classList.remove('hidden');
            modal.classList.add('flex');
@@ -265,9 +265,9 @@
 
        document.addEventListener('click', function(e) {
            const link = e.target.closest('a[href*="/delete"]');
-           if (!link) return;
+           if (!link || link === confirm) return;
            e.preventDefault();
-           showModal(link.href, link.textContent.trim());
+           showModal(link.href, link.dataset.deleteLabel || link.textContent.trim());
        });
 
        [cancel, close].forEach(function(el) { el.addEventListener('click', hideModal); });
