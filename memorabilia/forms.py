@@ -445,7 +445,8 @@ class PhotoMatchForm(ModelForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        # self.fields['photomatch'].queryset = PhotoMatch.objects.filter(owner_uid=self.current_user.id)
+        if self.instance and self.instance.pk:
+            self.fields['photo'].initial = (self.instance.image, self.instance.link)
 
 
     def save(self, commit=True):
@@ -458,9 +459,8 @@ class PhotoMatchForm(ModelForm):
         elif url_value:
             pm.link = url_value
             pm.image = None
-        else:
-            return 
-        
+        # else: no new photo provided — preserve existing image/link on the instance
+
         if commit:
             pm.save()
         

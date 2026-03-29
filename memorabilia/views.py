@@ -651,42 +651,42 @@ def delete_collectible(request, collection_id, collectible_type, collectible_id)
 
 
 @login_required
-@permission_required('memorabilia.create_photomatch', fn=objectgetter(PlayerGear, 'collectible_id'), raise_exception=True)
-def create_photo_match(request, collection_id, collectible_id):
+@permission_required('memorabilia.create_photomatch', fn=_get_collectible, raise_exception=True)
+def create_photo_match(request, collection_id, collectible_type, collectible_id):
     if request.method == "POST":
         form = PhotoMatchForm(request.POST, request.FILES, current_user=request.user)
         if form.is_valid():
             form.save()
-            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergear', pk=collectible_id)
+            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible_type, pk=collectible_id)
         else:
-            collectible = get_object_or_404(PlayerGear, pk=collectible_id)
+            collectible = _get_collectible(request, collection_id=collection_id, collectible_type=collectible_type, collectible_id=collectible_id)
     else:
-        collectible = get_object_or_404(PlayerGear, pk=collectible_id)
-        form = PhotoMatchForm(initial={'collectible':collectible}, current_user=request.user)
+        collectible = _get_collectible(request, collection_id=collection_id, collectible_type=collectible_type, collectible_id=collectible_id)
+        form = PhotoMatchForm(initial={'collectible': collectible}, current_user=request.user)
 
-    return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'New Photo Match', 'collectible': collectible})
+    return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'New Photo Match', 'collectible': collectible, 'collectible_type': collectible_type})
 
 
 @login_required
-@permission_required('memorabilia.update_photomatch', fn=objectgetter(PlayerGear, 'collectible_id'), raise_exception=True)
-def edit_photo_match(request, collection_id, collectible_id, photo_match_id):
+@permission_required('memorabilia.update_photomatch', fn=_get_collectible, raise_exception=True)
+def edit_photo_match(request, collection_id, collectible_type, collectible_id, photo_match_id):
     photomatch = get_object_or_404(PhotoMatch, pk=photo_match_id)
     if request.method == "POST":
         form = PhotoMatchForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergear', pk=collectible_id)
+            return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible_type, pk=collectible_id)
     else:
-        form = PhotoMatchForm(instance = photomatch)
+        form = PhotoMatchForm(instance=photomatch)
 
-    return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'Edit Photo Match', 'photomatch': photomatch})
+    return render(request, 'memorabilia/photomatch_form.html', {'form': form, 'title': 'Edit Photo Match', 'photomatch': photomatch, 'collectible_type': collectible_type})
 
 
 @login_required
-@permission_required('memorabilia.delete_photomatch', fn=objectgetter(PlayerGear, 'collectible_id'), raise_exception=True)
-def delete_photo_match(request, collection_id, collectible_id, photo_match_id):
+@permission_required('memorabilia.delete_photomatch', fn=_get_collectible, raise_exception=True)
+def delete_photo_match(request, collection_id, collectible_type, collectible_id, photo_match_id):
     PhotoMatch.objects.filter(pk=photo_match_id).delete()
-    return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type='playergear', pk=collectible_id)
+    return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible_type, pk=collectible_id)
 
 @login_required
 def get_flickr_albums(request, username, album):

@@ -1,19 +1,19 @@
-<div class="mx-auto w-full md:w-2/5 xl:w-1/4 transition-transform hover:-translate-y-1 hover:shadow-md rounded-lg overflow-hidden bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+<div class="mx-auto w-full md:w-2/5 xl:w-1/4 transition-transform hover:-translate-y-1 hover:shadow-md rounded-lg overflow-hidden bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col">
     <a href="{{ link }}">
-        <div class="flex flex-col">
-            {% if image %}
-            <img class="h-auto w-full rounded-t-lg" alt="{{ label }}" src="{{ image }}" />
-            {% endif %}
-            <div class="text-2xl font-medium text-center text-gray-800 dark:text-white px-3 pt-3 {% if edit_url or delete_url %}pb-2{% else %}pb-3{% endif %}">{{ label }}</div>
-        </div>
+        {% if image %}
+        <img class="h-auto w-full rounded-t-lg" alt="{{ label }}" src="{{ image }}" />
+        {% endif %}
+    </a>
+    <a href="{{ link }}" class="flex-1 flex items-center justify-center px-3 py-3">
+        <div class="text-2xl font-medium text-center text-gray-800 dark:text-white">{{ label }}</div>
     </a>
     {% if edit_url or delete_url %}
-    <div class="flex items-center justify-end gap-3 px-3 pb-3">
+    <div class="flex items-center justify-end gap-3 px-3 pb-3 min-h-[44px]">
         {% if edit_url %}
-        <a href="{{ edit_url }}" class="text-sm font-medium text-blue-600 hover:underline">Edit</a>
+        <a href="{{ edit_url }}" class="text-sm font-medium text-blue-600 hover:underline px-2">Edit</a>
         {% endif %}
         {% if delete_url %}
-        <a href="{{ delete_url }}" class="text-sm font-medium text-red-600 hover:underline">Delete</a>
+        <a href="{{ delete_url }}" class="text-sm font-medium text-red-600 hover:underline px-2">Delete</a>
         {% endif %}
     </div>
     {% endif %}

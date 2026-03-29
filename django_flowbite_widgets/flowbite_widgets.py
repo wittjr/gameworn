@@ -98,12 +98,8 @@ class FlowbiteImageDropzone(forms.MultiWidget):
 
     def decompress(self, value):
         if value:
-            # This method will be called with different types of values based on the field
-            # If it's a tuple of (file, url), return it
-            if isinstance(value, tuple) and len(value) == 2:
-                return value
-            # For a model instance where the value is already saved
-            # This is a placeholder - you'll need to adjust based on your model
+            if isinstance(value, (tuple, list)) and len(value) == 2:
+                return list(value)
             return [None, None]
         return [None, None]
 

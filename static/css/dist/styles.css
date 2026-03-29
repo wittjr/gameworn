@@ -1838,6 +1838,14 @@ tr.field-row.field-error input,
   max-height: 100%;
 }
 
+.max-h-40 {
+  max-height: 10rem;
+}
+
+.min-h-\[44px\] {
+  min-height: 44px;
+}
+
 .w-1\/2 {
   width: 50%;
 }
@@ -2122,6 +2130,10 @@ tr.field-row.field-error input,
 
 .gap-6 {
   gap: 1.5rem;
+}
+
+.gap-1 {
+  gap: 0.25rem;
 }
 
 .gap-x-4 {
@@ -3591,6 +3603,10 @@ tr.field-row.field-error input,
 
   .lg\:grid-cols-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .lg\:px-48 {

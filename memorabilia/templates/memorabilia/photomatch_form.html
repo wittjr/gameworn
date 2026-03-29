@@ -4,14 +4,7 @@
     {{ title }}
 {% endblock head_title %}
 
-{% block page_navigation %}
-    {% if user.is_authenticated %}
-        {% if user.id == form.instance.collectible.collection.owner_uid or user.is_superuser %}
-            {% url 'memorabilia:delete_photo_match' collection_id=photomatch.collectible.collection.id collectible_id=photomatch.collectible.id photo_match_id=photomatch.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Delete Photo Match" %}
-        {% endif %}
-    {% endif %}
-{% endblock page_navigation %}
+{% block page_navigation %}{% endblock page_navigation %}
 
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
@@ -19,14 +12,14 @@
     {% if photomatch %}
         {% url 'memorabilia:collection' pk=photomatch.collectible.collection.id as the_url %}
         {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch.collectible.collection.title %}
-        {% url 'memorabilia:collectible' collection_id=photomatch.collectible.collection.id collectible_type='playeritem' pk=photomatch.collectible.id as the_url %}
+        {% url 'memorabilia:collectible' collection_id=photomatch.collectible.collection.id collectible_type=photomatch.collectible.collectible_type pk=photomatch.collectible.id as the_url %}
         {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch.collectible.title %}
         {% url 'memorabilia:photo_match' collection_id=photomatch.collectible.collection.id collection_id=photomatch.collectible.id pk=photomatch.id as the_url %}
         {% include 'memorabilia/breadcrumb.html' with url=the_url label=photomatch %}
     {% else %}
-		{% url 'memorabilia:collection' pk=collectible.collection.id as the_url %}
+        {% url 'memorabilia:collection' pk=collectible.collection.id as the_url %}
         {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.collection.title %}
-        {% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type='playeritem' pk=collectible.id as the_url %}
+        {% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type=collectible_type pk=collectible.id as the_url %}
         {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.title %}
     {% endif %}
 {% endblock breadcrumb %}
@@ -36,9 +29,17 @@
 <form enctype="multipart/form-data" method="post" novalidate>
 	{% csrf_token %}
 	{{ form }}
-	<div class="flex justify-end gap-3">
-		<button type="button" class="btn-primary-white" onclick="history.back()">Cancel</button>
-		<button type="submit" class="btn-primary">Save</button>
+	<div class="flex items-center justify-between gap-3">
+		<div>
+			{% if photomatch %}
+			{% url 'memorabilia:delete_photo_match' collection_id=photomatch.collectible.collection.id collectible_type=collectible_type collectible_id=photomatch.collectible.id photo_match_id=photomatch.id as delete_url %}
+			<a href="{{ delete_url }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete</a>
+			{% endif %}
+		</div>
+		<div class="flex gap-3">
+			<button type="button" class="btn-primary-white" onclick="history.back()">Cancel</button>
+			<button type="submit" class="btn-primary">Save</button>
+		</div>
 	</div>
 </form>
 {% endblock content %}
