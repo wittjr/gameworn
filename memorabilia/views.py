@@ -58,6 +58,16 @@ class IndexView(generic.ListView):
         return context
 
 
+class MyCollectionsView(IndexView):
+    def get_queryset(self):
+        return Collection.objects.filter(owner_uid=self.request.user.id)
+
+    @classmethod
+    def as_view(cls, **kwargs):
+        view = super().as_view(**kwargs)
+        return login_required(view)
+
+
 def _model_has_field(qs, field_name):
     return any(f.name == field_name for f in qs.model._meta.get_fields())
 
