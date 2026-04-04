@@ -2771,6 +2771,10 @@ tr.field-row.field-error input,
   line-height: 1.5;
 }
 
+.leading-tight {
+  line-height: 1.25;
+}
+
 .tracking-normal {
   letter-spacing: 0em;
 }

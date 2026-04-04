@@ -43,7 +43,12 @@
                 {% if collection and collection.get_header_image_url %}
                 <div class="image-option-card flex-1 rounded-lg border-2 border-blue-500 cursor-pointer overflow-hidden"
                      data-option="current"
-                     onclick="selectImageOption('current')">
+                     role="button"
+                     tabindex="0"
+                     aria-pressed="true"
+                     aria-label="Keep current header image"
+                     onclick="selectImageOption('current')"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('current')}">
                     <div class="h-32 overflow-hidden">
                         <img src="{{ collection.get_header_image_url }}" class="w-full h-full object-cover" alt="Current image" />
                     </div>
@@ -57,7 +62,12 @@
                 <div class="image-option-card flex-1 rounded-lg border-2 cursor-pointer overflow-hidden
                             {% if collection and collection.get_header_image_url %}border-gray-300 dark:border-gray-600{% else %}border-blue-500{% endif %}"
                      data-option="new"
-                     onclick="selectImageOption('new')">
+                     role="button"
+                     tabindex="0"
+                     aria-pressed="{% if collection and collection.get_header_image_url %}false{% else %}true{% endif %}"
+                     aria-label="Upload a new image or paste a link"
+                     onclick="selectImageOption('new')"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('new')}">
                     <div class="h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
                         <svg class="w-10 h-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -69,11 +79,16 @@
                     </div>
                 </div>
 
-                {# "Collage" card #}
+                {# "Auto Collage" card #}
                 <div class="image-option-card flex-1 rounded-lg border-2 cursor-pointer overflow-hidden
                             {% if collection and not collection.get_header_image_url %}border-blue-500{% else %}border-gray-300 dark:border-gray-600{% endif %}"
                      data-option="collage"
-                     onclick="selectImageOption('collage')">
+                     role="button"
+                     tabindex="0"
+                     aria-pressed="{% if collection and not collection.get_header_image_url %}true{% else %}false{% endif %}"
+                     aria-label="Auto Collage: builds the header image automatically from your item photos"
+                     onclick="selectImageOption('collage')"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('collage')}">
                     <div class="h-32 overflow-hidden bg-gray-800">
                         {% if collection %}
                             {% with collage_imgs=collage_images %}
@@ -90,15 +105,26 @@
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <img src="{% static 'memorabilia/hockey_placeholder.svg' %}" class="w-full h-full object-contain p-4" alt="Hockey memorabilia" />
+                            <div class="h-32 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-700 px-3 text-center gap-1">
+                                <svg class="w-6 h-6 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 10h16M4 14h8M4 18h8"/>
+                                </svg>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 leading-tight">Automatically built from photos in this collection</p>
+                            </div>
                             {% endif %}
                             {% endwith %}
                         {% else %}
-                        <img src="{% static 'memorabilia/hockey_placeholder.svg' %}" class="w-full h-full object-contain p-4" alt="Hockey memorabilia" />
+                        <div class="h-32 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-700 px-3 text-center gap-1">
+                            <svg class="w-6 h-6 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 10h16M4 14h8M4 18h8"/>
+                            </svg>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 leading-tight">Automatically built from photos in this collection</p>
+                        </div>
                         {% endif %}
                     </div>
-                    <div class="p-2 text-center text-xs font-medium text-gray-900 dark:text-white bg-white dark:bg-gray-800">
-                        Collage
+                    <div class="p-2 text-center bg-white dark:bg-gray-800">
+                        <p class="text-xs font-medium text-gray-900 dark:text-white">Auto Collage</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Built from your item photos</p>
                     </div>
                 </div>
 
@@ -117,7 +143,8 @@
             {# Collage image picker — available when there are more than 1 collectible with images #}
             {% if all_collage_images|length > 1 %}
             <div id="collage-picker" class="hidden mt-4">
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select up to 9 images for the collage <span id="collage-pick-count" class="text-gray-400"></span></p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">By default, the collage uses photos from your items automatically. You can optionally hand-pick up to 9 below.</p>
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select images for the collage <span id="collage-pick-count" class="text-gray-400"></span></p>
                 <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                     {% for img_info in all_collage_images %}
                     <div class="collage-pick-card relative rounded-lg overflow-hidden border-2 border-gray-300 cursor-pointer select-none"
@@ -162,6 +189,7 @@
             var active = card.dataset.option === option;
             card.classList.toggle('border-blue-500', active);
             card.classList.toggle('border-gray-300', !active);
+            card.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
 
         var panel = document.getElementById('dropzone-panel');
