@@ -288,6 +288,12 @@ class CollectibleImage(RulesModel):
     class Meta:
         abstract = True
 
+    def delete(self, *args, **kwargs):
+        image = self.image  # capture field reference before deletion
+        super().delete(*args, **kwargs)
+        if image:
+            image.delete(save=False)
+
 class PlayerItemImage(CollectibleImage):
     collectible = models.ForeignKey(PlayerItem, on_delete=models.CASCADE, related_name='images')
 
@@ -303,6 +309,12 @@ class PhotoMatch(RulesModel):
     description = models.CharField(max_length=500, blank=True, null=True)
     game_date = models.DateField()
     collectible = models.ForeignKey(PlayerGear, on_delete=models.CASCADE, related_name='photomatches')
+
+    def delete(self, *args, **kwargs):
+        image = self.image
+        super().delete(*args, **kwargs)
+        if image:
+            image.delete(save=False)
 
     class Meta:
         rules_permissions = {

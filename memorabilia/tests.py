@@ -1,8 +1,11 @@
-from django.test import TestCase
+import tempfile
+
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, UserProfile
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch
 
 
 class BaseTestCase(TestCase):
@@ -1575,3 +1578,143 @@ class FlickrUrlTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         item = GeneralItem.objects.get(title='Flickr Album Item')
         self.assertEqual(item.flickr_url, 'https://www.flickr.com/photos/flickruser/albums/99887766')
+
+
+class UploadedImageEditDisplayTests(BaseTestCase):
+    """Regression: uploaded images must render as <img> tags on the edit form, not as a file input widget."""
+
+    # Minimal 1×1 red PNG — valid enough for ImageField
+    PNG_1PX = (
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+        b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00'
+        b'\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+    )
+
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_uploaded_image_renders_as_img_tag_on_edit(self):
+        from memorabilia.models import PlayerItemImage
+        img_file = SimpleUploadedFile('test.png', self.PNG_1PX, content_type='image/png')
+        image_record = PlayerItemImage.objects.create(
+            collectible=self.player_item,
+            image=img_file,
+            primary=True,
+        )
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'playeritem', self.player_item.id],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, image_record.image.url)
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_uploaded_image_does_not_render_as_file_input_only(self):
+        """The image field value must not be surfaced as a bare ClearableFileInput on the edit page."""
+        from memorabilia.models import PlayerItemImage
+        img_file = SimpleUploadedFile('test2.png', self.PNG_1PX, content_type='image/png')
+        PlayerItemImage.objects.create(
+            collectible=self.player_item,
+            image=img_file,
+            primary=True,
+        )
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'playeritem', self.player_item.id],
+        ))
+        # The file input for an existing image should be hidden, not the primary visible element.
+        # If it were rendered as a visible widget, the label tag would appear prominently.
+        self.assertNotContains(response, 'Image:</label>')
+
+
+class ImageFileDeletionTests(BaseTestCase):
+    """
+    File cleanup: calling .delete() on an image record with an uploaded file must
+    remove the file from disk. This covers the formset "Keep" un-check path, which
+    calls obj.delete() directly on each marked instance.
+
+    Note: Django's CASCADE delete (when the parent collectible is deleted) uses SQL
+    bulk deletes that bypass the Python delete() method, so cascade paths do NOT
+    trigger file cleanup. That is a known limitation and a separate concern.
+    """
+
+    PNG_1PX = (
+        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
+        b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00'
+        b'\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+    )
+
+    def _upload(self, name='test.png'):
+        return SimpleUploadedFile(name, self.PNG_1PX, content_type='image/png')
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_player_item_image_delete_removes_file(self):
+        import os
+        record = PlayerItemImage.objects.create(
+            collectible=self.player_item,
+            image=self._upload('pi.png'),
+        )
+        path = record.image.path
+        self.assertTrue(os.path.exists(path))
+        record.delete()
+        self.assertFalse(os.path.exists(path))
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_player_gear_image_delete_removes_file(self):
+        import os
+        record = PlayerGearImage.objects.create(
+            collectible=self.player_gear,
+            image=self._upload('pg.png'),
+        )
+        path = record.image.path
+        self.assertTrue(os.path.exists(path))
+        record.delete()
+        self.assertFalse(os.path.exists(path))
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_general_item_image_delete_removes_file(self):
+        import os
+        record = GeneralItemImage.objects.create(
+            collectible=self.general_item,
+            image=self._upload('gi.png'),
+        )
+        path = record.image.path
+        self.assertTrue(os.path.exists(path))
+        record.delete()
+        self.assertFalse(os.path.exists(path))
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_photomatch_delete_removes_file(self):
+        import os, datetime
+        record = PhotoMatch.objects.create(
+            collectible=self.player_gear,
+            image=self._upload('pm.png'),
+            game_date=datetime.date(2024, 1, 1),
+        )
+        path = record.image.path
+        self.assertTrue(os.path.exists(path))
+        record.delete()
+        self.assertFalse(os.path.exists(path))
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_link_only_image_delete_does_not_crash(self):
+        """An image record with only a Flickr link (no uploaded file) must be deletable without error."""
+        record = PlayerItemImage.objects.create(
+            collectible=self.player_item,
+            link='https://live.staticflickr.com/example/photo.jpg',
+        )
+        record.delete()  # must not raise
+        self.assertFalse(PlayerItemImage.objects.filter(pk=record.pk).exists())
+
+    @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+    def test_photomatch_link_only_delete_does_not_crash(self):
+        """A PhotoMatch with only a link (no uploaded file) must be deletable without error."""
+        import datetime
+        record = PhotoMatch.objects.create(
+            collectible=self.player_gear,
+            link='https://live.staticflickr.com/example/photo.jpg',
+            game_date=datetime.date(2024, 1, 1),
+        )
+        record.delete()  # must not raise
+        self.assertFalse(PhotoMatch.objects.filter(pk=record.pk).exists())

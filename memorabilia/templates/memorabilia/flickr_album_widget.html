@@ -11,81 +11,252 @@
 {% load memorabilia_extras %}
 
 <div class="mb-4 border-b border-gray-200 dark:border-gray-700">
-    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="default-tab"
-        data-tabs-toggle="#default-tab-content" role="tablist">
+    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist" id="add-image-tabs">
         <li class="me-2" role="presentation">
-            <button class="inline-block p-4 border-b-2 rounded-t-lg" id="flickr-tab" data-tabs-target="#flickr"
-                type="button" role="tab" aria-controls="flickr" aria-selected="false">Flickr Album</button>
+            <button class="inline-block p-4 border-b-2 rounded-t-lg border-blue-600 text-blue-600 dark:text-blue-500 dark:border-blue-500"
+                id="flickr-tab" data-tab-target="flickr-panel"
+                type="button" role="tab" aria-controls="flickr-panel" aria-selected="true">Flickr Album</button>
         </li>
-        <!-- <li class="me-2" role="presentation">
-            <button
-                class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
-                id="link-tab" data-tabs-target="#link" type="button" role="tab" aria-controls="link"
-                aria-selected="false">Image Link</button>
+        <li class="me-2" role="presentation">
+            <button class="inline-block p-4 border-b-2 rounded-t-lg border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                id="upload-tab" data-tab-target="upload-panel"
+                type="button" role="tab" aria-controls="upload-panel" aria-selected="false">Upload</button>
         </li>
-        <li role="presentation">
-            <button
-                class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
-                id="upload-tab" data-tabs-target="#upload" type="button" role="tab" aria-controls="upload"
-                aria-selected="false">Upload Image</button>
-        </li> -->
     </ul>
 </div>
-<div id="default-tab-content">
-    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="flickr" role="tabpanel"
-        aria-labelledby="flickr-tab">
-        <input type="text" id="flickrAlbum"
-            name="flickrAlbum" class="w-full mb-2 p-2 border rounded"
-            placeholder="https://www.flickr.com/photos/<flickr ID>/albums/<album ID>"></input>
+
+<div id="add-image-tab-content">
+    <!-- Flickr Album panel -->
+    <div id="flickr-panel" role="tabpanel" aria-labelledby="flickr-tab" class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <input type="text" id="flickrAlbum" name="flickrAlbum"
+            class="w-full mb-2 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="https://www.flickr.com/photos/<flickr ID>/albums/<album ID>">
         <script>
         (function() {
             var fid = (typeof window.FLICKR_ID !== 'undefined') ? window.FLICKR_ID : '';
             var existing = (typeof window.FLICKR_URL !== 'undefined') ? window.FLICKR_URL : '';
             var input = document.getElementById('flickrAlbum');
-            if (existing) {
-                input.value = existing;
-            }
-            if (fid) {
-                input.placeholder = 'https://www.flickr.com/photos/' + fid + '/albums/<album ID>';
-            }
+            if (existing) { input.value = existing; }
+            if (fid) { input.placeholder = 'https://www.flickr.com/photos/' + fid + '/albums/<album ID>'; }
         })();
         </script>
         <button type="button" id="queryFlickrBtn" onclick="queryFlickr()"
-        class="btn-primary w-full flex items-center justify-center">
-        <span id="queryFlickrText">Query Flickr</span>
-        <span id="queryFlickrSpinner" class="hidden ml-2">
+            class="btn-primary w-full flex items-center justify-center">
+            <span id="queryFlickrText">Query Flickr</span>
+            <span id="queryFlickrSpinner" class="hidden ml-2">
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
+        </button>
+        <div id="flickr-error" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mt-2" role="alert">
+            <p class="text-red-700">Failed to fetch Flickr album. Please try again.</p>
+        </div>
+    </div>
 
-            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    <!-- Upload panel -->
+    <div id="upload-panel" role="tabpanel" aria-labelledby="upload-tab" class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <!-- Dropzone -->
+        <div id="upload-dropzone-wrap" class="flex items-center justify-center w-full relative">
+            <label id="upload-dropzone-label" for="upload-dropzone-input"
+                class="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-white dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg class="w-8 h-8 mb-3 text-gray-500 dark:text-gray-400" aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                    </svg>
+                    <p class="mb-1 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, GIF</p>
+                </div>
+                <input id="upload-dropzone-input" type="file" accept="image/*"
+                    class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+            </label>
+        </div>
+        <!-- Success state (hidden until a file is chosen) -->
+        <div id="upload-success" class="hidden flex flex-col items-center gap-3 py-6 text-center" role="status" aria-live="polite">
+            <svg class="w-10 h-10 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-        </span>
-    </button>
-    <div id="flickr-error" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mt-2" role="alert">
-        <p class="text-red-700">Failed to fetch Flickr album. Please try again.</p>
-    </div>
-    </div>
-    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="link" role="tabpanel" aria-labelledby="link-tab">
-        <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
-                class="font-medium text-gray-800 dark:text-white">Dashboard tab's associated content</strong>. Clicking
-            another tab will toggle the visibility of this one for the next. The tab JavaScript swaps classes to control
-            the content visibility and styling.</p>
-    </div>
-    <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="upload" role="tabpanel"
-        aria-labelledby="upload-tab">
-        <p class="text-sm text-gray-500 dark:text-gray-400">This is some placeholder content the <strong
-                class="font-medium text-gray-800 dark:text-white">Contacts tab's associated content</strong>. Clicking
-            another tab will toggle the visibility of this one for the next. The tab JavaScript swaps classes to control
-            the content visibility and styling.</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                <span id="upload-success-filename" class="block truncate max-w-xs mx-auto text-gray-500 dark:text-gray-400"></span>
+                added to your photos
+            </p>
+            <button type="button" id="upload-another-btn"
+                class="text-sm text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded dark:text-blue-400">
+                Upload another
+            </button>
+        </div>
     </div>
 </div>
+
+<script>
+(function () {
+    // --- Tab switching ---
+    document.getElementById('add-image-tabs').addEventListener('click', function (e) {
+        var btn = e.target.closest('[role="tab"]');
+        if (!btn) return;
+        var targetId = btn.dataset.tabTarget;
+        document.querySelectorAll('#add-image-tabs [role="tab"]').forEach(function (t) {
+            var active = t === btn;
+            t.classList.toggle('border-blue-600', active);
+            t.classList.toggle('text-blue-600', active);
+            t.classList.toggle('dark:text-blue-500', active);
+            t.classList.toggle('dark:border-blue-500', active);
+            t.classList.toggle('border-transparent', !active);
+            t.classList.toggle('hover:text-gray-600', !active);
+            t.classList.toggle('hover:border-gray-300', !active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        ['flickr-panel', 'upload-panel'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden', id !== targetId);
+        });
+    });
+
+    // --- Upload handling ---
+    function attachUploadListener(input) {
+        input.addEventListener('change', function () {
+            if (!input.files || !input.files[0]) return;
+            var file = input.files[0];
+
+            // Determine next formset index
+            var totalInput = document.getElementById('id_images-TOTAL_FORMS');
+            var formCount = totalInput ? parseInt(totalInput.value) : 0;
+
+            // Name the file input for this formset slot
+            input.name = 'images-' + formCount + '-image';
+            input.id = 'id_images-' + formCount + '-image';
+
+            // Build the album card (mirrors the Flickr JS pattern)
+            var albumContainer = document.getElementById('album');
+            var hasPrimarySelected = !!document.querySelector('input[name="primary_choice"]:checked');
+
+            var formContainer = document.createElement('div');
+            formContainer.className = 'image-form grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+            // Preview thumbnail
+            var imgPreview = document.createElement('div');
+            imgPreview.className = 'image-preview';
+            var img = document.createElement('img');
+            img.className = 'w-full h-auto rounded';
+            img.alt = file.name;
+            var reader = new FileReader();
+            reader.onload = function (e) { img.src = e.target.result; };
+            reader.readAsDataURL(file);
+            imgPreview.appendChild(img);
+
+            // Hidden fields container
+            var hiddenContainer = document.createElement('div');
+            hiddenContainer.style.display = 'none';
+
+            // Move the file input here so it submits with the form
+            hiddenContainer.appendChild(input);
+
+            // Hidden primary checkbox
+            var primaryHidden = document.createElement('input');
+            primaryHidden.type = 'checkbox';
+            primaryHidden.name = 'images-' + formCount + '-primary';
+            primaryHidden.id = 'id_images-' + formCount + '-primary';
+            hiddenContainer.appendChild(primaryHidden);
+
+            // Hidden DELETE checkbox
+            var deleteHidden = document.createElement('input');
+            deleteHidden.type = 'checkbox';
+            deleteHidden.name = 'images-' + formCount + '-DELETE';
+            deleteHidden.id = 'id_images-' + formCount + '-DELETE';
+            hiddenContainer.appendChild(deleteHidden);
+
+            // Primary radio
+            var primaryDiv = document.createElement('div');
+            primaryDiv.className = 'form-group flex items-center gap-2';
+            var primaryRadio = document.createElement('input');
+            primaryRadio.type = 'radio';
+            primaryRadio.name = 'primary_choice';
+            primaryRadio.value = formCount;
+            primaryRadio.id = 'primary-' + formCount;
+            primaryRadio.className = 'form-radio';
+            primaryRadio.checked = !hasPrimarySelected;
+            var primaryLabel = document.createElement('label');
+            primaryLabel.htmlFor = 'primary-' + formCount;
+            primaryLabel.textContent = 'Cover photo';
+            primaryLabel.className = 'cursor-pointer';
+            primaryDiv.appendChild(primaryRadio);
+            primaryDiv.appendChild(primaryLabel);
+
+            // Keep checkbox
+            var includeDiv = document.createElement('div');
+            includeDiv.className = 'form-group flex items-center gap-2';
+            var includeCb = document.createElement('input');
+            includeCb.type = 'checkbox';
+            includeCb.id = 'include-' + formCount;
+            includeCb.checked = true;
+            includeCb.className = 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600';
+            var includeLabel = document.createElement('label');
+            includeLabel.htmlFor = 'include-' + formCount;
+            includeLabel.textContent = 'Keep';
+            includeLabel.className = 'cursor-pointer';
+            includeDiv.appendChild(includeCb);
+            includeDiv.appendChild(includeLabel);
+
+            formContainer.appendChild(hiddenContainer);
+            formContainer.appendChild(imgPreview);
+            formContainer.appendChild(primaryDiv);
+            formContainer.appendChild(includeDiv);
+
+            // Prepend so the new image appears at the top of the list
+            albumContainer.prepend(formContainer);
+
+            // Update TOTAL_FORMS
+            if (totalInput) totalInput.value = formCount + 1;
+
+            // Show success state, hide dropzone
+            document.getElementById('upload-dropzone-wrap').classList.add('hidden');
+            var successEl = document.getElementById('upload-success');
+            document.getElementById('upload-success-filename').textContent = file.name;
+            successEl.classList.remove('hidden');
+            successEl.classList.add('flex');
+        });
+    }
+
+    function resetUploadPanel() {
+        // Hide success state, show dropzone with a fresh input
+        var successEl = document.getElementById('upload-success');
+        successEl.classList.add('hidden');
+        successEl.classList.remove('flex');
+        document.getElementById('upload-dropzone-wrap').classList.remove('hidden');
+
+        var newInput = document.createElement('input');
+        newInput.type = 'file';
+        newInput.id = 'upload-dropzone-input';
+        newInput.accept = 'image/*';
+        newInput.className = 'absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer';
+        attachUploadListener(newInput);
+        document.getElementById('upload-dropzone-label').appendChild(newInput);
+    }
+
+    attachUploadListener(document.getElementById('upload-dropzone-input'));
+
+    document.getElementById('upload-another-btn').addEventListener('click', resetUploadPanel);
+
+    // Also reset when switching away from the upload tab
+    document.getElementById('add-image-tabs').addEventListener('click', function (e) {
+        var btn = e.target.closest('[role="tab"]');
+        if (btn && btn.dataset.tabTarget !== 'upload-panel') {
+            var successEl = document.getElementById('upload-success');
+            if (!successEl.classList.contains('hidden')) resetUploadPanel();
+        }
+    });
+}());
+</script>
 <fieldset>
 <legend class="sr-only">Select primary image</legend>
 <div id="album" class="flex flex-row gap-4 w-full flex-wrap ">
     {% for image_form in formset %}
         <div class="image-form grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {{ image_form.id }}
-            {% if image_form.link %}
+            {% if image_form.link.value %}
                 <div class="form-group">
                     <div class="hidden">
                         {{ image_form.link }}
@@ -93,10 +264,13 @@
                     {% getmediaurl image_form.link.value as image_url %}
                     <img class="w-full h-auto rounded" src="{{ image_url }}" alt="Collectible image" />
                 </div>
-            {% elif image_form.image %}
+            {% elif image_form.image.value %}
                 <div class="form-group">
-                    {{ image_form.image.label_tag }}
-                    {{ image_form.image }}
+                    <div class="hidden">
+                        {{ image_form.image }}
+                    </div>
+                    {% getmediaurl image_form.image.value as image_url %}
+                    <img class="w-full h-auto rounded" src="{{ image_url }}" alt="Collectible image" />
                 </div>
             {% endif %}
             <div class="form-group flex items-center gap-2">
