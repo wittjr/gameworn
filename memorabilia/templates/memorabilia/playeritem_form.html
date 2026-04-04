@@ -9,21 +9,6 @@
     {{ image_formset.media }}
 {% endblock extrahead %}
 
-{% block navigation %}
-    {% if user.is_authenticated %}
-        {% if user.id == collection.owner_uid or user.is_superuser %}
-            {% url 'memorabilia:edit_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Edit Collection" %}
-
-            {% url 'memorabilia:delete_collection' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Delete Collection" %}
-
-            {% url 'memorabilia:create_collectible' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Add Collectible" %}
-        {% endif %}
-    {% endif %}
-{% endblock navigation %}
-
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
     {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
