@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from rules.contrib.models import RulesModel
+from django.contrib.auth.models import User
 import rules
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
@@ -159,6 +160,7 @@ class Collectible(RulesModel):
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
     how_obtained = models.CharField(max_length=255, blank=True, null=True)
     coa = models.ForeignKey('CoaType', to_field='key', on_delete=models.PROTECT, db_column='coa', blank=True, null=True)
+    flickr_url = models.CharField(max_length=255, blank=True, default='')
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -362,3 +364,11 @@ class Team(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.league_id})"
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    flickr_id = models.CharField(max_length=50, blank=True, default='')
+
+    def __str__(self):
+        return f"Profile({self.user.username})"

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
 
-from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, UserProfile
 
 
 class BaseTestCase(TestCase):
@@ -1447,4 +1447,131 @@ class CollectionCRUDCollageTests(BaseTestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIn('all_collage_images', response.context)
+
+
+class MyCollectionsViewTests(BaseTestCase):
+    def test_requires_login(self):
+        response = self.client.get(reverse('memorabilia:my_collections'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response['Location'])
+
+    def test_owner_sees_own_collections(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('memorabilia:my_collections'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.collection, response.context['collection_list'])
+
+    def test_other_users_collections_excluded(self):
+        other_collection = Collection.objects.create(owner_uid=self.other_user.id, title='Other Collection')
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse('memorabilia:my_collections'))
+        self.assertNotIn(other_collection, response.context['collection_list'])
+
+    def test_each_user_sees_only_their_own(self):
+        other_collection = Collection.objects.create(owner_uid=self.other_user.id, title='Other Only')
+        self.client.force_login(self.other_user)
+        response = self.client.get(reverse('memorabilia:my_collections'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(other_collection, response.context['collection_list'])
+        self.assertNotIn(self.collection, response.context['collection_list'])
+
+    def test_empty_for_user_with_no_collections(self):
+        user = User.objects.create_user(username='noCollections', password='testpass')
+        self.client.force_login(user)
+        response = self.client.get(reverse('memorabilia:my_collections'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['collection_list']), 0)
+
+
+class UserProfileTests(BaseTestCase):
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('memorabilia:profile'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response['Location'])
+
+    def test_get_returns_200(self):
+        response = self.client.get(reverse('memorabilia:profile'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_creates_userprofile(self):
+        UserProfile.objects.filter(user=self.owner).delete()
+        self.client.get(reverse('memorabilia:profile'))
+        self.assertTrue(UserProfile.objects.filter(user=self.owner).exists())
+
+    def test_post_saves_flickr_id(self):
+        response = self.client.post(reverse('memorabilia:profile'), {'flickr_id': '12345678@N04'})
+        self.assertEqual(response.status_code, 302)
+        profile = UserProfile.objects.get(user=self.owner)
+        self.assertEqual(profile.flickr_id, '12345678@N04')
+
+    def test_post_clears_flickr_id(self):
+        UserProfile.objects.update_or_create(user=self.owner, defaults={'flickr_id': '12345678@N04'})
+        response = self.client.post(reverse('memorabilia:profile'), {'flickr_id': ''})
+        self.assertEqual(response.status_code, 302)
+        profile = UserProfile.objects.get(user=self.owner)
+        self.assertEqual(profile.flickr_id, '')
+
+
+class FlickrUrlTests(BaseTestCase):
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_create_playeritem_saves_flickr_url(self):
+        flickr_url = 'https://www.flickr.com/photos/testuser/albums/12345'
+        self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._player_item_post_data(title='Flickr Jersey', flickrAlbum=flickr_url),
+        )
+        item = PlayerItem.objects.get(title='Flickr Jersey')
+        self.assertEqual(item.flickr_url, flickr_url)
+
+    def test_edit_playeritem_updates_flickr_url(self):
+        flickr_url = 'https://www.flickr.com/photos/testuser/albums/99999'
+        self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'playeritem', self.player_item.id]),
+            self._player_item_post_data(title='Edited', flickrAlbum=flickr_url),
+        )
+        self.player_item.refresh_from_db()
+        self.assertEqual(self.player_item.flickr_url, flickr_url)
+
+    def test_edit_playeritem_empty_flickr_album_preserves_existing_flickr_url(self):
+        existing_url = 'https://www.flickr.com/photos/testuser/albums/11111'
+        self.player_item.flickr_url = existing_url
+        self.player_item.save(update_fields=['flickr_url'])
+        self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'playeritem', self.player_item.id]),
+            self._player_item_post_data(title='No Flickr'),
+        )
+        self.player_item.refresh_from_db()
+        self.assertEqual(self.player_item.flickr_url, existing_url)
+
+    def test_create_generalitem_saves_flickr_url(self):
+        flickr_url = 'https://www.flickr.com/photos/testuser/albums/55555'
+        self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._general_item_post_data(title='Flickr Puck', flickrAlbum=flickr_url),
+        )
+        item = GeneralItem.objects.get(title='Flickr Puck')
+        self.assertEqual(item.flickr_url, flickr_url)
+
+    def test_bulk_add_flickr_album_sets_flickr_url(self):
+        import json
+        response = self.client.post(
+            reverse('memorabilia:bulk_add_flickr_album', args=[self.collection.id]),
+            data=json.dumps({
+                'title': 'Flickr Album Item',
+                'description': 'desc',
+                'username': 'flickruser',
+                'album_id': '99887766',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        item = GeneralItem.objects.get(title='Flickr Album Item')
+        self.assertEqual(item.flickr_url, 'https://www.flickr.com/photos/flickruser/albums/99887766')

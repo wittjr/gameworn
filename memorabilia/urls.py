@@ -27,6 +27,7 @@ urlpatterns = [
     path("collection/<int:collection_id>/bulk-add-flickr", views.bulk_add_from_flickr, name="bulk_add_from_flickr"),
     path("collection/<int:collection_id>/bulk-add-flickr/album", views.bulk_add_flickr_album, name="bulk_add_flickr_album"),
     path("collection/<int:collection_id>/bulk-add-flickr/batch", views.bulk_add_flickr_batch, name="bulk_add_flickr_batch"),
+    path("profile/", views.profile, name="profile"),
     path("resources", views.ExternalResourceListView.as_view(), name="list_externalresources"),
     path("api/teams", views.get_teams, name="get_teams"),
 ]

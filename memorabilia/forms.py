@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -149,7 +149,7 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'collectible_type']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'collectible_type', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
@@ -234,7 +234,7 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = GeneralItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
@@ -294,7 +294,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -344,7 +344,7 @@ class HockeyJerseyForm(PlayerGearForm):
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
 
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
@@ -622,4 +622,19 @@ class BulkGeneralItemForm(ModelForm):
             'title': flowbite_widgets.FlowbiteTextInput(),
             'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
+        }
+
+
+class UserProfileForm(ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['flickr_id']
+        widgets = {
+            'flickr_id': flowbite_widgets.FlowbiteTextInput(attrs={'placeholder': 'e.g. 12345678@N04'}),
+        }
+        labels = {
+            'flickr_id': 'Flickr User ID',
+        }
+        help_texts = {
+            'flickr_id': 'Your Flickr NSID (e.g. 12345678@N04). Used to pre-fill album imports.',
         }

@@ -71,33 +71,8 @@
                <ul class="py-2" aria-label="Account settings">
                   {% if user.is_authenticated %}
 
-                  {% url 'account_email' as email_url %}
-                  {% get_social_accounts user as accounts %}
-                  {% if email_url %}
-                  {% include "memorabilia/elements/usernavitem.html" with link=email_url label="Change Email" %}
-                  {% endif %}
-
-                  {% url 'account_change_password' as change_password_url %}
-                  {% if change_password_url %}
-                  {% include "memorabilia/elements/usernavitem.html" with link=change_password_url label="Change
-                  Password" %}
-                  {% endif %}
-
-                  {% url 'socialaccount_connections' as connections_url %}
-                  {% if connections_url %}
-                  {% include "memorabilia/elements/usernavitem.html" with link=connections_url label="Manage Account" %}
-                  {% endif %}
-
-                  {% url 'mfa_index' as mfa_url %}
-                  {% if mfa_url %}
-                  {% include "memorabilia/elements/usernavitem.html" with link=mfa_url label="Two-Factor Authentication"
-                  %}
-                  {% endif %}
-
-                  {% url 'usersessions_list' as usersessions_list_url %}
-                  {% if usersessions_list_url %}
-                  {% include "memorabilia/elements/usernavitem.html" with link=usersessions_list_url label="Sessions" %}
-                  {% endif %}
+                  {% url 'memorabilia:profile' as profile_url %}
+                  {% include "memorabilia/elements/usernavitem.html" with link=profile_url label="Profile" %}
 
                   {% url 'account_logout' as logout_url %}
                   {% if logout_url %}

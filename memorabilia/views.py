@@ -3,8 +3,8 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm
+from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
+from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm, UserProfileForm
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -39,6 +39,19 @@ def home(request):
     recent_other = GeneralItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
     data = sorted(chain(recent, recent_gear, recent_jersey, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
+
+
+@login_required
+def profile(request):
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=profile_obj)
+        if form.is_valid():
+            form.save()
+            return redirect('memorabilia:profile')
+    else:
+        form = UserProfileForm(instance=profile_obj)
+    return render(request, 'memorabilia/profile.html', {'form': form})
 
 
 class IndexView(generic.ListView):
@@ -418,6 +431,10 @@ def create_collectible(request, collection_id):
         image_formset = ImageFormSet(request.POST, request.FILES, prefix='images')
         if form.is_valid() and image_formset.is_valid():
             collectible = form.save()
+            flickr_url = request.POST.get('flickrAlbum', '').strip()
+            if flickr_url:
+                collectible.flickr_url = flickr_url
+                collectible.save(update_fields=['flickr_url'])
             image_formset.instance = collectible
             image_formset.save()
             # return redirect('memorabilia:collection', pk=collection_id)
@@ -434,6 +451,7 @@ def create_collectible(request, collection_id):
         form = HockeyJerseyForm(initial={'collection': collection}, current_user=request.user)
         image_formset = PlayerGearImageFormSet(prefix='images')
 
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
         'image_formset': image_formset,
@@ -444,6 +462,7 @@ def create_collectible(request, collection_id):
         'users': User.objects.filter(is_superuser=False),
         'selected_collectible_type': collectible_type,
         'is_post_error': request.method == 'POST',
+        'flickr_id': profile_obj.flickr_id,
     })
 
 def _get_image_formset_class(ctype):
@@ -571,6 +590,10 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
             if form.is_valid() and image_formset.is_valid():
                 collectible = form.save()
+                flickr_url = request.POST.get('flickrAlbum', '').strip()
+                if flickr_url:
+                    collectible.flickr_url = flickr_url
+                    collectible.save(update_fields=['flickr_url'])
                 image_formset.instance = collectible
                 image_formset.save()
                 return redirect('memorabilia:collectible', collection_id=collectible.collection_id, collectible_type=collectible_type, pk=collectible.pk)
@@ -586,6 +609,9 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             form = NewFormClass(request.POST, request.FILES, current_user=request.user)
             if form.is_valid():
                 new_instance = form.save(commit=False)
+                flickr_url = request.POST.get('flickrAlbum', '').strip()
+                if flickr_url:
+                    new_instance.flickr_url = flickr_url
                 new_instance.save()
                 _copy_images(collectible, new_instance)
                 collectible.delete()
@@ -629,6 +655,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'PlayerItem': 'Player Item',
         'GeneralItem': 'General Item',
     }
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
         'image_formset': image_formset,
@@ -641,6 +668,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'selected_collectible_type': selected_collectible_type,
         'type_display_label': _type_labels.get(selected_collectible_type, selected_collectible_type),
         'convertible_types': [(k, v) for k, v in _type_labels.items() if k != selected_collectible_type],
+        'flickr_id': profile_obj.flickr_id,
     })
 
 
@@ -821,7 +849,7 @@ def bulk_edit_collectibles(request, collection_id):
         other_formset = OtherFormSet(queryset=other_qs, prefix='other')
 
     context = {
-        'title': 'Bulk Edit Collectibles',
+        'title': 'Edit All Collectibles',
         'collection': collection,
         'gear_formset': gear_formset,
         'hockey_jersey_formset': hockey_jersey_formset,
@@ -869,9 +897,11 @@ def get_flickr_user_albums(request):
 @permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def bulk_add_from_flickr(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
     return render(request, 'memorabilia/flickr_bulk_add.html', {
-        'title': 'Bulk Add from Flickr',
+        'title': 'Add from Flickr',
         'collection': collection,
+        'flickr_id': profile_obj.flickr_id,
     })
 
 
@@ -893,10 +923,12 @@ def bulk_add_flickr_album(request, collection_id):
     album_id = body.get('album_id', '').strip()
     if not title:
         return JsonResponse({'error': 'title required'}, status=400)
+    flickr_url = f'https://www.flickr.com/photos/{username}/albums/{album_id}' if username and album_id else ''
     item = GeneralItem.objects.create(
         title=title,
         description=description,
         collection=collection,
+        flickr_url=flickr_url,
     )
     photo_count = 0
     if username and album_id:
@@ -937,10 +969,12 @@ def _process_albums_background(collection_id, username, albums):
             album_id = album.get('album_id', '').strip()
             if not title:
                 continue
+            flickr_url = f'https://www.flickr.com/photos/{username}/albums/{album_id}' if username and album_id else ''
             item = GeneralItem.objects.create(
                 title=title,
                 description=description,
                 collection=collection,
+                flickr_url=flickr_url,
             )
             if username and album_id:
                 _import_flickr_album_photos(item, username, album_id)

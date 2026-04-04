@@ -6,17 +6,7 @@
     <link rel="stylesheet" href="{% static 'memorabilia/collection-detail.css' %}">
 {% endblock page_css %}
 
-{% block page_navigation %}
-    {% if user.is_authenticated %}
-        {% if user.id == collection.owner_uid or user.is_superuser %}
-            {% url 'memorabilia:bulk_edit_collectibles' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Edit All Collectibles" %}
-
-            {% url 'memorabilia:bulk_add_from_flickr' collection.id as the_url %}
-            {% include "memorabilia/navitem.html" with link=the_url label="Bulk Add from Flickr" %}
-        {% endif %}
-    {% endif %}
-{% endblock page_navigation %}
+{% block page_navigation %}{% endblock page_navigation %}
 
 {% block page_actions %}
     {% if user.is_authenticated %}
@@ -26,6 +16,10 @@
             <a href="{{ add_url }}" class="btn-primary">+ Add Collectible</a>
             {% url 'memorabilia:edit_collection' collection.id as edit_url %}
             <a href="{{ edit_url }}" class="btn-primary-white">Edit Collection</a>
+            {% url 'memorabilia:bulk_edit_collectibles' collection.id as bulk_edit_url %}
+            <a href="{{ bulk_edit_url }}" class="btn-primary-white">Edit All Collectibles</a>
+            {% url 'memorabilia:bulk_add_from_flickr' collection.id as flickr_url %}
+            <a href="{{ flickr_url }}" class="btn-primary-white">Add from Flickr</a>
             {% url 'memorabilia:delete_collection' collection.id as delete_url %}
             <a href="{{ delete_url }}" data-delete-label="{{ collection.title }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collection</a>
         </div>

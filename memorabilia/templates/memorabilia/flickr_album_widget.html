@@ -34,8 +34,22 @@
 <div id="default-tab-content">
     <div class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800" id="flickr" role="tabpanel"
         aria-labelledby="flickr-tab">
-        <input type="text" id="flickrAlbum" value=""
-            name="flickrAlbum" class="w-full mb-2 p-2 border rounded"></input>
+        <input type="text" id="flickrAlbum"
+            name="flickrAlbum" class="w-full mb-2 p-2 border rounded"
+            placeholder="https://www.flickr.com/photos/<flickr ID>/albums/<album ID>"></input>
+        <script>
+        (function() {
+            var fid = (typeof window.FLICKR_ID !== 'undefined') ? window.FLICKR_ID : '';
+            var existing = (typeof window.FLICKR_URL !== 'undefined') ? window.FLICKR_URL : '';
+            var input = document.getElementById('flickrAlbum');
+            if (existing) {
+                input.value = existing;
+            }
+            if (fid) {
+                input.placeholder = 'https://www.flickr.com/photos/' + fid + '/albums/<album ID>';
+            }
+        })();
+        </script>
         <button type="button" id="queryFlickrBtn" onclick="queryFlickr()"
         class="btn-primary w-full flex items-center justify-center">
         <span id="queryFlickrText">Query Flickr</span>

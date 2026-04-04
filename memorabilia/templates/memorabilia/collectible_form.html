@@ -7,6 +7,7 @@
 
 {% block extrahead %}
     {{ image_formset.media }}
+    <script>window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "{{ collectible.flickr_url|default:''|escapejs }}";</script>
 {% endblock extrahead %}
 
 {% block navigation %}
