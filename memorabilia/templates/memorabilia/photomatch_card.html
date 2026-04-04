@@ -1,6 +1,6 @@
 <div class="max-w-sm w-full h-full bg-white border-gray-200 rounded-lg dark:bg-gray-800 dark:border-gray-700">
     <div class="relative">
-        {% include "memorabilia/elements/modal.html" with image_url=image_url %}
+        {% include "memorabilia/elements/gallery_thumbnail.html" with image_url=image_url thumb_class="photomatch-thumb" %}
         {% if request.user.id == object.collection.owner_uid or request.user.is_superuser %}
         {% url 'memorabilia:edit_photo_match' object.collection.id object.collectible_type object.id image.id as edit_match_url %}
         {% url 'memorabilia:delete_photo_match' object.collection.id object.collectible_type object.id image.id as delete_match_url %}

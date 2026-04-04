@@ -1,0 +1,8 @@
+{% load static %}
+{% if image_url %}
+<button class="{{ thumb_class|default:'gallery-thumb' }} flex justify-center items-center h-full w-full hover:bg-gray-200 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg px-0 py-0" type="button" data-gallery-src="{{ image_url }}">
+    <img class="rounded-lg w-full h-auto max-h-full max-w-full" src="{{ image_url }}" alt="{{ alt_text|default:'Collectible photo' }}">
+</button>
+{% else %}
+<img class="object-contain w-full h-72 p-6 bg-gray-100 rounded-lg" src="{% static 'memorabilia/placeholder.svg' %}" alt="No image" />
+{% endif %}
