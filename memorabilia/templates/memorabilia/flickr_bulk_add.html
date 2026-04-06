@@ -59,6 +59,9 @@
     const BATCH_URL = "{% url 'memorabilia:bulk_add_flickr_batch' collection.id %}";
     const COLLECTION_URL = "{% url 'memorabilia:collection' collection.id %}";
     const CSRF = '{{ csrf_token }}';
+    // Map of flickr album_id -> [imported_photo_ids] (from DB; flickr_ids fetched async after render)
+    const EXISTING_ALBUMS = {{ existing_albums_json|safe }};
+    const ALBUM_PHOTO_IDS_URL = "{% url 'memorabilia:get_flickr_album_photo_ids' %}";
 
     function queryAlbums() {
         const username = document.getElementById('flickrUsername').value.trim();
@@ -132,6 +135,16 @@
             checkmark.className = 'check-indicator hidden absolute top-2 right-2 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center';
             checkmark.innerHTML = '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
 
+            // Import status badge — shown immediately from DB data, updated async with live Flickr IDs
+            const importedIds = EXISTING_ALBUMS[album.id];
+            if (importedIds) {
+                const badge = document.createElement('div');
+                badge.className = 'absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500';
+                badge.textContent = '…';
+                badge.dataset.albumId = album.id;
+                card.appendChild(badge);
+            }
+
             overlay.appendChild(titleEl);
             overlay.appendChild(countEl);
             card.appendChild(img);
@@ -142,6 +155,34 @@
 
         document.getElementById('submitRow').style.display = 'flex';
         updateCount();
+        fetchImportStatuses();
+    }
+
+    function fetchImportStatuses() {
+        albums.forEach(album => {
+            const importedIds = EXISTING_ALBUMS[album.id];
+            if (!importedIds) return;
+            const badge = document.querySelector(`[data-album-id="${album.id}"]`);
+            if (!badge) return;
+            fetch(ALBUM_PHOTO_IDS_URL + '?username=' + encodeURIComponent(flickrUsername) + '&album_id=' + encodeURIComponent(album.id), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.photo_ids) return;
+                const flickrSet = new Set(data.photo_ids);
+                const matchCount = importedIds.filter(id => flickrSet.has(id)).length;
+                const allImported = flickrSet.size > 0 && matchCount === flickrSet.size;
+                badge.className = 'absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full ' +
+                    (allImported ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700');
+                badge.textContent = allImported
+                    ? '✓ All imported'
+                    : matchCount + ' of ' + flickrSet.size + ' imported';
+            })
+            .catch(() => {
+                // Leave the badge in its pending state on failure
+            });
+        });
     }
 
     function toggleCard(card) {

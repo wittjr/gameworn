@@ -24,6 +24,7 @@ urlpatterns = [
     path("external/flickr/album", views.get_flickr_album, name="get_flickr_album"),
     path("external/flickr/albums/<str:username>/<str:album>", views.get_flickr_albums, name="get_flickr_albums"),
     path("external/flickr/user-albums", views.get_flickr_user_albums, name="get_flickr_user_albums"),
+    path("external/flickr/album-photo-ids", views.get_flickr_album_photo_ids, name="get_flickr_album_photo_ids"),
     path("collection/<int:collection_id>/bulk-add-flickr", views.bulk_add_from_flickr, name="bulk_add_from_flickr"),
     path("collection/<int:collection_id>/bulk-add-flickr/album", views.bulk_add_flickr_album, name="bulk_add_flickr_album"),
     path("collection/<int:collection_id>/bulk-add-flickr/batch", views.bulk_add_flickr_batch, name="bulk_add_flickr_batch"),

@@ -893,15 +893,81 @@ def get_flickr_user_albums(request):
     return JsonResponse({'albums': albums})
 
 
+def get_flickr_album_photo_ids(request):
+    """Return the list of Flickr photo IDs for a single album. Called async by the bulk-add page."""
+    if request.headers.get('x-requested-with') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Ajax required'}, status=400)
+    username = request.GET.get('username', '').strip()
+    album_id = request.GET.get('album_id', '').strip()
+    if not username or not album_id:
+        return JsonResponse({'error': 'username and album_id required'}, status=400)
+    try:
+        r = requests.get(
+            'https://www.flickr.com/services/rest/',
+            params={
+                'method': 'flickr.photosets.getPhotos',
+                'api_key': settings.FLICKR_KEY,
+                'photoset_id': album_id,
+                'user_id': username,
+                'format': 'json',
+                'nojsoncallback': '1',
+                'per_page': '500',
+            },
+            timeout=10,
+        )
+        data = r.json()
+    except Exception:
+        return JsonResponse({'error': 'Flickr request failed'}, status=502)
+    if data.get('stat') != 'ok':
+        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=400)
+    photo_ids = [p['id'] for p in data.get('photoset', {}).get('photo', [])]
+    return JsonResponse({'photo_ids': photo_ids})
+
+
 @login_required
 @permission_required('memorabilia.update_collection', fn=objectgetter(Collection, 'collection_id'), raise_exception=True)
 def bulk_add_from_flickr(request, collection_id):
     collection = get_object_or_404(Collection, pk=collection_id)
     profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    # Build a map of flickr album_id -> [imported_photo_ids] for this collection (DB only, no Flickr API calls).
+    # The live Flickr photo ID list is fetched async by the browser after page load.
+    # All collectible types are checked since flickr_url lives on the base Collectible model.
+    existing_albums = {}
+    collectible_querysets = [
+        GeneralItem.objects.filter(collection=collection).exclude(flickr_url='').prefetch_related('images'),
+        PlayerItem.objects.filter(collection=collection).exclude(flickr_url='').prefetch_related('images'),
+        PlayerGear.objects.filter(collection=collection).exclude(flickr_url='').prefetch_related('gear_images'),
+    ]
+    for qs in collectible_querysets:
+        for item in qs:
+            parts = item.flickr_url.rstrip('/').split('/')
+            try:
+                album_idx = parts.index('albums')
+                album_id = parts[album_idx + 1]
+            except (ValueError, IndexError):
+                continue
+            image_rel = getattr(item, 'gear_images', None) or getattr(item, 'images', None)
+            imported_ids = []
+            if image_rel is not None:
+                for img in image_rel.all():
+                    pid = None
+                    # Prefer flickrObject.id; fall back to parsing the photo ID from the link URL.
+                    # Flickr link format: https://live.staticflickr.com/{server}/{photo_id}_{secret}_{size}.jpg
+                    if img.flickrObject and isinstance(img.flickrObject, dict):
+                        pid = img.flickrObject.get('id')
+                    if not pid and img.link and 'staticflickr.com' in img.link:
+                        filename = img.link.rstrip('/').rsplit('/', 1)[-1]
+                        pid = filename.split('_')[0] or None
+                    if pid:
+                        imported_ids.append(str(pid))
+            existing_albums[album_id] = imported_ids
+
     return render(request, 'memorabilia/flickr_bulk_add.html', {
         'title': 'Add from Flickr',
         'collection': collection,
         'flickr_id': profile_obj.flickr_id,
+        'existing_albums_json': _json.dumps(existing_albums),
     })
 
 
