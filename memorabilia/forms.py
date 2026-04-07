@@ -562,6 +562,7 @@ class BulkPlayerGearForm(ModelForm):
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+    number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
 
     class Meta:
         model = PlayerGear
@@ -571,7 +572,6 @@ class BulkPlayerGearForm(ModelForm):
             'league': flowbite_widgets.FlowbiteTextInput(),
             'player': flowbite_widgets.FlowbiteTextInput(),
             'team': flowbite_widgets.FlowbiteTextInput(),
-            'number': flowbite_widgets.FlowbiteNumberInput(),
             'brand': flowbite_widgets.FlowbiteTextInput(),
             'size': flowbite_widgets.FlowbiteTextInput(),
             'season': flowbite_widgets.FlowbiteTextInput(),
@@ -592,6 +592,7 @@ class BulkHockeyJerseyForm(ModelForm):
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+    number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
 
     class Meta:
         model = HockeyJersey
@@ -601,7 +602,6 @@ class BulkHockeyJerseyForm(ModelForm):
             'league': flowbite_widgets.FlowbiteTextInput(),
             'player': flowbite_widgets.FlowbiteTextInput(),
             'team': flowbite_widgets.FlowbiteTextInput(),
-            'number': flowbite_widgets.FlowbiteNumberInput(),
             'brand': flowbite_widgets.FlowbiteTextInput(),
             'size': flowbite_widgets.FlowbiteTextInput(),
             'season': flowbite_widgets.FlowbiteTextInput(),

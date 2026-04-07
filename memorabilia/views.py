@@ -509,7 +509,8 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
             return data[name]
         key = f'{prefix}-{name}'
         if key in post_data:
-            return post_data[key]
+            val = post_data[key]
+            return val if val != '' else None
         return getattr(old_instance, name, None)
 
     base = {
@@ -815,27 +816,34 @@ def bulk_edit_collectibles(request, collection_id):
             # Must be done before any saves so we can re-render with errors.
             conversion_errors = False
 
-            def _check_gear_conversion_fields(form, new_type):
+            def _require(form, post_key, label):
                 nonlocal conversion_errors
-                if new_type not in ('playergear', 'hockeyjersey'):
-                    return
-                prefix = form.prefix
-                if not request.POST.get(f'{prefix}-game_type', '').strip():
-                    form.add_error(None, 'Game Type is required when converting to Player Gear or Hockey Jersey.')
-                    conversion_errors = True
-                if not request.POST.get(f'{prefix}-usage_type', '').strip():
-                    form.add_error(None, 'Usage Type is required when converting to Player Gear or Hockey Jersey.')
+                if not request.POST.get(post_key, '').strip():
+                    form.add_error(None, f'{label} is required for this type.')
                     conversion_errors = True
 
             for form in player_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'playeritem')
-                if new_type != 'playeritem':
-                    _check_gear_conversion_fields(form, new_type)
+                if new_type in ('playergear', 'hockeyjersey'):
+                    prefix = form.prefix
+                    _require(form, f'{prefix}-game_type', 'Game Type')
+                    _require(form, f'{prefix}-usage_type', 'Usage Type')
+                    _require(form, f'{prefix}-brand', 'Brand')
+                    _require(form, f'{prefix}-size', 'Size')
+                    _require(form, f'{prefix}-season', 'Season')
 
             for form in other_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'generalitem')
-                if new_type != 'generalitem':
-                    _check_gear_conversion_fields(form, new_type)
+                if new_type in ('playeritem', 'playergear', 'hockeyjersey'):
+                    prefix = form.prefix
+                    _require(form, f'{prefix}-player', 'Player')
+                if new_type in ('playergear', 'hockeyjersey'):
+                    prefix = form.prefix
+                    _require(form, f'{prefix}-game_type', 'Game Type')
+                    _require(form, f'{prefix}-usage_type', 'Usage Type')
+                    _require(form, f'{prefix}-brand', 'Brand')
+                    _require(form, f'{prefix}-size', 'Size')
+                    _require(form, f'{prefix}-season', 'Season')
 
             if conversion_errors:
                 pass  # fall through to re-render with errors
