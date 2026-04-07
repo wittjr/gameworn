@@ -50,6 +50,7 @@
         </select>
       </div>
       {{ form.id }}
+      {% if form.non_field_errors %}<div class="w-full text-xs text-red-600 -mb-1">{{ form.non_field_errors }}</div>{% endif %}
       {# Form fields: title, description, how_obtained, coa, league, player, team, number, brand, size, season, game_type, usage_type, gear_type #}
       {% for field in form.visible_fields %}
       <div class="flex-1 min-w-[{% if field.name == 'description' %}14rem{% elif field.name == 'title' or field.name == 'player' or field.name == 'team' or field.name == 'how_obtained' %}11rem{% elif field.name == 'number' or field.name == 'size' %}6rem{% elif field.name == 'league' %}7rem{% else %}10rem{% endif %}]" data-field="{{ field.name }}">
@@ -101,6 +102,7 @@
         </select>
       </div>
       {{ form.id }}
+      {% if form.non_field_errors %}<div class="w-full text-xs text-red-600 -mb-1">{{ form.non_field_errors }}</div>{% endif %}
       {# Form fields: title, description, how_obtained, coa, league, player, team, number, brand, size, season, game_type, usage_type, gear_type, season_set #}
       {% for field in form.visible_fields %}
       <div class="flex-1 min-w-[{% if field.name == 'description' %}14rem{% elif field.name == 'title' or field.name == 'player' or field.name == 'team' or field.name == 'how_obtained' %}11rem{% elif field.name == 'number' or field.name == 'size' %}6rem{% elif field.name == 'league' %}7rem{% else %}10rem{% endif %}]" data-field="{{ field.name }}">
@@ -144,6 +146,7 @@
         </select>
       </div>
       {{ form.id }}
+      {% if form.non_field_errors %}<div class="w-full text-xs text-red-600 -mb-1">{{ form.non_field_errors }}</div>{% endif %}
       {# Form fields: title, description, how_obtained, coa, league, player, team, number #}
       {% for field in form.visible_fields %}
       <div class="flex-1 min-w-[{% if field.name == 'description' %}14rem{% elif field.name == 'title' or field.name == 'player' or field.name == 'team' or field.name == 'how_obtained' %}11rem{% elif field.name == 'number' %}6rem{% elif field.name == 'league' %}7rem{% else %}10rem{% endif %}]" data-field="{{ field.name }}">
@@ -228,6 +231,7 @@
         </select>
       </div>
       {{ form.id }}
+      {% if form.non_field_errors %}<div class="w-full text-xs text-red-600 -mb-1">{{ form.non_field_errors }}</div>{% endif %}
       {# Form fields: title, description, how_obtained, coa #}
       {% for field in form.visible_fields %}
       <div class="flex-1 min-w-[{% if field.name == 'description' %}14rem{% elif field.name == 'title' or field.name == 'how_obtained' %}11rem{% else %}10rem{% endif %}]" data-field="{{ field.name }}">
@@ -351,9 +355,50 @@
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('.item-type-select').forEach(sel => {
         applyTypeVisibility(sel);
-        sel.addEventListener('change', function() { applyTypeVisibility(this); });
+        sel.addEventListener('change', function() {
+          applyTypeVisibility(this);
+          if (this.value === 'hockeyjersey') {
+            const gearTypeSelect = this.closest('[data-row-prefix]').querySelector('[name$="-gear_type"]');
+            if (gearTypeSelect) gearTypeSelect.value = 'JRS';
+          }
+        });
       });
     });
+  </script>
+
+  <script>
+  // Restore extra field values and type selectors from POST data on validation errors.
+  // The formset-bound fields are restored by Django automatically; these are the
+  // plain HTML inputs (item_type_<prefix>, and gear FK fields on player/other rows).
+  (function() {
+    const POST = {{ post_data_json|safe }};
+    if (!POST) return;
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-row-prefix]').forEach(function(row) {
+        const prefix = row.getAttribute('data-row-prefix');
+
+        // Restore type selector
+        const typeSelect = row.querySelector('[name="item_type_' + prefix + '"]');
+        if (typeSelect && POST['item_type_' + prefix]) {
+          typeSelect.value = POST['item_type_' + prefix];
+        }
+
+        // Restore extra inputs (disabled when not the active type — enable briefly to set value)
+        row.querySelectorAll('input[data-extra], select[data-extra]').forEach(function(el) {
+          const key = el.name;
+          if (key && POST[key] !== undefined) {
+            const wasDisabled = el.disabled;
+            el.disabled = false;
+            el.value = POST[key];
+            el.disabled = wasDisabled;
+          }
+        });
+
+        // Re-apply visibility so the correct fields show for the restored type
+        if (typeSelect) applyTypeVisibility(typeSelect);
+      });
+    });
+  })();
   </script>
 
   <script>

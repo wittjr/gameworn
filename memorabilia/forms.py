@@ -60,8 +60,13 @@ class CollectionForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.collage_collectible_ids:
-            self.initial['collage_selection'] = json.dumps(self.instance.collage_collectible_ids)
+        if self.instance and self.instance.pk:
+            if self.instance.collage_collectible_ids:
+                self.initial['collage_selection'] = json.dumps(self.instance.collage_collectible_ids)
+            if self.instance.get_header_image_url():
+                self.initial['image_mode'] = 'current'
+            else:
+                self.initial['image_mode'] = 'collage'
 
     def clean_collage_selection(self):
         raw = self.cleaned_data.get('collage_selection', '').strip()

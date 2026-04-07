@@ -36,12 +36,20 @@
 
     <div id="albumGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6"></div>
 
+    <div id="batchError" class="hidden mb-4 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-sm"></div>
+
     <div id="submitRow" style="display:none" class="items-center gap-4">
         <button type="button" onclick="selectAll()" class="text-sm text-blue-600 hover:underline">Select All</button>
         <button type="button" onclick="selectNone()" class="text-sm text-blue-600 hover:underline">Select None</button>
         <span id="selectedCount" class="text-sm text-gray-600 ml-auto"></span>
-        <button type="button" id="submitBtn" onclick="createItems()" class="btn-primary">
-            Create Items
+        <button type="button" id="submitBtn" onclick="createItems()" class="btn-primary flex items-center">
+            <span id="submitBtnText">Create Items</span>
+            <span id="submitBtnSpinner" class="hidden ml-2">
+                <svg class="animate-spin inline h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </span>
         </button>
     </div>
 
@@ -65,12 +73,16 @@
 
     function queryAlbums() {
         const username = document.getElementById('flickrUsername').value.trim();
-        if (!username) return;
+        const errorEl = document.getElementById('albumError');
+        if (!username) {
+            errorEl.textContent = 'Please enter a Flickr user ID.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
 
         const btn = document.getElementById('queryBtn');
         const btnText = document.getElementById('queryBtnText');
         const spinner = document.getElementById('queryBtnSpinner');
-        const errorEl = document.getElementById('albumError');
 
         btn.disabled = true;
         btnText.textContent = 'Querying...';
@@ -180,7 +192,8 @@
                     : matchCount + ' of ' + flickrSet.size + ' imported';
             })
             .catch(() => {
-                // Leave the badge in its pending state on failure
+                badge.className = 'absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-400';
+                badge.textContent = 'Status unavailable';
             });
         });
     }
@@ -214,16 +227,36 @@
         document.getElementById('selectedCount').textContent = n + ' album' + (n !== 1 ? 's' : '') + ' selected';
     }
 
+    function showBatchError(msg) {
+        const el = document.getElementById('batchError');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function unlockBatchUI() {
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtnText').textContent = 'Create Items';
+        document.getElementById('submitBtnSpinner').classList.add('hidden');
+        document.getElementById('queryBtn').disabled = false;
+        document.querySelectorAll('.album-card').forEach(c => c.style.pointerEvents = '');
+    }
+
     async function createItems() {
+        const batchErrorEl = document.getElementById('batchError');
+        batchErrorEl.classList.add('hidden');
+
         const selected = Array.from(document.querySelectorAll('.album-card.selected'))
             .map(c => albums[parseInt(c.dataset.idx)]);
         if (!selected.length) {
-            alert('Please select at least one album.');
+            showBatchError('Please select at least one album.');
             return;
         }
 
-        // Lock UI
+        // Lock UI and show spinner
         document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtnText').textContent = 'Starting...';
+        document.getElementById('submitBtnSpinner').classList.remove('hidden');
         document.getElementById('queryBtn').disabled = true;
         document.querySelectorAll('.album-card').forEach(c => c.style.pointerEvents = 'none');
 
@@ -247,16 +280,12 @@
                 document.getElementById('startedSection').classList.remove('hidden');
                 document.getElementById('submitRow').style.display = 'none';
             } else {
-                alert('Error starting import: ' + (result.error || 'unknown error'));
-                document.getElementById('submitBtn').disabled = false;
-                document.getElementById('queryBtn').disabled = false;
-                document.querySelectorAll('.album-card').forEach(c => c.style.pointerEvents = '');
+                showBatchError('Error starting import: ' + (result.error || 'unknown error'));
+                unlockBatchUI();
             }
         } catch (err) {
-            alert('Network error. Please try again.');
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('queryBtn').disabled = false;
-            document.querySelectorAll('.album-card').forEach(c => c.style.pointerEvents = '');
+            showBatchError('Network error. Please try again.');
+            unlockBatchUI();
         }
     }
 </script>

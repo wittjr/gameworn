@@ -15,6 +15,9 @@ import requests
 import threading
 import json as _json
 from django.db import connection as _db_connection
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _get_collectible(request, **view_kwargs):
@@ -475,6 +478,25 @@ def _get_image_formset_class(ctype):
     return CollectibleImageFormSet
 
 
+def _update_collage_after_conversion(old_instance, new_instance):
+    """If the collection's collage references the old item, update it to point to the new one."""
+    collection = old_instance.collection
+    if not collection.collage_collectible_ids:
+        return
+    old_type = old_instance.collectible_type
+    old_pk = old_instance.pk
+    new_type = new_instance.collectible_type
+    updated = [
+        {'type': new_type, 'id': new_instance.pk}
+        if entry.get('type') == old_type and entry.get('id') == old_pk
+        else entry
+        for entry in collection.collage_collectible_ids
+    ]
+    if updated != collection.collage_collectible_ids:
+        collection.collage_collectible_ids = updated
+        collection.save(update_fields=['collage_collectible_ids'])
+
+
 def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None):
     """Convert a bulk-edit collectible to a new type, copying shared fields from form data."""
     data = form.cleaned_data
@@ -530,6 +552,7 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
 
     new_instance.save()
     _copy_images(old_instance, new_instance)
+    _update_collage_after_conversion(old_instance, new_instance)
     old_instance.delete()
 
 
@@ -614,6 +637,8 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
                     new_instance.flickr_url = flickr_url
                 new_instance.save()
                 _copy_images(collectible, new_instance)
+                # Update the collection's collage if this item was referenced there.
+                _update_collage_after_conversion(collectible, new_instance)
                 collectible.delete()
                 return redirect('memorabilia:collectible',
                                 collection_id=new_instance.collection_id,
@@ -785,63 +810,93 @@ def bulk_edit_collectibles(request, collection_id):
         player_formset = PlayerFormSet(request.POST, queryset=player_qs, prefix='player')
         other_formset = OtherFormSet(request.POST, queryset=other_qs, prefix='other')
         if gear_formset.is_valid() and hockey_jersey_formset.is_valid() and player_formset.is_valid() and other_formset.is_valid():
-            # Process type conversions first; track converted forms by object
-            # reference (not pk) because Django sets pk=None after delete().
-            gear_converted = set()
-            hockey_jersey_converted = set()
-            player_converted = set()
-            other_converted = set()
+            # Validate required FK fields for type conversions where the source form
+            # doesn't include them (player/other forms lack game_type and usage_type).
+            # Must be done before any saves so we can re-render with errors.
+            conversion_errors = False
 
-            for form in gear_formset.initial_forms:
-                new_type = request.POST.get(f'item_type_{form.prefix}', 'playergear')
-                if new_type != 'playergear':
-                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    gear_converted.add(id(form))
-
-            for form in hockey_jersey_formset.initial_forms:
-                new_type = request.POST.get(f'item_type_{form.prefix}', 'hockeyjersey')
-                if new_type != 'hockeyjersey':
-                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    hockey_jersey_converted.add(id(form))
+            def _check_gear_conversion_fields(form, new_type):
+                nonlocal conversion_errors
+                if new_type not in ('playergear', 'hockeyjersey'):
+                    return
+                prefix = form.prefix
+                if not request.POST.get(f'{prefix}-game_type', '').strip():
+                    form.add_error(None, 'Game Type is required when converting to Player Gear or Hockey Jersey.')
+                    conversion_errors = True
+                if not request.POST.get(f'{prefix}-usage_type', '').strip():
+                    form.add_error(None, 'Usage Type is required when converting to Player Gear or Hockey Jersey.')
+                    conversion_errors = True
 
             for form in player_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'playeritem')
                 if new_type != 'playeritem':
-                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    player_converted.add(id(form))
+                    _check_gear_conversion_fields(form, new_type)
 
             for form in other_formset.initial_forms:
                 new_type = request.POST.get(f'item_type_{form.prefix}', 'generalitem')
                 if new_type != 'generalitem':
-                    _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
-                    other_converted.add(id(form))
+                    _check_gear_conversion_fields(form, new_type)
 
-            # Save non-converted items
-            for form in gear_formset.initial_forms:
-                if id(form) not in gear_converted and form.has_changed():
-                    obj = form.save(commit=False)
-                    obj.collection = collection
-                    obj.save()
+            if conversion_errors:
+                pass  # fall through to re-render with errors
+            else:
+                # Process type conversions first; track converted forms by object
+                # reference (not pk) because Django sets pk=None after delete().
+                gear_converted = set()
+                hockey_jersey_converted = set()
+                player_converted = set()
+                other_converted = set()
 
-            for form in hockey_jersey_formset.initial_forms:
-                if id(form) not in hockey_jersey_converted and form.has_changed():
-                    obj = form.save(commit=False)
-                    obj.collection = collection
-                    obj.save()
+                for form in gear_formset.initial_forms:
+                    new_type = request.POST.get(f'item_type_{form.prefix}', 'playergear')
+                    if new_type != 'playergear':
+                        _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                        gear_converted.add(id(form))
 
-            for form in player_formset.initial_forms:
-                if id(form) not in player_converted and form.has_changed():
-                    obj = form.save(commit=False)
-                    obj.collection = collection
-                    obj.save()
+                for form in hockey_jersey_formset.initial_forms:
+                    new_type = request.POST.get(f'item_type_{form.prefix}', 'hockeyjersey')
+                    if new_type != 'hockeyjersey':
+                        _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                        hockey_jersey_converted.add(id(form))
 
-            for form in other_formset.initial_forms:
-                if id(form) not in other_converted and form.has_changed():
-                    obj = form.save(commit=False)
-                    obj.collection = collection
-                    obj.save()
+                for form in player_formset.initial_forms:
+                    new_type = request.POST.get(f'item_type_{form.prefix}', 'playeritem')
+                    if new_type != 'playeritem':
+                        _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                        player_converted.add(id(form))
 
-            return redirect('memorabilia:collection', pk=collection_id)
+                for form in other_formset.initial_forms:
+                    new_type = request.POST.get(f'item_type_{form.prefix}', 'generalitem')
+                    if new_type != 'generalitem':
+                        _convert_bulk_item(form.instance, new_type, form, collection, request.POST)
+                        other_converted.add(id(form))
+
+                # Save non-converted items
+                for form in gear_formset.initial_forms:
+                    if id(form) not in gear_converted and form.has_changed():
+                        obj = form.save(commit=False)
+                        obj.collection = collection
+                        obj.save()
+
+                for form in hockey_jersey_formset.initial_forms:
+                    if id(form) not in hockey_jersey_converted and form.has_changed():
+                        obj = form.save(commit=False)
+                        obj.collection = collection
+                        obj.save()
+
+                for form in player_formset.initial_forms:
+                    if id(form) not in player_converted and form.has_changed():
+                        obj = form.save(commit=False)
+                        obj.collection = collection
+                        obj.save()
+
+                for form in other_formset.initial_forms:
+                    if id(form) not in other_converted and form.has_changed():
+                        obj = form.save(commit=False)
+                        obj.collection = collection
+                        obj.save()
+
+                return redirect('memorabilia:collection', pk=collection_id)
     else:
         gear_formset = GearFormSet(queryset=gear_qs, prefix='gear')
         hockey_jersey_formset = HockeyJerseyBulkFormSet(queryset=hockey_jersey_qs, prefix='hockeyjersey')
@@ -861,6 +916,10 @@ def bulk_edit_collectibles(request, collection_id):
         'gear_types': GearType.objects.all(),
         'season_sets': SeasonSet.objects.all(),
         'how_obtained_options': HowObtainedOption.objects.all(),
+        # On POST errors the extra fields (type selector, gear FK fields not in
+        # formset) are plain HTML and won't be re-populated by Django automatically.
+        # Pass the raw POST dict so JS can restore them.
+        'post_data_json': _json.dumps(request.POST.dict()) if request.method == 'POST' else 'null',
     }
     return render(request, 'memorabilia/collectible_bulk_edit.html', context)
 
@@ -872,11 +931,24 @@ def get_flickr_user_albums(request):
     username = request.GET.get('username', '').strip()
     if not username:
         return JsonResponse({'error': 'username required'}, status=400)
-    url = f'https://www.flickr.com/services/rest/?method=flickr.photosets.getList&api_key={settings.FLICKR_KEY}&user_id={username}&format=json&nojsoncallback=1&per_page=500'
-    r = requests.get(url)
-    data = r.json()
+    try:
+        r = requests.get(
+            'https://www.flickr.com/services/rest/',
+            params={
+                'method': 'flickr.photosets.getList',
+                'api_key': settings.FLICKR_KEY,
+                'user_id': username,
+                'format': 'json',
+                'nojsoncallback': '1',
+                'per_page': '500',
+            },
+            timeout=10,
+        )
+        data = r.json()
+    except Exception:
+        return JsonResponse({'error': 'Failed to reach Flickr. Please try again.'}, status=502)
     if data.get('stat') != 'ok':
-        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=400)
+        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=502)
     albums = []
     for ps in data['photosets']['photoset']:
         server = ps.get('server', '')
@@ -893,6 +965,7 @@ def get_flickr_user_albums(request):
     return JsonResponse({'albums': albums})
 
 
+@login_required
 def get_flickr_album_photo_ids(request):
     """Return the list of Flickr photo IDs for a single album. Called async by the bulk-add page."""
     if request.headers.get('x-requested-with') != 'XMLHttpRequest':
@@ -917,9 +990,9 @@ def get_flickr_album_photo_ids(request):
         )
         data = r.json()
     except Exception:
-        return JsonResponse({'error': 'Flickr request failed'}, status=502)
+        return JsonResponse({'error': 'Failed to reach Flickr. Please try again.'}, status=502)
     if data.get('stat') != 'ok':
-        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=400)
+        return JsonResponse({'error': data.get('message', 'Flickr error')}, status=502)
     photo_ids = [p['id'] for p in data.get('photoset', {}).get('photo', [])]
     return JsonResponse({'photo_ids': photo_ids})
 
@@ -1014,6 +1087,8 @@ def bulk_add_flickr_batch(request, collection_id):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     username = body.get('username', '').strip()
     albums = body.get('albums', [])
+    if not username:
+        return JsonResponse({'error': 'username required'}, status=400)
     if not albums:
         return JsonResponse({'error': 'No albums provided'}, status=400)
     thread = threading.Thread(
@@ -1045,24 +1120,28 @@ def _process_albums_background(collection_id, username, albums):
             if username and album_id:
                 _import_flickr_album_photos(item, username, album_id)
     except Exception:
-        pass
+        logger.exception('Error in background Flickr album import for collection %s', collection_id)
     finally:
         _db_connection.close()
 
 
 def _import_flickr_album_photos(item, username, album_id):
     """Fetch all photos from a Flickr album and create GeneralItemImage records. Returns photo count."""
-    url = (
-        f'https://www.flickr.com/services/rest/'
-        f'?method=flickr.photosets.getPhotos'
-        f'&api_key={settings.FLICKR_KEY}'
-        f'&photoset_id={album_id}'
-        f'&user_id={username}'
-        f'&extras=url_l,url_m,url_s,url_sq'
-        f'&format=json&nojsoncallback=1&per_page=500'
-    )
     try:
-        data = requests.get(url, timeout=15).json()
+        data = requests.get(
+            'https://www.flickr.com/services/rest/',
+            params={
+                'method': 'flickr.photosets.getPhotos',
+                'api_key': settings.FLICKR_KEY,
+                'photoset_id': album_id,
+                'user_id': username,
+                'extras': 'url_l,url_m,url_s,url_sq',
+                'format': 'json',
+                'nojsoncallback': '1',
+                'per_page': '500',
+            },
+            timeout=15,
+        ).json()
     except Exception:
         return 0
     if data.get('stat') != 'ok':
