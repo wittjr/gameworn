@@ -13,7 +13,7 @@ endif
 
 DJANGO_ENV := DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS)
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind
 
 test:
 	$(VENV) && $(DJANGO_ENV) python manage.py test memorabilia
@@ -38,3 +38,6 @@ shell:
 
 check:
 	$(VENV) && $(DJANGO_ENV) python manage.py check memorabilia
+
+tailwind:
+	$(VENV) && $(DJANGO_ENV) python manage.py tailwind build

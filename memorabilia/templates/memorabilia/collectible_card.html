@@ -1,7 +1,9 @@
 <div class="mx-auto w-full md:w-2/5 xl:w-1/4 transition-transform hover:-translate-y-1 hover:shadow-md rounded-lg overflow-hidden bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col">
     <a href="{{ link }}">
         {% if image %}
-        <img class="h-auto w-full rounded-t-lg" alt="{{ label }}" src="{{ image }}" />
+        <div class="w-full aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+            <img class="w-full h-full object-cover" alt="{{ label }}" src="{{ image }}" />
+        </div>
         {% endif %}
     </a>
     <a href="{{ link }}" class="flex-1 flex items-center justify-center px-3 py-3">

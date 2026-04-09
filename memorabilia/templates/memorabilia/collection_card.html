@@ -6,7 +6,7 @@
 
         <div class="flex w-full items-center justify-center h-72 bg-gray-100 rounded dark:bg-gray-700 overflow-hidden">
             {% if image %}
-            <img class="rounded-t-lg object-cover w-full h-full" src="{{ image }}" alt="" />
+            <img class="rounded-t-lg object-cover w-full h-full" src="{{ image }}" alt="{{ label }}" />
             {% elif collage_images %}
             {% collage_rows collage_images as rows %}
             <div class="flex flex-col w-full h-full gap-0.5">
