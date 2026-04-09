@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch
 
 
 class BaseTestCase(TestCase):
@@ -48,6 +48,22 @@ class BaseTestCase(TestCase):
             title='Test Puck',
             description='A test puck',
             collection=cls.collection,
+        )
+
+        cls.gear_type_jrs, _ = GearType.objects.get_or_create(key='JRS', defaults={'name': 'Jersey'})
+        cls.season_set = SeasonSet.objects.create(key='REG1', name='Regular Set 1')
+
+        cls.hockey_jersey = HockeyJersey.objects.create(
+            title='Test Hockey Jersey',
+            description='A test hockey jersey',
+            collection=cls.collection,
+            league='NHL',
+            player='Wayne Gretzky',
+            brand='CCM',
+            size='54',
+            season='1988',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
         )
 
     def _player_item_post_data(self, **overrides):
@@ -96,6 +112,28 @@ class BaseTestCase(TestCase):
             'title': 'New Puck',
             'description': 'A new test puck',
             'collection': self.collection.id,
+            'images-TOTAL_FORMS': '0',
+            'images-INITIAL_FORMS': '0',
+            'images-MIN_NUM_FORMS': '0',
+            'images-MAX_NUM_FORMS': '1000',
+        }
+        data.update(overrides)
+        return data
+
+    def _hockey_jersey_post_data(self, **overrides):
+        """Return valid POST data for creating/editing a HockeyJersey."""
+        data = {
+            'collectible_type': 'HockeyJersey',
+            'title': 'New Hockey Jersey',
+            'description': 'A new test hockey jersey',
+            'collection': self.collection.id,
+            'league': 'NHL',
+            'player': 'Test Player',
+            'brand': 'CCM',
+            'size': '54',
+            'season': '2024',
+            'game_type': 'REG',
+            'usage_type': 'GU',
             'images-TOTAL_FORMS': '0',
             'images-INITIAL_FORMS': '0',
             'images-MIN_NUM_FORMS': '0',
@@ -450,6 +488,30 @@ class CollectiblePermissionTests(BaseTestCase):
         response = self.client.get(reverse(
             'memorabilia:edit_collectible',
             args=[self.collection.id, 'generalitem', self.general_item.id],
+        ))
+        self.assertEqual(response.status_code, 403)
+
+    def test_edit_hockeyjersey_requires_login(self):
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id],
+        ))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response['Location'])
+
+    def test_edit_hockeyjersey_other_user_forbidden(self):
+        self.client.force_login(self.other_user)
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id],
+        ))
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_hockeyjersey_other_user_forbidden(self):
+        self.client.force_login(self.other_user)
+        response = self.client.post(reverse(
+            'memorabilia:delete_collectible',
+            args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id],
         ))
         self.assertEqual(response.status_code, 403)
 
@@ -1718,3 +1780,256 @@ class ImageFileDeletionTests(BaseTestCase):
         )
         record.delete()  # must not raise
         self.assertFalse(PhotoMatch.objects.filter(pk=record.pk).exists())
+
+
+class HockeyJerseyCRUDTests(BaseTestCase):
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_create_get(self):
+        response = self.client.get(
+            reverse('memorabilia:create_collectible', args=[self.collection.id])
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_create_post(self):
+        response = self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._hockey_jersey_post_data(title='Created Hockey Jersey'),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(HockeyJersey.objects.filter(title='Created Hockey Jersey').exists())
+
+    def test_create_post_auto_sets_gear_type_jrs(self):
+        self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._hockey_jersey_post_data(title='Auto GearType Jersey'),
+        )
+        jersey = HockeyJersey.objects.get(title='Auto GearType Jersey')
+        self.assertEqual(jersey.gear_type_id, 'JRS')
+
+    def test_edit_get(self):
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id],
+        ))
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_post(self):
+        response = self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id]),
+            self._hockey_jersey_post_data(title='Edited Hockey Jersey'),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.hockey_jersey.refresh_from_db()
+        self.assertEqual(self.hockey_jersey.title, 'Edited Hockey Jersey')
+
+    def test_edit_post_preserves_gear_type_jrs(self):
+        self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id]),
+            self._hockey_jersey_post_data(title='Still JRS'),
+        )
+        self.hockey_jersey.refresh_from_db()
+        self.assertEqual(self.hockey_jersey.gear_type_id, 'JRS')
+
+    def test_edit_post_with_season_set(self):
+        response = self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id]),
+            self._hockey_jersey_post_data(title='Jersey With Season Set', season_set=self.season_set.key),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.hockey_jersey.refresh_from_db()
+        self.assertEqual(self.hockey_jersey.season_set_id, self.season_set.key)
+
+    def test_delete_post(self):
+        temp = HockeyJersey.objects.create(
+            title='Temp Hockey Jersey', description='temp', collection=self.collection,
+            league='NHL', player='P', brand='CCM', size='54',
+            season='2024', game_type=self.game_type, usage_type=self.usage_type,
+        )
+        response = self.client.post(reverse(
+            'memorabilia:delete_collectible',
+            args=[self.collection.id, 'hockeyjersey', temp.id],
+        ))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(HockeyJersey.objects.filter(pk=temp.id).exists())
+
+    def test_detail_get(self):
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={
+                'collection_id': self.collection.id,
+                'collectible_type': 'hockeyjersey',
+                'pk': self.hockey_jersey.id,
+            },
+        ))
+        self.assertEqual(response.status_code, 200)
+
+
+class SearchCollectiblesTests(BaseTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.search_collection = Collection.objects.create(
+            owner_uid=cls.owner.id,
+            title='Search Collection',
+        )
+        cls.search_player_item = PlayerItem.objects.create(
+            title='Search Player Jersey',
+            description='A searchable player item',
+            collection=cls.search_collection,
+            league='NHL',
+            player='Mario Lemieux',
+            team='Penguins',
+        )
+        cls.search_gear = PlayerGear.objects.create(
+            title='Search Gear Item',
+            description='A searchable gear item',
+            collection=cls.search_collection,
+            league='AHL',
+            player='Mark Messier',
+            brand='Reebok',
+            size='L',
+            season='1990',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+        )
+        cls.search_jersey = HockeyJersey.objects.create(
+            title='Search Hockey Jersey',
+            description='A searchable hockey jersey',
+            collection=cls.search_collection,
+            league='NHL',
+            player='Patrick Roy',
+            brand='Koho',
+            size='60',
+            season='1993',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+        )
+        cls.search_general = GeneralItem.objects.create(
+            title='Search General Item',
+            description='A searchable general item',
+            collection=cls.search_collection,
+        )
+
+    def _search_url(self, **params):
+        from urllib.parse import urlencode
+        base = reverse('memorabilia:search_collectibles')
+        if params:
+            return f'{base}?{urlencode(params)}'
+        return base
+
+    def test_empty_search_returns_200(self):
+        response = self.client.get(self._search_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_empty_search_returns_all_items_in_results(self):
+        response = self.client.get(self._search_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('results', response.context)
+
+    def test_search_by_player_name_returns_matching_item(self):
+        response = self.client.get(self._search_url(player='Mario Lemieux'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Player Jersey', titles)
+
+    def test_search_by_player_name_excludes_non_matching(self):
+        response = self.client.get(self._search_url(player='Mario Lemieux'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Search Gear Item', titles)
+        self.assertNotIn('Search General Item', titles)
+
+    def test_search_by_player_field_matches_title_context(self):
+        response = self.client.get(self._search_url(player='Mario Lemieux'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Player Jersey', titles)
+
+    def test_search_by_brand_matches_gear_item(self):
+        response = self.client.get(self._search_url(brand='Reebok'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Gear Item', titles)
+
+    def test_item_type_playeritem_filter(self):
+        response = self.client.get(self._search_url(item_type='playeritem'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        for item in results:
+            self.assertEqual(item.collectible_type, 'playeritem')
+
+    def test_item_type_playergear_filter(self):
+        response = self.client.get(self._search_url(item_type='playergear'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Gear Item', titles)
+        self.assertNotIn('Search Player Jersey', titles)
+        self.assertNotIn('Search General Item', titles)
+
+    def test_item_type_hockeyjersey_filter(self):
+        response = self.client.get(self._search_url(item_type='hockeyjersey'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Hockey Jersey', titles)
+        for item in results:
+            self.assertEqual(item.collectible_type, 'hockeyjersey')
+
+    def test_item_type_generalitem_filter(self):
+        response = self.client.get(self._search_url(item_type='generalitem'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        for item in results:
+            self.assertEqual(item.collectible_type, 'generalitem')
+
+    def test_search_by_league_filter(self):
+        response = self.client.get(self._search_url(league='AHL'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Gear Item', titles)
+        self.assertNotIn('Search General Item', titles)
+
+    def test_gear_only_filter_excludes_playeritem(self):
+        response = self.client.get(self._search_url(brand='Reebok'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Gear Item', titles)
+        self.assertNotIn('Search Player Jersey', titles)
+
+    def test_gear_only_filter_excludes_generalitem(self):
+        response = self.client.get(self._search_url(brand='Reebok'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Search General Item', titles)
+
+    def test_search_unauthenticated_returns_200(self):
+        self.client.logout()
+        response = self.client.get(self._search_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_context_contains_form(self):
+        response = self.client.get(self._search_url())
+        self.assertIn('form', response.context)
+
+    def test_search_context_contains_leagues(self):
+        response = self.client.get(self._search_url())
+        self.assertIn('leagues', response.context)
+
+    def test_search_by_collection_filter(self):
+        response = self.client.get(self._search_url(collection=self.search_collection.id))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Search Player Jersey', titles)
+        self.assertNotIn('Test Jersey', titles)

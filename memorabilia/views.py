@@ -91,12 +91,11 @@ def _model_has_field(qs, field_name):
 def _apply_collectible_filters(qs, data):
     query = data.get('query')
     if query:
-        q = (
-            Q(title__icontains=query) |
-            Q(player__icontains=query) |
-            Q(team__icontains=query) |
-            Q(description__icontains=query)
-        )
+        q = Q(title__icontains=query) | Q(description__icontains=query)
+        if _model_has_field(qs, 'player'):
+            q |= Q(player__icontains=query)
+        if _model_has_field(qs, 'team'):
+            q |= Q(team__icontains=query)
         if _model_has_field(qs, 'brand'):
             q |= Q(brand__icontains=query)
         qs = qs.filter(q)
