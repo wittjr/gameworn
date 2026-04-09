@@ -20,6 +20,47 @@
     {{ player_formset.management_form }}
     {{ other_formset.management_form }}
 
+    {# ── Quick Fill panel ── #}
+    <div id="quickFillPanel" class="border rounded-lg p-4 mb-6 bg-gray-50 dark:bg-gray-800">
+      <div class="flex flex-wrap gap-3 items-end">
+        <div class="flex-1 min-w-[10rem]">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Field</label>
+          <select id="qfField" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+            <option value="">— choose a field —</option>
+            <option value="league">League</option>
+            <option value="player">Player</option>
+            <option value="team">Team</option>
+            <option value="number">Number</option>
+            <option value="brand">Brand</option>
+            <option value="size">Size</option>
+            <option value="season">Season</option>
+            <option value="how_obtained">How Obtained</option>
+            <option value="game_type">Game Type</option>
+            <option value="usage_type">Usage Type</option>
+            <option value="gear_type">Gear Type</option>
+            <option value="season_set">Season Set</option>
+            <option value="coa">COA</option>
+            <option value="allow_featured">Allow to be Featured</option>
+          </select>
+        </div>
+        <div id="qfValueWrap" class="flex-1 min-w-[12rem]">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Value</label>
+          <input id="qfValueText" type="text" placeholder="Enter value…" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" />
+          <select id="qfValueSelect" class="hidden bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2.5"></select>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button type="button" id="qfApplyAll" onclick="quickFillApply(false)" disabled
+            class="px-3 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+            Apply to all
+          </button>
+          <button type="button" id="qfApplySelected" onclick="quickFillApply(true)" disabled
+            class="px-3 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
+            Apply to selected
+          </button>
+        </div>
+      </div>
+    </div>
+
     {# ── Player Gear ── #}
     {% if gear_formset.total_form_count %}
     <h2 class="text-lg font-semibold mt-6 mb-1">Player Gear</h2>
@@ -329,6 +370,94 @@
       <option value="{{ opt.name }}"></option>
     {% endfor %}
   </datalist>
+
+  <script>
+  // ── Quick Fill ──
+  (function () {
+    // Fields that use a <select> in the row (copy options from first visible match)
+    const SELECT_FIELDS = new Set(['game_type', 'usage_type', 'gear_type', 'season_set', 'coa', 'allow_featured']);
+    // Fields that use a plain text/number input
+    const NUMBER_FIELDS = new Set(['number']);
+
+    const qfField = document.getElementById('qfField');
+    const qfValueText = document.getElementById('qfValueText');
+    const qfValueSelect = document.getElementById('qfValueSelect');
+    const qfApplyAll = document.getElementById('qfApplyAll');
+    const qfApplySelected = document.getElementById('qfApplySelected');
+
+    function updateButtons() {
+      const ready = qfField.value !== '';
+      qfApplyAll.disabled = !ready;
+      const anyChecked = !!document.querySelector('.delete-cb:checked');
+      qfApplySelected.disabled = !ready || !anyChecked;
+    }
+
+    function getRowInput(row, fieldName) {
+      // Prefer the bound form field (name ends with -fieldName); fall back to data-extra inputs
+      return row.querySelector(`[name$="-${fieldName}"]`);
+    }
+
+    function populateSelectOptions(fieldName) {
+      // Clone options from the first row that has this field visible
+      const sourceSelect = document.querySelector(`[data-row-prefix] [data-field="${fieldName}"] select, [data-row-prefix] [name$="-${fieldName}"]`);
+      qfValueSelect.innerHTML = '';
+      if (sourceSelect && sourceSelect.tagName === 'SELECT') {
+        Array.from(sourceSelect.options).forEach(opt => {
+          qfValueSelect.appendChild(opt.cloneNode(true));
+        });
+      }
+    }
+
+    qfField.addEventListener('change', function () {
+      const field = this.value;
+      if (!field) {
+        qfValueText.classList.remove('hidden');
+        qfValueSelect.classList.add('hidden');
+        qfValueText.value = '';
+      } else if (SELECT_FIELDS.has(field)) {
+        qfValueText.classList.add('hidden');
+        qfValueSelect.classList.remove('hidden');
+        populateSelectOptions(field);
+      } else {
+        qfValueSelect.classList.add('hidden');
+        qfValueText.classList.remove('hidden');
+        qfValueText.value = '';
+        qfValueText.type = NUMBER_FIELDS.has(field) ? 'number' : 'text';
+      }
+      updateButtons();
+    });
+
+    qfValueText.addEventListener('input', updateButtons);
+    qfValueSelect.addEventListener('change', updateButtons);
+    document.addEventListener('change', function (e) {
+      if (e.target.classList.contains('delete-cb')) updateButtons();
+    });
+
+    window.quickFillApply = function (selectedOnly) {
+      const field = qfField.value;
+      if (!field) return;
+      const isSelect = SELECT_FIELDS.has(field);
+      const value = isSelect ? qfValueSelect.value : qfValueText.value;
+
+      document.querySelectorAll('[data-row-prefix]').forEach(function (row) {
+        if (selectedOnly) {
+          const cb = row.querySelector('.delete-cb');
+          if (!cb || !cb.checked) return;
+        }
+        const fieldWrap = row.querySelector(`[data-field="${field}"]`);
+        if (!fieldWrap || fieldWrap.style.display === 'none') return;
+        const input = getRowInput(row, field);
+        if (!input) return;
+        const wasDisabled = input.disabled;
+        input.disabled = false;
+        input.value = value;
+        input.disabled = wasDisabled;
+      });
+    };
+
+    updateButtons();
+  })();
+  </script>
 
   <script>
     // Fields visible per item type

@@ -1947,6 +1947,10 @@ tr.field-row.field-error input,
   min-width: 9rem;
 }
 
+.min-w-\[12rem\] {
+  min-width: 12rem;
+}
+
 .max-w-5xl {
   max-width: 64rem;
 }
@@ -3112,6 +3116,11 @@ tr.field-row.field-error input,
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
 
+.hover\:bg-blue-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(26 86 219 / var(--tw-bg-opacity));
+}
+
 .hover\:text-blue-600:hover {
   --tw-text-opacity: 1;
   color: rgb(28 100 242 / var(--tw-text-opacity));
@@ -3213,6 +3222,14 @@ tr.field-row.field-error input,
 .focus\:ring-red-300:focus {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(248 180 180 / var(--tw-ring-opacity));
+}
+
+.disabled\:cursor-not-allowed:disabled {
+  cursor: not-allowed;
+}
+
+.disabled\:opacity-40:disabled {
+  opacity: 0.4;
 }
 
 .group:hover .group-hover\:text-blue-600 {
