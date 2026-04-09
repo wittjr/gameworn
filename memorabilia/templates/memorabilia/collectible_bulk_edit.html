@@ -333,10 +333,10 @@
   <script>
     // Fields visible per item type
     const TYPE_FIELDS = {
-      playergear: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type'],
-      hockeyjersey: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set'],
-      playeritem: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number'],
-      generalitem: ['title', 'description', 'how_obtained', 'coa'],
+      playergear: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured'],
+      hockeyjersey: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'allow_featured'],
+      playeritem: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'allow_featured'],
+      generalitem: ['title', 'description', 'how_obtained', 'coa', 'allow_featured'],
     };
 
     function applyTypeVisibility(selectEl) {

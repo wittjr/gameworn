@@ -34,12 +34,14 @@ def _get_collectible(request, **view_kwargs):
 
 # Create your views here.
 
+_FEATURED_Q = Q(allow_featured=True) | Q(allow_featured__isnull=True, collection__allow_featured=True)
+
+
 def home(request):
-    print(request)
-    recent = PlayerItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
-    recent_gear = PlayerGear.objects.exclude(gear_type_id='JRS').prefetch_related('gear_images').order_by('-last_updated')[:6]
-    recent_jersey = HockeyJersey.objects.prefetch_related('gear_images').order_by('-last_updated')[:6]
-    recent_other = GeneralItem.objects.prefetch_related('images').order_by('-last_updated')[:6]
+    recent = PlayerItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
+    recent_gear = PlayerGear.objects.filter(_FEATURED_Q).exclude(gear_type_id='JRS').select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
+    recent_jersey = HockeyJersey.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
+    recent_other = GeneralItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
     data = sorted(chain(recent, recent_gear, recent_jersey, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
     return render(request, 'memorabilia/index.html', {'collectibles': data})
 
@@ -666,7 +668,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'how_obtained', 'coa']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'how_obtained', 'coa', 'allow_featured']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)

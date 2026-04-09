@@ -33,6 +33,19 @@
             {% endfor %}
         </div>
 
+        <div class="mb-4{% if form.allow_featured.errors %} bg-red-50 rounded-lg p-2 field-has-error{% endif %}">
+            <div class="flex items-center gap-3">
+                {{ form.allow_featured }}
+                <label for="{{ form.allow_featured.id_for_label }}" class="text-sm font-medium {% if form.allow_featured.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">
+                    Allow items in this collection to be featured
+                </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">When enabled, items from this collection may appear in featured sections of the site (unless individually overridden).</p>
+            {% for error in form.allow_featured.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+            {% endfor %}
+        </div>
+
         <div class="mb-4{% if form.header_image.errors %} bg-red-50 rounded-lg p-2{% endif %}">
             <label for="{{ form.header_image.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.header_image.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">Header Image</label>
 

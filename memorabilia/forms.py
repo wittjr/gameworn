@@ -50,12 +50,15 @@ class CollectionForm(ModelForm):
         model = Collection
         fields = [
             "title",
+            "allow_featured",
         ]
         labels = {
             "title": "Title",
+            "allow_featured": "Allow items in this collection to be featured",
         }
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
+            "allow_featured": flowbite_widgets.FlowbiteCheckboxInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -129,6 +132,12 @@ class CollectionForm(ModelForm):
 
 HOW_OBTAINED_SEPARATOR = '──── Users ────'
 
+ALLOW_FEATURED_CHOICES = [
+    ('', 'Use collection setting'),
+    ('true', 'Yes – allow'),
+    ('false', 'No – do not allow'),
+]
+
 
 class HowObtainedValidationMixin:
     def clean_how_obtained(self):
@@ -149,6 +158,13 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         required=False,
         label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
     )
 
     class Meta:
@@ -188,7 +204,9 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
         })
-        
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else self.initial.get('allow_featured')
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
+        self.fields['allow_featured'] = self.fields.pop('allow_featured')
 
     def get_image_fields(self):
         for field_name in self.fields:
@@ -235,6 +253,13 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
         label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
 
     class Meta:
         model = GeneralItem
@@ -255,6 +280,9 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
         })
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else self.initial.get('allow_featured')
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
+        self.fields['allow_featured'] = self.fields.pop('allow_featured')
 
 
 class PlayerGearImageForm(ModelForm):
@@ -295,6 +323,13 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
         label='COA',
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
 
     class Meta:
         model = PlayerGear
@@ -329,6 +364,9 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
         })
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else self.initial.get('allow_featured')
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
+        self.fields['allow_featured'] = self.fields.pop('allow_featured')
 
     def clean_league(self):
         return self.cleaned_data.get("league", "").strip()
@@ -531,10 +569,22 @@ class BulkCollectibleForm(ModelForm):
     """Simplified form for bulk editing PlayerItems in a formset."""
 
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
     class Meta:
         model = PlayerItem
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -553,6 +603,8 @@ class BulkCollectibleForm(ModelForm):
         self.fields['team'].widget.attrs.update({
             'placeholder': 'Start typing a team...'
         })
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
 
 class BulkPlayerGearForm(ModelForm):
@@ -563,10 +615,17 @@ class BulkPlayerGearForm(ModelForm):
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
 
     class Meta:
         model = PlayerGear
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -583,6 +642,8 @@ class BulkPlayerGearForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['league'].widget.attrs.update({'placeholder': 'e.g., NHL, AHL...'})
         self.fields['team'].widget.attrs.update({'placeholder': 'Start typing a team...'})
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
 
 class BulkHockeyJerseyForm(ModelForm):
@@ -593,10 +654,17 @@ class BulkHockeyJerseyForm(ModelForm):
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
 
     class Meta:
         model = HockeyJersey
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -613,21 +681,35 @@ class BulkHockeyJerseyForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['league'].widget.attrs.update({'placeholder': 'e.g., NHL, AHL...'})
         self.fields['team'].widget.attrs.update({'placeholder': 'Start typing a team...'})
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
 
 class BulkGeneralItemForm(ModelForm):
     """Simplified form for bulk editing GeneralItems in a formset."""
 
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
+    allow_featured = forms.TypedChoiceField(
+        label='Allow to be featured',
+        choices=ALLOW_FEATURED_CHOICES,
+        coerce=lambda v: None if v == '' else (v == 'true'),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
 
     class Meta:
         model = GeneralItem
-        fields = ['title', 'description', 'how_obtained', 'coa']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
+        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
 
 class UserProfileForm(ModelForm):

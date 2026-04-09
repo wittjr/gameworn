@@ -30,6 +30,7 @@ class Collection(RulesModel):
     image_link = models.CharField(max_length=255, blank=True, null=True)
     collage_collectible_ids = models.JSONField(blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True)
+    allow_featured = models.BooleanField(default=True)
 
     class Meta:
         indexes = [
@@ -162,6 +163,7 @@ class Collectible(RulesModel):
     coa = models.ForeignKey('CoaType', to_field='key', on_delete=models.PROTECT, db_column='coa', blank=True, null=True)
     flickr_url = models.CharField(max_length=255, blank=True, default='')
     last_updated = models.DateTimeField(auto_now=True)
+    allow_featured = models.BooleanField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -188,6 +190,12 @@ class Collectible(RulesModel):
             except ValueError:
                 return None
         return str(img)
+
+    @property
+    def effective_featured_status(self) -> bool:
+        if self.allow_featured is not None:
+            return self.allow_featured
+        return self.collection.allow_featured
 
 class BasePlayerItem(Collectible):
     league = models.CharField(max_length=5, blank=True, null=True)
