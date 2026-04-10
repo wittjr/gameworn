@@ -438,14 +438,19 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied
 
-    # Resolve image URLs to absolute URIs for WeasyPrint
+    # Resolve image URLs for WeasyPrint.
+    # Local files use file:// paths to avoid HTTP round-trips; external links are used as-is.
     def resolve_url(img_obj):
         if img_obj is None:
             return None
-        url = img_obj.link if img_obj.link else (img_obj.image.url if img_obj.image else None)
-        if url and not url.startswith('http'):
-            url = request.build_absolute_uri(url)
-        return url
+        if img_obj.link:
+            return img_obj.link
+        if img_obj.image:
+            try:
+                return f"file://{img_obj.image.path}"
+            except NotImplementedError:
+                return request.build_absolute_uri(img_obj.image.url)
+        return None
 
     primary = next((img for img in images if img.primary), images[0] if images else None)
     primary_url = resolve_url(primary)
@@ -474,6 +479,9 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
     filename = f"{collectible.title.replace(' ', '_')}.pdf"
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    token = request.GET.get('dl', '')
+    if token:
+        response.set_cookie('downloadReady', token, max_age=60, samesite='Lax')
     return response
 
 

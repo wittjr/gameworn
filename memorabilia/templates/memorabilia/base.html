@@ -190,6 +190,43 @@
    </main>
    {% endblock body %} {% block extra_body %} {% endblock extra_body %}
 
+   <script>
+   (function () {
+     function eraseCookie(name) {
+       document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+     }
+     document.addEventListener('click', function (e) {
+       var link = e.target.closest('[data-pdf-download]');
+       if (!link) return;
+       var token = Date.now().toString(36);
+       var base = link.href.split('?')[0];
+       link.href = base + '?dl=' + token;
+       var spinner = link.querySelector('.pdf-spinner');
+       if (spinner) spinner.classList.remove('hidden');
+       link.classList.add('pointer-events-none', 'opacity-75');
+       link.setAttribute('aria-busy', 'true');
+       var poll = setInterval(function () {
+         if (document.cookie.split(';').some(function (c) {
+           return c.trim().startsWith('downloadReady=' + token);
+         })) {
+           clearInterval(poll);
+           eraseCookie('downloadReady');
+           if (spinner) spinner.classList.add('hidden');
+           link.classList.remove('pointer-events-none', 'opacity-75');
+           link.setAttribute('aria-busy', 'false');
+         }
+       }, 500);
+       setTimeout(function () {
+         clearInterval(poll);
+         eraseCookie('downloadReady');
+         if (spinner) spinner.classList.add('hidden');
+         link.classList.remove('pointer-events-none', 'opacity-75');
+         link.setAttribute('aria-busy', 'false');
+       }, 60000);
+     });
+   }());
+   </script>
+
    <!-- Global delete confirmation modal -->
    <div id="delete-confirm-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="delete-modal-message"
        class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
