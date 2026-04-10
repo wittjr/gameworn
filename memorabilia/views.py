@@ -1,6 +1,6 @@
 from itertools import chain
 
-from django.http import HttpResponseRedirect, JsonResponse, Http404
+from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
 from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
@@ -400,6 +400,81 @@ class CollectibleView(generic.DetailView):
             context['primary_image'] = images[0].image if images else None
 
         return context
+
+
+@login_required
+def collectible_pdf(request, collection_id, collectible_type, pk):
+    from weasyprint import HTML
+    from django.template.loader import render_to_string
+
+    # Fetch the object (same logic as CollectibleView.get_object)
+    if collectible_type == 'playeritem':
+        collectible = get_object_or_404(PlayerItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+        images = list(collectible.images.all())
+        photomatches = []
+    elif collectible_type == 'generalitem':
+        collectible = get_object_or_404(GeneralItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+        images = list(collectible.images.all())
+        photomatches = []
+    elif collectible_type == 'playergear':
+        collectible = get_object_or_404(
+            PlayerGear.objects.select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images', 'photomatches'),
+            pk=pk, collection_id=collection_id,
+        )
+        images = list(collectible.gear_images.all())
+        photomatches = list(collectible.photomatches.all())
+    elif collectible_type == 'hockeyjersey':
+        collectible = get_object_or_404(
+            HockeyJersey.objects.select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images', 'photomatches'),
+            pk=pk, collection_id=collection_id,
+        )
+        images = list(collectible.gear_images.all())
+        photomatches = list(collectible.photomatches.all())
+    else:
+        raise Http404("Collectible not found")
+
+    # Only the owner (or superuser) may download
+    if not request.user.is_superuser and request.user.id != collectible.collection.owner_uid:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    # Resolve image URLs to absolute URIs for WeasyPrint
+    def resolve_url(img_obj):
+        if img_obj is None:
+            return None
+        url = img_obj.link if img_obj.link else (img_obj.image.url if img_obj.image else None)
+        if url and not url.startswith('http'):
+            url = request.build_absolute_uri(url)
+        return url
+
+    primary = next((img for img in images if img.primary), images[0] if images else None)
+    primary_url = resolve_url(primary)
+    secondary_images = [{'url': resolve_url(img)} for img in images if img is not primary]
+    photomatch_data = [{'url': resolve_url(pm), 'date': pm.game_date, 'description': pm.description} for pm in photomatches]
+
+    league = None
+    if hasattr(collectible, 'league') and collectible.league:
+        try:
+            league = League.objects.get(pk=collectible.league)
+        except League.DoesNotExist:
+            pass
+
+    context = {
+        'collectible': collectible,
+        'collectible_type': collectible_type,
+        'primary_url': primary_url,
+        'secondary_images': secondary_images,
+        'photomatch_data': photomatch_data,
+        'league': league,
+    }
+
+    html_string = render_to_string('memorabilia/collectible_pdf.html', context, request=request)
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+
+    filename = f"{collectible.title.replace(' ', '_')}.pdf"
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 @login_required

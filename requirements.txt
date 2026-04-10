@@ -10,3 +10,4 @@ pillow==12.2.0
 django-tailwind==4.4.2
 PyJWT==2.12.1
 cryptography==46.0.7
+weasyprint==68.1

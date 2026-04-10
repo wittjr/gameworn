@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: letter;
+    margin: 0.75in;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Georgia, serif;
+    font-size: 11pt;
+    color: #222;
+  }
+
+  /* ── Page 1 ── */
+  .cover-page {
+    page-break-after: always;
+  }
+
+  .cover-title {
+    font-size: 22pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 16pt;
+    border-bottom: 2px solid #444;
+    padding-bottom: 8pt;
+  }
+
+  .cover-image {
+    text-align: center;
+    margin-bottom: 16pt;
+  }
+
+  .cover-image img {
+    max-width: 100%;
+    max-height: 4in;
+    object-fit: contain;
+    border: 1px solid #ccc;
+  }
+
+  .cover-image .no-image {
+    width: 100%;
+    height: 1.5in;
+    background: #f0f0f0;
+    color: #999;
+    font-size: 10pt;
+    border: 1px solid #ccc;
+  }
+
+  .info-columns {
+    column-count: 2;
+    column-gap: 20pt;
+    column-rule: 1px solid #e0e0e0;
+  }
+
+  .info-row {
+    break-inside: avoid;
+    padding: 4pt 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .info-label {
+    font-size: 8pt;
+    font-weight: bold;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.3pt;
+  }
+
+  .info-value {
+    font-size: 10pt;
+    color: #222;
+  }
+
+  /* ── Additional image pages ── */
+  .image-page {
+    page-break-before: always;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 9in;
+  }
+
+  .image-page img {
+    max-width: 100%;
+    max-height: 8.5in;
+    object-fit: contain;
+  }
+
+  .image-page .caption {
+    margin-top: 10pt;
+    font-size: 9pt;
+    color: #555;
+    text-align: center;
+  }
+
+  .photomatch-header {
+    page-break-before: always;
+    font-size: 16pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 12pt;
+    border-bottom: 2px solid #444;
+    padding-bottom: 6pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- Page 1: cover image + info table -->
+<div class="cover-page">
+  <div class="cover-title">{{ collectible.title }}</div>
+  <div class="cover-image">
+    {% if primary_url %}
+      <img src="{{ primary_url }}" alt="{{ collectible.title }}">
+    {% else %}
+      <div class="no-image">No image</div>
+    {% endif %}
+  </div>
+  <div class="info-columns">
+    {% if collectible.description %}
+    <div class="info-row"><div class="info-label">Description</div><div class="info-value">{{ collectible.description }}</div></div>
+    {% endif %}
+    <div class="info-row"><div class="info-label">Collection</div><div class="info-value">{{ collectible.collection }}</div></div>
+
+    {% if collectible_type == 'playeritem' or collectible_type == 'playergear' or collectible_type == 'hockeyjersey' %}
+      {% if collectible.player %}
+      <div class="info-row"><div class="info-label">Player</div><div class="info-value">{{ collectible.player }}</div></div>
+      {% endif %}
+      {% if collectible.number %}
+      <div class="info-row"><div class="info-label">Number</div><div class="info-value">{{ collectible.number }}</div></div>
+      {% endif %}
+      {% if league %}
+      <div class="info-row"><div class="info-label">League</div><div class="info-value">{{ league }}</div></div>
+      {% endif %}
+      {% if collectible.team %}
+      <div class="info-row"><div class="info-label">Team</div><div class="info-value">{{ collectible.team }}</div></div>
+      {% endif %}
+    {% endif %}
+
+    {% if collectible_type == 'playergear' or collectible_type == 'hockeyjersey' %}
+      {% if collectible.season %}
+      <div class="info-row"><div class="info-label">Season</div><div class="info-value">{{ collectible.season }}</div></div>
+      {% endif %}
+      {% if collectible.brand %}
+      <div class="info-row"><div class="info-label">Brand</div><div class="info-value">{{ collectible.brand }}</div></div>
+      {% endif %}
+      {% if collectible.size %}
+      <div class="info-row"><div class="info-label">Size</div><div class="info-value">{{ collectible.size }}</div></div>
+      {% endif %}
+      {% if collectible.usage_type %}
+      <div class="info-row"><div class="info-label">Usage Type</div><div class="info-value">{{ collectible.usage_type }}</div></div>
+      {% endif %}
+      {% if collectible.game_type %}
+      <div class="info-row"><div class="info-label">Game Type</div><div class="info-value">{{ collectible.game_type }}</div></div>
+      {% endif %}
+    {% endif %}
+
+    {% if collectible_type == 'hockeyjersey' %}
+      {% if collectible.season_set %}
+      <div class="info-row"><div class="info-label">Season Set</div><div class="info-value">{{ collectible.season_set }}</div></div>
+      {% endif %}
+    {% endif %}
+
+    {% if collectible.coa %}
+    <div class="info-row"><div class="info-label">Certificate of Authenticity</div><div class="info-value">{{ collectible.coa }}</div></div>
+    {% endif %}
+    {% if collectible.how_obtained %}
+    <div class="info-row"><div class="info-label">How Obtained</div><div class="info-value">{{ collectible.how_obtained }}</div></div>
+    {% endif %}
+    {% if collectible.for_sale and collectible.asking_price %}
+    <div class="info-row"><div class="info-label">Asking Price</div><div class="info-value">{{ collectible.asking_price }}</div></div>
+    {% endif %}
+    {% if collectible.for_trade and collectible.looking_for %}
+    <div class="info-row"><div class="info-label">Looking For</div><div class="info-value">{{ collectible.looking_for }}</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Additional collectible images, one per page -->
+{% for img in secondary_images %}
+  {% if img.url %}
+  <div class="image-page">
+    <img src="{{ img.url }}" alt="Image {{ forloop.counter|add:1 }}">
+  </div>
+  {% endif %}
+{% endfor %}
+
+<!-- Photo match images -->
+{% if photomatch_data %}
+  <div class="photomatch-header">Photo Matches</div>
+  {% for pm in photomatch_data %}
+    {% if pm.url %}
+    <div class="image-page">
+      <img src="{{ pm.url }}" alt="Photo match">
+      <div class="caption">
+        {% if pm.date %}{{ pm.date }}{% endif %}
+        {% if pm.date and pm.description %} &mdash; {% endif %}
+        {% if pm.description %}{{ pm.description }}{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+</body>
+</html>

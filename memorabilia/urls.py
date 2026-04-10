@@ -14,6 +14,7 @@ urlpatterns = [
     path("collection/<int:collection_id>/delete", views.delete_collection, name="delete_collection"),
     path("collection/<int:collection_id>/collectible/create", views.create_collectible, name="create_collectible"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:pk>", views.CollectibleView.as_view(), name="collectible"),
+    path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:pk>/pdf", views.collectible_pdf, name="collectible_pdf"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/edit", views.edit_collectible, name="edit_collectible"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/delete", views.delete_collectible, name="delete_collectible"),
     path("collection/<int:collection_id>/bulk-edit", views.bulk_edit_collectibles, name="bulk_edit_collectibles"),
