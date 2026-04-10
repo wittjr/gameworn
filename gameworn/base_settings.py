@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.discord',
+    'allauth.socialaccount.providers.facebook',
     'memorabilia.apps.MemorabiliaConfig',
     'tailwind',
     'django_flowbite_widgets',
@@ -122,6 +123,16 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': os.environ.get('DISCORD_KEY')
             # https://discord.com/oauth2/authorize?client_id=1281068554493628498&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2F&scope=identify+email+openid
         }
+    },
+    'facebook': {
+        'APP': {
+            'client_id': os.environ.get('FACEBOOK_CLIENT_ID'),
+            'secret': os.environ.get('FACEBOOK_SECRET'),
+        },
+        'METHOD': 'oauth2',
+        'SCOPE': ['email', 'public_profile'],
+        'FIELDS': ['id', 'name', 'email', 'picture'],
+        'VERSION': 'v21.0',
     }
 }
 

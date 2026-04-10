@@ -10,7 +10,14 @@ def user_avatar(request):
         social_info = SocialAccount.objects.filter(user=request.user, provider='discord')
         if len(social_info) > 0:
             return {'user_avatar_url':f"https://cdn.discordapp.com/avatars/{social_info[0].extra_data['id']}/{social_info[0].extra_data['avatar']}"}
-        
+
+        social_info = SocialAccount.objects.filter(user=request.user, provider='facebook')
+        if len(social_info) > 0:
+            try:
+                return {'user_avatar_url': social_info[0].extra_data['picture']['data']['url']}
+            except (KeyError, TypeError):
+                pass
+
         #  Use gravatar
         url = get_gravatar_url(user.email, size=32)
         # gravatar_exists = has_gravatar(user.email)

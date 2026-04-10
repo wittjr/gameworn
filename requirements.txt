@@ -8,3 +8,5 @@ rules==3.5
 django_gravatar2==1.4.5
 pillow==12.2.0
 django-tailwind==4.4.2
+PyJWT==2.12.1
+cryptography==46.0.7
