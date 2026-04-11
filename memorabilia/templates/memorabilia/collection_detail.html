@@ -2,6 +2,8 @@
 {% load static %}
 {% load memorabilia_extras %}
 
+{% block head_title %}{{ collection.title }}{% endblock head_title %}
+
 {% block page_css %}
     <link rel="stylesheet" href="{% static 'memorabilia/collection-detail.css' %}">
 {% endblock page_css %}

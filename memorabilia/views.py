@@ -86,6 +86,17 @@ class MyCollectionsView(IndexView):
         return login_required(view)
 
 
+class UserCollectionsView(IndexView):
+    def get_queryset(self):
+        self._profile_user = get_object_or_404(User, username=self.kwargs['username'])
+        return Collection.objects.filter(owner_uid=self._profile_user.id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = f"{self._profile_user.username}'s Collections"
+        return context
+
+
 def _model_has_field(qs, field_name):
     return any(f.name == field_name for f in qs.model._meta.get_fields())
 

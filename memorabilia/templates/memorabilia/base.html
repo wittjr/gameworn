@@ -9,7 +9,7 @@
    <meta charset="utf-8" />
    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
    <meta name="description" content="" />
-   <title>{% block head_title %}{% endblock head_title %}</title>
+   <title>{% block head_title %}{{ site_name }}{% endblock head_title %}</title>
 
    {% block css %}
    {% tailwind_css %}
@@ -65,7 +65,7 @@
                   <span class="block text-sm text-gray-500 truncate dark:text-gray-400">{{ user.email }}</span>
                </div>
                <ul class="py-2" aria-label="Collection actions">
-                  {% url 'memorabilia:my_collections' as the_url %}
+                  {% url 'memorabilia:user_collections' user.username as the_url %}
                   {% include "memorabilia/elements/usernavitem.html" with link=the_url label="My Collections" %}
                   {% url 'memorabilia:create_collection' as the_url %}
                   {% include "memorabilia/elements/usernavitem.html" with link=the_url label="Add Collection" %}
