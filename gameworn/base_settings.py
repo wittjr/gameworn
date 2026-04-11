@@ -189,7 +189,7 @@ MEDIA_URL = 'media/'
 # Path where media is stored
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
-SITE_NAME = 'Game Used'
+SITE_NAME = 'Heavy Use'
 
 FLICKR_KEY = os.environ.get('FLICKR_KEY', '')
 
