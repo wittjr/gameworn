@@ -666,6 +666,12 @@ class BulkHockeyJerseyForm(ModelForm):
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
+    home_away = forms.ChoiceField(
+        choices=[('', '---------')] + list(PlayerGear.HOME_AWAY_CHOICES),
+        required=False,
+        label='Home/Away',
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+    )
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -676,7 +682,7 @@ class BulkHockeyJerseyForm(ModelForm):
 
     class Meta:
         model = HockeyJersey
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),

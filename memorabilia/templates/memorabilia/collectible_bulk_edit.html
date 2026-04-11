@@ -39,6 +39,7 @@
             <option value="usage_type">Usage Type</option>
             <option value="gear_type">Gear Type</option>
             <option value="season_set">Season Set</option>
+            <option value="home_away">Home/Away</option>
             <option value="coa">COA</option>
             <option value="allow_featured">Allow to be Featured</option>
           </select>
@@ -375,7 +376,7 @@
   // ── Quick Fill ──
   (function () {
     // Fields that use a <select> in the row (copy options from first visible match)
-    const SELECT_FIELDS = new Set(['game_type', 'usage_type', 'gear_type', 'season_set', 'coa', 'allow_featured']);
+    const SELECT_FIELDS = new Set(['game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'coa', 'allow_featured']);
     // Fields that use a plain text/number input
     const NUMBER_FIELDS = new Set(['number']);
 
@@ -463,7 +464,7 @@
     // Fields visible per item type
     const TYPE_FIELDS = {
       playergear: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured'],
-      hockeyjersey: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'allow_featured'],
+      hockeyjersey: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'allow_featured'],
       playeritem: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'allow_featured'],
       generalitem: ['title', 'description', 'how_obtained', 'coa', 'allow_featured'],
     };
