@@ -18,11 +18,13 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic.base import RedirectView
 from allauth.account.decorators import secure_admin_login
 admin.autodiscover()
 # admin.site.login = secure_admin_login(admin.site.login)
 
 urlpatterns = [
+    path("favicon.ico", RedirectView.as_view(url=settings.STATIC_URL + "memorabilia/favicon.ico", permanent=True)),
     path("", include("memorabilia.urls")),
     path("accounts/", include("allauth.urls")),
     path('admin/', admin.site.urls),
