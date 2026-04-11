@@ -150,6 +150,10 @@
       <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.season_set.label }}</label>
       {{ form.season_set }}
     </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]" id="home-away-filter" style="display:none">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.home_away.label }}</label>
+      {{ form.home_away }}
+    </div>
   </div>
 
   <div class="flex justify-end mt-4 space-x-2">
@@ -160,21 +164,26 @@
 
 <script>
 (function() {
-  function updateGearTypeVisibility() {
+  function updateFilterVisibility() {
     var itemType = document.querySelector('[name="item_type"]');
+    if (!itemType) return;
     var gearDiv = document.getElementById('gear-type-filter');
-    if (!itemType || !gearDiv) return;
+    var homeAwayDiv = document.getElementById('home-away-filter');
     var isGear = itemType.value === 'playergear';
-    gearDiv.style.display = isGear ? '' : 'none';
-    if (!isGear) {
-      var gearSelect = gearDiv.querySelector('select');
-      if (gearSelect) gearSelect.value = '';
+    var isJersey = itemType.value === 'hockeyjersey';
+    if (gearDiv) {
+      gearDiv.style.display = isGear ? '' : 'none';
+      if (!isGear) { var s = gearDiv.querySelector('select'); if (s) s.value = ''; }
+    }
+    if (homeAwayDiv) {
+      homeAwayDiv.style.display = isJersey ? '' : 'none';
+      if (!isJersey) { var s = homeAwayDiv.querySelector('select'); if (s) s.value = ''; }
     }
   }
   document.addEventListener('DOMContentLoaded', function() {
     var itemType = document.querySelector('[name="item_type"]');
-    if (itemType) itemType.addEventListener('change', updateGearTypeVisibility);
-    updateGearTypeVisibility();
+    if (itemType) itemType.addEventListener('change', updateFilterVisibility);
+    updateFilterVisibility();
   });
 })();
 </script>

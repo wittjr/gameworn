@@ -231,7 +231,10 @@ class PlayerGearItem(BasePlayerItem):
 
 
 class PlayerGear(PlayerGearItem):
+    HOME_AWAY_CHOICES = [('H', 'Home'), ('A', 'Away')]
+
     season_set = models.ForeignKey('SeasonSet', to_field='key', on_delete=models.PROTECT, db_column='season_set', blank=True, null=True)
+    home_away = models.CharField(max_length=1, choices=HOME_AWAY_CHOICES, blank=True, null=True)
 
     @property
     def collectible_type(self):

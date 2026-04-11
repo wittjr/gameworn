@@ -334,7 +334,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'flickr_url']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -383,6 +383,12 @@ class HockeyJerseyForm(PlayerGearForm):
         queryset=SeasonSet.objects.all(),
         required=False,
         widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    home_away = forms.ChoiceField(
+        choices=[('', '---------')] + list(PlayerGear.HOME_AWAY_CHOICES),
+        required=False,
+        label='Home/Away',
+        widget=flowbite_widgets.FlowbiteSelectInput(),
     )
 
     class Meta(PlayerGearForm.Meta):
@@ -545,6 +551,12 @@ class CollectibleSearchForm(forms.Form):
     )
     season_set = forms.ChoiceField(required=False, label="Season Set", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = forms.ChoiceField(required=False, label="Gear Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    home_away = forms.ChoiceField(
+        required=False,
+        label="Home/Away",
+        choices=[('', 'Any'), ('H', 'Home'), ('A', 'Away')],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

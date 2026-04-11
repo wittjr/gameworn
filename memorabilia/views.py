@@ -155,6 +155,9 @@ def _apply_collectible_filters(qs, data):
     gear_type = data.get('gear_type')
     if gear_type and _model_has_field(qs, 'gear_type'):
         qs = qs.filter(gear_type=gear_type)
+    home_away = data.get('home_away')
+    if home_away and _model_has_field(qs, 'home_away'):
+        qs = qs.filter(home_away=home_away)
     return qs
 
 
@@ -164,7 +167,7 @@ def search_collectibles(request):
     # Fields that exist on PlayerItem + PlayerGear but NOT GeneralItem
     _PLAYER_FIELDS = ('league', 'player', 'team', 'number')
     # Fields that only exist on HockeyJersey
-    _JERSEY_ONLY = ('season_set',)
+    _JERSEY_ONLY = ('season_set', 'home_away')
 
     form = CollectibleSearchForm(request.GET or None)
     gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS')

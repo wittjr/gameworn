@@ -64,6 +64,7 @@
                 {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
                 {% include 'memorabilia/tablerow.html' with label='Season Set' value=object.season_set %}
+                {% include 'memorabilia/tablerow.html' with label='Home/Away' value=object.get_home_away_display %}
                 {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}

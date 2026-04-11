@@ -169,6 +169,9 @@
       {% if collectible.season_set %}
       <div class="info-row"><div class="info-label">Season Set</div><div class="info-value">{{ collectible.season_set }}</div></div>
       {% endif %}
+      {% if collectible.home_away %}
+      <div class="info-row"><div class="info-label">Home/Away</div><div class="info-value">{{ collectible.get_home_away_display }}</div></div>
+      {% endif %}
     {% endif %}
 
     {% if collectible.coa %}
