@@ -220,9 +220,19 @@ def build_collection_zip(collection, include_external=False):
             'exported_at': datetime.now(timezone.utc).isoformat(),
         }, indent=2))
 
+        coll_image_filename = ''
+        if collection.image and collection.image.name:
+            try:
+                base_name = os.path.basename(collection.image.name)
+                with collection.image.open('rb') as f:
+                    zf.writestr(f"collection_image/{base_name}", f.read())
+                coll_image_filename = base_name
+            except Exception:
+                pass
         coll_row = {
             'export_id': str(collection.export_id),
             'title': collection.title,
+            'image_filename': coll_image_filename,
             'image_link': collection.image_link or '',
             'allow_featured': ('' if collection.allow_featured is None
                                else str(collection.allow_featured)),
@@ -327,8 +337,20 @@ def commit_import(zip_bytes, parsed, owner_uid, mode, target_collection_id=None)
                 collection = Collection.objects.create(
                     owner_uid=owner_uid,
                     title=title,
+                    image_link=coll_row.get('image_link') or None,
                     allow_featured=_parse_bool(coll_row.get('allow_featured')),
                 )
+                # Restore uploaded header image if present in ZIP
+                img_filename = coll_row.get('image_filename', '')
+                if img_filename:
+                    zip_path = f"collection_image/{img_filename}"
+                    if zip_path in set(zf.namelist()):
+                        from django.core.files.base import ContentFile
+                        from django.core.files.storage import default_storage
+                        data = zf.read(zip_path)
+                        saved = default_storage.save(f"images/{img_filename}", ContentFile(data))
+                        collection.image = saved
+                        collection.save(update_fields=['image'])
 
             is_collection_export = (parsed['type'] == 'collection')
             for row in parsed['items']:
