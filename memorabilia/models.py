@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rules.contrib.models import RulesModel
 from django.contrib.auth.models import User
 import rules
+import uuid
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
 
@@ -25,6 +26,7 @@ def is_collectible_owner(user, collectible):
 
 class Collection(RulesModel):
     owner_uid = models.IntegerField()
+    export_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=100)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     image_link = models.CharField(max_length=255, blank=True, null=True)
@@ -152,6 +154,7 @@ class HowObtainedOption(models.Model):
 
 
 class Collectible(RulesModel):
+    export_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)

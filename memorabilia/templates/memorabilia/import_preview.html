@@ -1,0 +1,134 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block head_title %}Import Preview{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% url 'memorabilia:import_upload' as upload_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=upload_url label="Import" %}
+    {% include 'memorabilia/breadcrumb.html' with label="Preview" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">Import Preview</h1>
+    <p class="text-gray-600 dark:text-gray-400 mb-6">Review what will be imported, then choose where to put it.</p>
+
+    {% if error %}
+    <div class="p-4 mb-6 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- Summary card -->
+    <div class="bg-white rounded-lg shadow p-5 mb-6 dark:bg-gray-800">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dt class="font-medium text-gray-600 dark:text-gray-400">Export type</dt>
+            <dd class="text-gray-900 dark:text-white capitalize">{{ preview.type }}</dd>
+            {% if preview.collection %}
+            <dt class="font-medium text-gray-600 dark:text-gray-400">Collection title</dt>
+            <dd class="text-gray-900 dark:text-white">{{ preview.collection.title }}</dd>
+            {% endif %}
+            <dt class="font-medium text-gray-600 dark:text-gray-400">Items</dt>
+            <dd class="text-gray-900 dark:text-white">{{ preview.item_count }}</dd>
+        </dl>
+    </div>
+
+    <!-- Items preview table -->
+    {% if preview.items_preview %}
+    <div class="bg-white rounded-lg shadow overflow-x-auto mb-6 dark:bg-gray-800">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <tr>
+                    <th class="px-4 py-3">Title</th>
+                    <th class="px-4 py-3">Type</th>
+                    <th class="px-4 py-3">Player</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in preview.items_preview %}
+                <tr class="border-b dark:border-gray-700">
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ item.title }}</td>
+                    <td class="px-4 py-3 capitalize">{{ item.collectible_type }}</td>
+                    <td class="px-4 py-3">{{ item.player|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if preview.item_count > preview.items_preview|length %}
+        <p class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+            … and {{ preview.item_count|add:"-10" }} more item{{ preview.item_count|add:"-10"|pluralize }}.
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Import form -->
+    <form method="post" class="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
+        {% csrf_token %}
+        {% if preset_collection_title %}
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
+            All items above will be added to <strong class="text-gray-900 dark:text-white">{{ preset_collection_title }}</strong>.
+        </p>
+        {% else %}
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Where should this go?</h2>
+
+        <fieldset class="mb-5">
+            <div class="flex items-center mb-3">
+                <input id="mode-new" type="radio" name="mode" value="new" checked
+                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <label for="mode-new" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    {% if preview.type == "collection" %}
+                        Create a new collection (copies the exported title)
+                    {% else %}
+                        Create a new collection and add the item to it
+                    {% endif %}
+                </label>
+            </div>
+            <div class="flex items-center">
+                <input id="mode-merge" type="radio" name="mode" value="merge"
+                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <label for="mode-merge" class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    Add to an existing collection
+                </label>
+            </div>
+        </fieldset>
+
+        <div id="merge-picker" class="mb-5 hidden">
+            <label for="target-collection" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">
+                Existing collection
+            </label>
+            <select name="target_collection" id="target-collection"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                <option value="">— select a collection —</option>
+                {% for col in user_collections %}
+                <option value="{{ col.id }}">{{ col.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="flex gap-2">
+            <button type="submit" class="btn-primary">Import</button>
+            {% url 'memorabilia:import_upload' as upload_url %}
+            <a href="{{ upload_url }}" class="btn-primary-white">Back</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        var picker = document.getElementById('merge-picker');
+        var radios = document.querySelectorAll('[name="mode"]');
+        function update() {
+            var merge = document.getElementById('mode-merge');
+            if (picker) picker.classList.toggle('hidden', !merge || !merge.checked);
+        }
+        radios.forEach(function (r) { r.addEventListener('change', update); });
+        update();
+    });
+})();
+</script>
+{% endblock content %}

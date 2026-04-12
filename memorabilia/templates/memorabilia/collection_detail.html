@@ -14,16 +14,47 @@
     {% if user.is_authenticated %}
         {% if user.id == collection.owner_uid or user.is_superuser %}
         <div class="flex flex-wrap items-center justify-end gap-2 mb-4">
-            {% url 'memorabilia:create_collectible' collection.id as add_url %}
-            <a href="{{ add_url }}" class="btn-primary">+ Add Collectible</a>
-            {% url 'memorabilia:edit_collection' collection.id as edit_url %}
-            <a href="{{ edit_url }}" class="btn-primary-white">Edit Collection</a>
-            {% url 'memorabilia:bulk_edit_collectibles' collection.id as bulk_edit_url %}
-            <a href="{{ bulk_edit_url }}" class="btn-primary-white">Edit All Collectibles</a>
-            {% url 'memorabilia:bulk_add_from_flickr' collection.id as flickr_url %}
-            <a href="{{ flickr_url }}" class="btn-primary-white">Add from Flickr</a>
             {% url 'memorabilia:delete_collection' collection.id as delete_url %}
-            <a href="{{ delete_url }}" data-delete-label="{{ collection.title }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collection</a>
+            <a href="{{ delete_url }}" data-delete-label="{{ collection.title }}" data-tooltip-target="tt-delete-collection" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collection</a>
+            <div id="tt-delete-collection" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-red-700 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Permanently delete this collection and all its items
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            {% url 'memorabilia:collection_import' collection.id as import_url %}
+            <a href="{{ import_url }}" class="btn-primary-white" data-tooltip-target="tt-import-items">Import Items</a>
+            <div id="tt-import-items" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Import items from a ZIP file into this collection
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            {% url 'memorabilia:bulk_add_from_flickr' collection.id as flickr_url %}
+            <a href="{{ flickr_url }}" class="btn-primary-white" data-tooltip-target="tt-flickr">Add from Flickr</a>
+            <div id="tt-flickr" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Add items using photos from a Flickr album
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            <button type="button" data-modal-target="zip-modal" data-modal-toggle="zip-modal" data-tooltip-target="tt-export" class="btn-primary-white">Export Collection</button>
+            <div id="tt-export" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Download this collection as a ZIP file
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            {% url 'memorabilia:bulk_edit_collectibles' collection.id as bulk_edit_url %}
+            <a href="{{ bulk_edit_url }}" class="btn-primary-white" data-tooltip-target="tt-bulk-edit">Edit All Collectibles</a>
+            <div id="tt-bulk-edit" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Bulk edit all items in this collection at once
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            {% url 'memorabilia:edit_collection' collection.id as edit_url %}
+            <a href="{{ edit_url }}" class="btn-primary-white" data-tooltip-target="tt-edit-collection">Edit Collection</a>
+            <div id="tt-edit-collection" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Edit the collection title, image, and settings
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+            {% url 'memorabilia:create_collectible' collection.id as add_url %}
+            <a href="{{ add_url }}" class="btn-primary" data-tooltip-target="tt-create-collectible">Create Collectible</a>
+            <div id="tt-create-collectible" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+                Add a new item to this collection
+                <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
         </div>
         {% endif %}
     {% endif %}
@@ -85,6 +116,8 @@
             {% endif %}
             {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url edit_url=card_edit_url delete_url=card_delete_url %}
         {% endfor %}
-    </div>    
+    </div>
 
+{% url 'memorabilia:export_collection' collection.id as zip_base_url %}
+{% include "memorabilia/elements/zip_export_modal.html" with export_url=zip_base_url %}
 {% endblock content %}

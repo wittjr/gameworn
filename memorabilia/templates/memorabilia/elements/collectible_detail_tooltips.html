@@ -1,0 +1,8 @@
+{% comment %}Tooltip definitions for collectible detail page buttons. Include once per page.{% endcomment %}
+{% with tt="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs" %}
+<div id="tt-edit-collectible" role="tooltip" class="{{ tt }}">Edit this collectible's details<div class="tooltip-arrow" data-popper-arrow></div></div>
+<div id="tt-add-photo-match" role="tooltip" class="{{ tt }}">Add a photo match for this item<div class="tooltip-arrow" data-popper-arrow></div></div>
+<div id="tt-download-pdf" role="tooltip" class="{{ tt }}">Download a PDF summary of this collectible<div class="tooltip-arrow" data-popper-arrow></div></div>
+<div id="tt-download-zip" role="tooltip" class="{{ tt }}">Export this collectible as a backup file<div class="tooltip-arrow" data-popper-arrow></div></div>
+<div id="tt-delete-collectible" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-red-700 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">Permanently delete this collectible<div class="tooltip-arrow" data-popper-arrow></div></div>
+{% endwith %}

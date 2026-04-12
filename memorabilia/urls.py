@@ -33,4 +33,11 @@ urlpatterns = [
     path("profile/", views.profile, name="profile"),
     path("resources", views.ExternalResourceListView.as_view(), name="list_externalresources"),
     path("api/teams", views.get_teams, name="get_teams"),
+    # Export
+    path("collection/<int:collection_id>/export", views.export_collection, name="export_collection"),
+    path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/export", views.export_collectible, name="export_collectible"),
+    # Import
+    path("import/", views.import_upload, name="import_upload"),
+    path("import/preview/", views.import_preview, name="import_preview"),
+    path("collection/<int:collection_id>/import/", views.import_upload, name="collection_import"),
 ]

@@ -1,0 +1,48 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block head_title %}Import Collection{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% include 'memorabilia/breadcrumb.html' with label="Import" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">Import</h1>
+    {% if preset_collection %}
+    <p class="text-gray-600 dark:text-gray-400 mb-6">
+        Upload a ZIP file to add items to <strong class="text-gray-900 dark:text-white">{{ preset_collection.title }}</strong>.
+    </p>
+    {% else %}
+    <p class="text-gray-600 dark:text-gray-400 mb-6">
+        Upload a ZIP file exported from Heavy Use to import a collection or individual collectible.
+    </p>
+    {% endif %}
+
+    {% if error %}
+    <div class="p-4 mb-6 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
+        {% csrf_token %}
+        <div class="mb-6">
+            <label for="id_zip_file" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+                ZIP File
+            </label>
+            <input type="file" name="zip_file" id="id_zip_file" accept=".zip"
+                   class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                   required>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Select a .zip file exported from Heavy Use.</p>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="btn-primary">Upload &amp; Preview</button>
+            {% url 'memorabilia:list_collections' as back_url %}
+            <a href="{{ back_url }}" class="btn-primary-white">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock content %}

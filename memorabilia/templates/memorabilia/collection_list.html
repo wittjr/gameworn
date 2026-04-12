@@ -14,9 +14,19 @@
 
 {% block page_actions %}
     {% if user.is_authenticated %}
-    <div class="flex justify-end mb-4">
+    <div class="flex justify-end gap-2 mb-4">
+        {% url 'memorabilia:import_upload' as import_url %}
+        <a href="{{ import_url }}" class="btn-primary-white" data-tooltip-target="tt-import">Import</a>
+        <div id="tt-import" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+            Import a collection or items from a ZIP file
+            <div class="tooltip-arrow" data-popper-arrow></div>
+        </div>
         {% url 'memorabilia:create_collection' as add_url %}
-        <a href="{{ add_url }}" class="btn-primary">+ Add Collection</a>
+        <a href="{{ add_url }}" class="btn-primary" data-tooltip-target="tt-create-collection">Create Collection</a>
+        <div id="tt-create-collection" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-xs font-normal leading-snug text-white bg-gray-600 rounded-md shadow-lg shadow-gray-900/20 opacity-0 tooltip max-w-xs">
+            Start a new empty collection
+            <div class="tooltip-arrow" data-popper-arrow></div>
+        </div>
     </div>
     {% endif %}
 {% endblock page_actions %}
