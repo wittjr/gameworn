@@ -1,5 +1,8 @@
 from .base_settings import *
 
+# IPs (or CIDR ranges) allowed to access /admin/. Empty list = no restriction.
+ADMIN_ALLOWED_IPS = []
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

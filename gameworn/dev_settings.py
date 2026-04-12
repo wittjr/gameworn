@@ -65,3 +65,6 @@ LOGGING = {
         },
     },
 }
+
+# IPs (or CIDR ranges) allowed to access /admin/. Empty list = no restriction.
+ADMIN_ALLOWED_IPS = []
