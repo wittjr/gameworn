@@ -16,7 +16,7 @@
               <svg aria-hidden="true" class="pdf-spinner hidden animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
               <span>Download PDF</span>
             </a>
-            <button type="button" data-modal-target="zip-modal" data-modal-toggle="zip-modal" class="btn-primary-white" data-tooltip-target="tt-download-zip">Export Backup</button>
+            <button type="button" data-modal-target="zip-modal" data-modal-toggle="zip-modal" class="btn-primary-white" data-tooltip-target="tt-download-zip">Export Item</button>
             {% url 'memorabilia:delete_collectible' object.collection.id object.collectible_type object.id as delete_url %}
             <a href="{{ delete_url }}" data-delete-label="{{ object.title }}" data-tooltip-target="tt-delete-collectible" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete Collectible</a>
         </div>
