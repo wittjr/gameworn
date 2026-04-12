@@ -224,6 +224,8 @@ def build_collection_zip(collection, include_external=False):
             'export_id': str(collection.export_id),
             'title': collection.title,
             'image_link': collection.image_link or '',
+            'allow_featured': ('' if collection.allow_featured is None
+                               else str(collection.allow_featured)),
         }
         zf.writestr('collection.csv', _rows_to_csv([coll_row], list(coll_row)))
 
@@ -321,7 +323,12 @@ def commit_import(zip_bytes, parsed, owner_uid, mode, target_collection_id=None)
                     title = parsed['collection'].get('title', 'Imported Collection')
                 else:
                     title = 'Imported Collection'
-                collection = Collection.objects.create(owner_uid=owner_uid, title=title)
+                coll_row = parsed.get('collection') or {}
+                collection = Collection.objects.create(
+                    owner_uid=owner_uid,
+                    title=title,
+                    allow_featured=_parse_bool(coll_row.get('allow_featured')),
+                )
 
             is_collection_export = (parsed['type'] == 'collection')
             for row in parsed['items']:
