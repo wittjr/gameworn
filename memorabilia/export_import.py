@@ -42,6 +42,7 @@ COLLECTIBLE_FIELDNAMES = [
     'brand', 'size', 'season',
     'game_type', 'usage_type', 'gear_type',
     'season_set', 'home_away',
+    'allow_featured',
     'images_json',
     'photomatches_json',
 ]
@@ -177,6 +178,8 @@ def _collectible_to_row(collectible, images_meta, photomatches_meta):
         'gear_type': getattr(collectible, 'gear_type_id', None) or '',
         'season_set': getattr(collectible, 'season_set_id', None) or '',
         'home_away': getattr(collectible, 'home_away', None) or '',
+        'allow_featured': ('' if collectible.allow_featured is None
+                           else str(collectible.allow_featured)),
         'images_json': json.dumps(images_meta),
         'photomatches_json': json.dumps(photomatches_meta),
     }
@@ -343,6 +346,7 @@ def _create_collectible(row, collection, zf, is_collection_export):
         'how_obtained': row.get('how_obtained') or None,
         'flickr_url': row.get('flickr_url', ''),
         'coa': _fk_or_none(CoaType, row.get('coa')),
+        'allow_featured': _parse_bool(row.get('allow_featured')),
     }
     player = {
         'player': row.get('player', ''),
