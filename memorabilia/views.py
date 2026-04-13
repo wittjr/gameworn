@@ -765,7 +765,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'how_obtained', 'coa', 'allow_featured']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'coa', 'allow_featured']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)
