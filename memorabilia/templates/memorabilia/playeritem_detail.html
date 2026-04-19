@@ -57,7 +57,9 @@
                 {% include 'memorabilia/tablerow.html' with label='Number' value=object.number %}
                 {% include 'memorabilia/tablerow.html' with label='League' value=league %}
                 {% include 'memorabilia/tablerow.html' with label='Team' value=object.team %}
-                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
+                {% for auth in object.authentications.all %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
+                {% endfor %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}

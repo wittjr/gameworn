@@ -37,13 +37,13 @@ VERSION = 1
 COLLECTIBLE_FIELDNAMES = [
     'export_id', 'collectible_type', 'title', 'description',
     'for_sale', 'for_trade', 'asking_price',
-    'coa', 'how_obtained', 'flickr_url',
+    'how_obtained', 'flickr_url',
     'player', 'team', 'number', 'league',
     'brand', 'size', 'season',
     'game_type', 'usage_type', 'gear_type',
     'season_set', 'home_away',
-    'team_inventory_number', 'auth_tag_number', 'auth_source',
     'allow_featured',
+    'authentications_json',
     'images_json',
     'photomatches_json',
 ]
@@ -154,7 +154,20 @@ def _build_photomatch_manifest(collectible, pm_dir, zf, include_external):
     return pm_meta
 
 
+def _build_authentications_meta(collectible):
+    """Return a list of auth dicts for the collectible's authentications."""
+    auths = []
+    for auth in collectible.authentications.all():
+        auths.append({
+            'auth_type': auth.auth_type_id or '',
+            'number': auth.number or '',
+            'issuer': auth.issuer_id or '',
+        })
+    return auths
+
+
 def _collectible_to_row(collectible, images_meta, photomatches_meta):
+    auth_meta = _build_authentications_meta(collectible)
     return {
         'export_id': str(collectible.export_id),
         'collectible_type': collectible.collectible_type,
@@ -163,7 +176,6 @@ def _collectible_to_row(collectible, images_meta, photomatches_meta):
         'for_sale': '' if collectible.for_sale is None else str(collectible.for_sale),
         'for_trade': '' if collectible.for_trade is None else str(collectible.for_trade),
         'asking_price': '' if collectible.asking_price is None else collectible.asking_price,
-        'coa': collectible.coa_id or '',
         'how_obtained': collectible.how_obtained or '',
         'flickr_url': collectible.flickr_url or '',
         'player': getattr(collectible, 'player', ''),
@@ -179,11 +191,9 @@ def _collectible_to_row(collectible, images_meta, photomatches_meta):
         'gear_type': getattr(collectible, 'gear_type_id', None) or '',
         'season_set': getattr(collectible, 'season_set_id', None) or '',
         'home_away': getattr(collectible, 'home_away', None) or '',
-        'team_inventory_number': getattr(collectible, 'team_inventory_number', '') or '',
-        'auth_tag_number': getattr(collectible, 'auth_tag_number', '') or '',
-        'auth_source': getattr(collectible, 'auth_source_id', None) or '',
         'allow_featured': ('' if collectible.allow_featured is None
                            else str(collectible.allow_featured)),
+        'authentications_json': json.dumps(auth_meta),
         'images_json': json.dumps(images_meta),
         'photomatches_json': json.dumps(photomatches_meta),
     }
@@ -244,9 +254,9 @@ def build_collection_zip(collection, include_external=False):
         zf.writestr('collection.csv', _rows_to_csv([coll_row], list(coll_row)))
 
         collectibles = list(chain(
-            collection.playergear_set.prefetch_related('gear_images', 'photomatches').all(),
-            collection.playeritem_set.prefetch_related('images').all(),
-            collection.generalitem_set.prefetch_related('images').all(),
+            collection.playergear_set.prefetch_related('gear_images', 'photomatches', 'authentications').all(),
+            collection.playeritem_set.prefetch_related('images', 'authentications').all(),
+            collection.generalitem_set.prefetch_related('images', 'authentications').all(),
         ))
         rows = []
         for c in collectibles:
@@ -364,9 +374,10 @@ def commit_import(zip_bytes, parsed, owner_uid, mode, target_collection_id=None)
 
 
 def _create_collectible(row, collection, zf, is_collection_export):
-    from .models import (PlayerItem, PlayerItemImage,
-                         PlayerGear, PlayerGearImage, GeneralItem, GeneralItemImage,
-                         GameType, UsageType, GearType, SeasonSet, CoaType, AuthSource)
+    from .models import (PlayerItem, PlayerItemImage, PlayerItemAuthentication,
+                         PlayerGear, PlayerGearImage, PlayerGearAuthentication,
+                         GeneralItem, GeneralItemImage, GeneralItemAuthentication,
+                         GameType, UsageType, GearType, SeasonSet)
 
     ctype = row.get('collectible_type', 'generalitem')
     common = {
@@ -378,7 +389,6 @@ def _create_collectible(row, collection, zf, is_collection_export):
         'asking_price': _parse_float(row.get('asking_price')),
         'how_obtained': row.get('how_obtained') or None,
         'flickr_url': row.get('flickr_url', ''),
-        'coa': _fk_or_none(CoaType, row.get('coa')),
         'allow_featured': _parse_bool(row.get('allow_featured')),
     }
     player = {
@@ -399,27 +409,22 @@ def _create_collectible(row, collection, zf, is_collection_export):
     if ctype == 'playeritem':
         obj = PlayerItem.objects.create(**common, **player)
         ImageModel = PlayerItemImage
+        AuthModel = PlayerItemAuthentication
     elif ctype in ('playergear', 'hockeyjersey'):
-        jersey_fields = {}
-        if ctype == 'hockeyjersey':
-            jersey_fields = {
-                'team_inventory_number': row.get('team_inventory_number', '') or '',
-                'auth_tag_number': row.get('auth_tag_number', '') or '',
-                'auth_source': _fk_or_none(AuthSource, row.get('auth_source')),
-            }
         obj = PlayerGear.objects.create(
             **common, **player, **gear,
             home_away=row.get('home_away') or None,
             season_set=_fk_or_none(SeasonSet, row.get('season_set')),
-            **jersey_fields,
         )
         if ctype == 'hockeyjersey':
             obj.gear_type_id = 'JRS'
             obj.save(update_fields=['gear_type_id'])
         ImageModel = PlayerGearImage
+        AuthModel = PlayerGearAuthentication
     else:
         obj = GeneralItem.objects.create(**common)
         ImageModel = GeneralItemImage
+        AuthModel = GeneralItemAuthentication
 
     # Directory layout: collection export uses <dir>/<export_id>/, single uses <dir>/
     orig_export_id = row.get('export_id', '')
@@ -430,10 +435,28 @@ def _create_collectible(row, collection, zf, is_collection_export):
         images_dir = 'images'
         pm_dir = 'photomatches'
 
+    _import_authentications(row, obj, AuthModel)
     _import_images(row, obj, ImageModel, images_dir, zf)
     if ctype in ('playergear', 'hockeyjersey'):
         _import_photomatches(row, obj, pm_dir, zf)
     return obj
+
+
+def _import_authentications(row, obj, AuthModel):
+    from .models import CoaType, AuthSource
+
+    try:
+        auths_meta = json.loads(row.get('authentications_json', '[]') or '[]')
+    except (json.JSONDecodeError, TypeError):
+        auths_meta = []
+
+    for meta in auths_meta:
+        AuthModel.objects.create(
+            collectible=obj,
+            auth_type=_fk_or_none(CoaType, meta.get('auth_type')),
+            number=meta.get('number', '') or '',
+            issuer=_fk_or_none(AuthSource, meta.get('issuer')),
+        )
 
 
 def _import_images(row, obj, ImageModel, images_dir, zf):

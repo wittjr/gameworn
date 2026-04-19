@@ -4,7 +4,14 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, AuthSource, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
+from .models import (
+    Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType,
+    CoaType, AuthSource, HowObtainedOption, CollectibleImage,
+    PlayerItem, PlayerItemImage, PlayerItemAuthentication,
+    GeneralItem, GeneralItemImage, GeneralItemAuthentication,
+    PlayerGear, PlayerGearImage, PlayerGearAuthentication,
+    SeasonSet, HockeyJersey, UserProfile,
+)
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -153,12 +160,6 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         widget=flowbite_widgets.FlowbiteTextInput(),
         help_text="Select from the list or type a custom value",
     )
-    coa = ModelChoiceField(
-        queryset=CoaType.objects.all(),
-        required=False,
-        label='COA',
-        widget=flowbite_widgets.FlowbiteSelectInput,
-    )
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -247,12 +248,6 @@ class GeneralItemImageForm(ModelForm):
 
 class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
     """Form for GeneralItem - contains only base Collectible fields"""
-    coa = ModelChoiceField(
-        queryset=CoaType.objects.all(),
-        required=False,
-        label='COA',
-        widget=flowbite_widgets.FlowbiteSelectInput,
-    )
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -317,12 +312,6 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
         required=False,
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
-    coa = ModelChoiceField(
-        queryset=CoaType.objects.all(),
-        required=False,
-        label='COA',
-        widget=flowbite_widgets.FlowbiteSelectInput,
-    )
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -334,7 +323,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url', 'team_inventory_number', 'auth_tag_number', 'auth_source']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -390,26 +379,11 @@ class HockeyJerseyForm(PlayerGearForm):
         label='Home/Away',
         widget=flowbite_widgets.FlowbiteSelectInput(),
     )
-    auth_source = ModelChoiceField(
-        queryset=AuthSource.objects.all(),
-        required=False,
-        label='Authentication Source',
-        widget=flowbite_widgets.FlowbiteSelectInput,
-    )
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
-        # This exclude list fully overrides PlayerGearForm.Meta.exclude — it intentionally
-        # omits season_set, home_away, team_inventory_number, auth_tag_number, and auth_source
-        # so they appear (those are added as explicit fields above). Any new field added to
-        # PlayerGearForm.Meta.exclude to hide it from PlayerGear must also be added here
-        # if it should also be hidden from HockeyJersey.
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
-        widgets = {
-            **PlayerGearForm.Meta.widgets,
-            'team_inventory_number': flowbite_widgets.FlowbiteTextInput(),
-            'auth_tag_number': flowbite_widgets.FlowbiteTextInput(),
-        }
+        widgets = PlayerGearForm.Meta.widgets
 
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
@@ -573,9 +547,8 @@ class CollectibleSearchForm(forms.Form):
         choices=[('', 'Any'), ('H', 'Home'), ('A', 'Away')],
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
-    auth_source = forms.ChoiceField(required=False, label="Authentication Source", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
-    auth_tag_number = forms.CharField(required=False, label="Authentication/Tag #", widget=flowbite_widgets.FlowbiteTextInput())
-    team_inventory_number = forms.CharField(required=False, label="Team Inventory #", widget=flowbite_widgets.FlowbiteTextInput())
+    auth_issuer = forms.ChoiceField(required=False, label="Authentication Issuer", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    auth_number = forms.CharField(required=False, label="Authentication #", widget=flowbite_widgets.FlowbiteTextInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -594,13 +567,12 @@ class CollectibleSearchForm(forms.Form):
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]
         self.fields['season_set'].choices = [('', '')] + [(s.key, s.name) for s in SeasonSet.objects.all()]
         self.fields['gear_type'].choices = [('', '')] + [(g.key, g.name) for g in GearType.objects.all()]
-        self.fields['auth_source'].choices = [('', 'Any')] + [(a.key, a.name) for a in AuthSource.objects.all()]
+        self.fields['auth_issuer'].choices = [('', 'Any')] + [(a.key, a.name) for a in AuthSource.objects.all()]
 
 
 class BulkCollectibleForm(ModelForm):
     """Simplified form for bulk editing PlayerItems in a formset."""
 
-    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -611,7 +583,7 @@ class BulkCollectibleForm(ModelForm):
 
     class Meta:
         model = PlayerItem
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'league', 'player', 'team', 'number', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -640,7 +612,6 @@ class BulkPlayerGearForm(ModelForm):
     game_type = ModelChoiceField(queryset=GameType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
-    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
@@ -652,7 +623,7 @@ class BulkPlayerGearForm(ModelForm):
 
     class Meta:
         model = PlayerGear
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -679,8 +650,6 @@ class BulkHockeyJerseyForm(ModelForm):
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
-    auth_source = ModelChoiceField(queryset=AuthSource.objects.all(), required=False, label='Authentication Source', widget=flowbite_widgets.FlowbiteSelectInput)
-    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
     home_away = forms.ChoiceField(
         choices=[('', '---------')] + list(PlayerGear.HOME_AWAY_CHOICES),
@@ -698,7 +667,7 @@ class BulkHockeyJerseyForm(ModelForm):
 
     class Meta:
         model = HockeyJersey
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'team_inventory_number', 'auth_tag_number', 'auth_source', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -709,8 +678,6 @@ class BulkHockeyJerseyForm(ModelForm):
             'season': flowbite_widgets.FlowbiteTextInput(),
             'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
-            'team_inventory_number': flowbite_widgets.FlowbiteTextInput(),
-            'auth_tag_number': flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -724,7 +691,6 @@ class BulkHockeyJerseyForm(ModelForm):
 class BulkGeneralItemForm(ModelForm):
     """Simplified form for bulk editing GeneralItems in a formset."""
 
-    coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
         choices=ALLOW_FEATURED_CHOICES,
@@ -735,7 +701,7 @@ class BulkGeneralItemForm(ModelForm):
 
     class Meta:
         model = GeneralItem
-        fields = ['title', 'description', 'how_obtained', 'coa', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
@@ -746,6 +712,67 @@ class BulkGeneralItemForm(ModelForm):
         super().__init__(*args, **kwargs)
         val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
         self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
+
+
+class AuthenticationForm(ModelForm):
+    auth_type = ModelChoiceField(
+        queryset=CoaType.objects.all(),
+        required=False,
+        label='Type',
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    issuer = ModelChoiceField(
+        queryset=AuthSource.objects.all(),
+        required=False,
+        label='Issuer',
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    class Meta:
+        fields = ['auth_type', 'number', 'issuer']
+        widgets = {
+            'number': flowbite_widgets.FlowbiteTextInput(),
+        }
+
+
+class PlayerGearAuthenticationForm(AuthenticationForm):
+    class Meta(AuthenticationForm.Meta):
+        model = PlayerGearAuthentication
+
+
+class PlayerItemAuthenticationForm(AuthenticationForm):
+    class Meta(AuthenticationForm.Meta):
+        model = PlayerItemAuthentication
+
+
+class GeneralItemAuthenticationForm(AuthenticationForm):
+    class Meta(AuthenticationForm.Meta):
+        model = GeneralItemAuthentication
+
+
+PlayerGearAuthenticationFormSet = inlineformset_factory(
+    PlayerGear,
+    PlayerGearAuthentication,
+    form=PlayerGearAuthenticationForm,
+    extra=0,
+    can_delete=True,
+)
+
+PlayerItemAuthenticationFormSet = inlineformset_factory(
+    PlayerItem,
+    PlayerItemAuthentication,
+    form=PlayerItemAuthenticationForm,
+    extra=0,
+    can_delete=True,
+)
+
+GeneralItemAuthenticationFormSet = inlineformset_factory(
+    GeneralItem,
+    GeneralItemAuthentication,
+    form=GeneralItemAuthenticationForm,
+    extra=0,
+    can_delete=True,
+)
 
 
 class UserProfileForm(ModelForm):

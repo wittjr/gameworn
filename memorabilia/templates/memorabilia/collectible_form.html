@@ -255,6 +255,94 @@
                 {% endfor %}
             </div>
 
+            <!-- Authentications -->
+            {% if auth_formset %}
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold mb-3">Authentications</h3>
+                {{ auth_formset.management_form }}
+                {% for auth_form in auth_formset %}
+                <div class="sm:rounded-lg border shadow-md w-full text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {% for hidden in auth_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="flex flex-col sm:flex-row bg-white border-b dark:border-gray-700">
+                        <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.auth_type.label_tag }}</div>
+                        <div class="px-6 py-2 sm:flex-1">
+                            {{ auth_form.auth_type }}
+                            {% for error in auth_form.auth_type.errors %}<p class="mt-1 text-sm text-red-600" role="alert">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row bg-gray-50 border-b dark:border-gray-700">
+                        <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.number.label_tag }}</div>
+                        <div class="px-6 py-2 sm:flex-1">
+                            {{ auth_form.number }}
+                            {% for error in auth_form.number.errors %}<p class="mt-1 text-sm text-red-600" role="alert">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row bg-white border-b dark:border-gray-700">
+                        <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.issuer.label_tag }}</div>
+                        <div class="px-6 py-2 sm:flex-1">
+                            {{ auth_form.issuer }}
+                            {% for error in auth_form.issuer.errors %}<p class="mt-1 text-sm text-red-600" role="alert">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+                    {% if auth_formset.can_delete %}
+                    <div class="flex items-center gap-2 px-6 py-3 bg-gray-50">
+                        {{ auth_form.DELETE }}
+                        <label for="{{ auth_form.DELETE.id_for_label }}" class="text-sm font-medium text-red-600 cursor-pointer">Remove this authentication</label>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="button" id="add-auth-btn"
+                    class="mt-2 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 border border-dashed border-blue-400 rounded-lg hover:bg-blue-50 hover:border-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-colors duration-150">
+                    <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Add Authentication
+                </button>
+            </div>
+            <script>
+            (function() {
+                var formsetPrefix = '{{ auth_formset.prefix }}';
+                document.getElementById('add-auth-btn').addEventListener('click', function() {
+                    var totalInput = document.getElementById('id_' + formsetPrefix + '-TOTAL_FORMS');
+                    var total = parseInt(totalInput.value, 10);
+                    var emptyForm = document.getElementById(formsetPrefix + '-empty-form');
+                    if (!emptyForm) return;
+                    var newForm = emptyForm.cloneNode(true);
+                    newForm.id = '';
+                    newForm.style.display = '';
+                    newForm.innerHTML = newForm.innerHTML.replace(/__prefix__/g, total);
+                    document.getElementById('add-auth-btn').insertAdjacentElement('beforebegin', newForm);
+                    totalInput.value = total + 1;
+                });
+            })();
+            </script>
+            <!-- Empty form template for JS cloning -->
+            <div id="{{ auth_formset.prefix }}-empty-form" class="sm:rounded-lg border shadow-md w-full text-sm text-gray-500 dark:text-gray-400 mb-4" style="display:none">
+                {% with auth_form=auth_formset.empty_form %}
+                {% for hidden in auth_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <div class="flex flex-col sm:flex-row bg-white border-b dark:border-gray-700">
+                    <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.auth_type.label_tag }}</div>
+                    <div class="px-6 py-2 sm:flex-1">{{ auth_form.auth_type }}</div>
+                </div>
+                <div class="flex flex-col sm:flex-row bg-gray-50 border-b dark:border-gray-700">
+                    <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.number.label_tag }}</div>
+                    <div class="px-6 py-2 sm:flex-1">{{ auth_form.number }}</div>
+                </div>
+                <div class="flex flex-col sm:flex-row bg-white border-b dark:border-gray-700">
+                    <div class="px-6 py-4 font-medium whitespace-nowrap text-gray-900 dark:text-white sm:w-1/3 shrink-0">{{ auth_form.issuer.label_tag }}</div>
+                    <div class="px-6 py-2 sm:flex-1">{{ auth_form.issuer }}</div>
+                </div>
+                {% if auth_formset.can_delete %}
+                <div class="flex items-center gap-2 px-6 py-3 bg-gray-50">
+                    {{ auth_form.DELETE }}
+                    <label for="{{ auth_form.DELETE.id_for_label }}" class="text-sm font-medium text-red-600 cursor-pointer">Remove this authentication</label>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+
             <div class="flex justify-end space-x-4 mt-6">
                 {% if collectible %}
                 <a href="{% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type=collectible.collectible_type pk=collectible.id %}" class="btn-primary-white">Cancel</a>

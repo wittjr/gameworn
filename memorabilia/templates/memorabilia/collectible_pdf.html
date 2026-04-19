@@ -250,20 +250,11 @@
       {% if collectible.home_away %}
       <div class="info-row"><div class="info-label">Home/Away</div><div class="info-value">{{ collectible.get_home_away_display }}</div></div>
       {% endif %}
-      {% if collectible.team_inventory_number %}
-      <div class="info-row"><div class="info-label">Team Inventory #</div><div class="info-value">{{ collectible.team_inventory_number }}</div></div>
-      {% endif %}
-      {% if collectible.auth_source %}
-      <div class="info-row"><div class="info-label">Authentication Source</div><div class="info-value">{{ collectible.auth_source }}</div></div>
-      {% endif %}
-      {% if collectible.auth_tag_number %}
-      <div class="info-row"><div class="info-label">Authentication/Tag #</div><div class="info-value">{{ collectible.auth_tag_number }}</div></div>
-      {% endif %}
     {% endif %}
 
-    {% if collectible.coa %}
-    <div class="info-row"><div class="info-label">Certificate of Authenticity</div><div class="info-value">{{ collectible.coa }}</div></div>
-    {% endif %}
+    {% for auth in collectible.authentications.all %}
+    <div class="info-row"><div class="info-label">Authentication</div><div class="info-value">{{ auth }}</div></div>
+    {% endfor %}
     {% if collectible.how_obtained %}
     <div class="info-row"><div class="info-label">How Obtained</div><div class="info-value">{{ collectible.how_obtained }}</div></div>
     {% endif %}

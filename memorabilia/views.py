@@ -4,8 +4,22 @@ from itertools import chain
 from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile, MeiGrayEntry, PopulationReport
-from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm, UserProfileForm
+from .models import (
+    Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType,
+    HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team,
+    GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet,
+    HockeyJersey, UserProfile, MeiGrayEntry, PopulationReport,
+    PlayerGearAuthentication, PlayerItemAuthentication, GeneralItemAuthentication,
+)
+from .forms import (
+    CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm,
+    CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm,
+    BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class,
+    GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet,
+    HockeyJerseyForm, UserProfileForm,
+    PlayerGearAuthenticationFormSet, PlayerItemAuthenticationFormSet,
+    GeneralItemAuthenticationFormSet,
+)
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from rules.contrib.views import permission_required, objectgetter
@@ -159,15 +173,12 @@ def _apply_collectible_filters(qs, data):
     home_away = data.get('home_away')
     if home_away and _model_has_field(qs, 'home_away'):
         qs = qs.filter(home_away=home_away)
-    auth_source = data.get('auth_source')
-    if auth_source and _model_has_field(qs, 'auth_source'):
-        qs = qs.filter(auth_source=auth_source)
-    auth_tag_number = data.get('auth_tag_number')
-    if auth_tag_number and _model_has_field(qs, 'auth_tag_number'):
-        qs = qs.filter(auth_tag_number__icontains=auth_tag_number)
-    team_inventory_number = data.get('team_inventory_number')
-    if team_inventory_number and _model_has_field(qs, 'team_inventory_number'):
-        qs = qs.filter(team_inventory_number__icontains=team_inventory_number)
+    auth_issuer = data.get('auth_issuer')
+    if auth_issuer:
+        qs = qs.filter(authentications__issuer_id=auth_issuer).distinct()
+    auth_number = data.get('auth_number')
+    if auth_number:
+        qs = qs.filter(authentications__number__icontains=auth_number).distinct()
     return qs
 
 
@@ -177,9 +188,9 @@ def search_collectibles(request):
     # Fields that exist on PlayerItem + PlayerGear but NOT GeneralItem
     _PLAYER_FIELDS = ('league', 'player', 'team', 'number')
     # Fields that only exist on HockeyJersey
-    _JERSEY_ONLY = ('season_set', 'home_away', 'auth_source', 'auth_tag_number', 'team_inventory_number')
+    _JERSEY_ONLY = ('season_set', 'home_away')
 
-    form = CollectibleSearchForm(request.GET or None)
+    form = CollectibleSearchForm(request.GET if request.GET else {'item_type': 'hockeyjersey'})
     gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS')
     hockey_qs = HockeyJersey.objects.all()
     player_qs = PlayerItem.objects.all()
@@ -221,11 +232,9 @@ def search_collectibles(request):
         other_qs = _apply_collectible_filters(other_qs, other_data)
 
         # Exclude types that don't have the filtered fields.
-        # Jersey-only fields (season_set, home_away, auth_source, auth_tag_number,
-        # team_inventory_number) are DB columns on PlayerGear but are only exposed
-        # via HockeyJerseyForm — no non-jersey PlayerGear row will ever have them
-        # populated. Zeroing gear_qs here is an intentional product decision: these
-        # filters are semantically jersey-only in the UI, not just in the schema.
+        # Jersey-only fields (season_set, home_away) are DB columns on PlayerGear
+        # but are only exposed via HockeyJerseyForm. Zeroing gear_qs here is an
+        # intentional product decision: these filters are semantically jersey-only.
         if has_jersey_filter:
             gear_qs = PlayerGear.objects.none()
             player_qs = PlayerItem.objects.none()
@@ -383,17 +392,17 @@ class CollectibleView(generic.DetailView):
         collectible_type = self.kwargs.get('collectible_type')
 
         if collectible_type == 'playeritem':
-            return get_object_or_404(PlayerItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+            return get_object_or_404(PlayerItem.objects.prefetch_related('images', 'authentications__auth_type', 'authentications__issuer'), pk=pk, collection_id=collection_id)
         elif collectible_type == 'generalitem':
-            return get_object_or_404(GeneralItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+            return get_object_or_404(GeneralItem.objects.prefetch_related('images', 'authentications__auth_type', 'authentications__issuer'), pk=pk, collection_id=collection_id)
         elif collectible_type == 'playergear':
             return get_object_or_404(
-                PlayerGear.objects.select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images'),
+                PlayerGear.objects.select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images', 'authentications__auth_type', 'authentications__issuer'),
                 pk=pk, collection_id=collection_id,
             )
         elif collectible_type == 'hockeyjersey':
             return get_object_or_404(
-                HockeyJersey.objects.select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images'),
+                HockeyJersey.objects.select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images', 'authentications__auth_type', 'authentications__issuer'),
                 pk=pk, collection_id=collection_id,
             )
 
@@ -428,11 +437,13 @@ class CollectibleView(generic.DetailView):
         else:
             context['primary_image'] = images[0].image if images else None
 
-        if isinstance(collectible, HockeyJersey) and collectible.auth_tag_number and collectible.auth_source_id == 'MEIGRAY':
-            try:
-                context['meigray_entry'] = MeiGrayEntry.objects.get(pk=collectible.auth_tag_number)
-            except MeiGrayEntry.DoesNotExist:
-                context['meigray_entry'] = None
+        if isinstance(collectible, HockeyJersey):
+            meigray_auth = collectible.authentications.filter(issuer_id='MEIGRAY').first()
+            if meigray_auth and meigray_auth.number:
+                try:
+                    context['meigray_entry'] = MeiGrayEntry.objects.get(pk=meigray_auth.number)
+                except MeiGrayEntry.DoesNotExist:
+                    context['meigray_entry'] = None
 
         return context
 
@@ -444,23 +455,23 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
 
     # Fetch the object (same logic as CollectibleView.get_object)
     if collectible_type == 'playeritem':
-        collectible = get_object_or_404(PlayerItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+        collectible = get_object_or_404(PlayerItem.objects.prefetch_related('images', 'authentications__auth_type', 'authentications__issuer'), pk=pk, collection_id=collection_id)
         images = list(collectible.images.all())
         photomatches = []
     elif collectible_type == 'generalitem':
-        collectible = get_object_or_404(GeneralItem.objects.prefetch_related('images'), pk=pk, collection_id=collection_id)
+        collectible = get_object_or_404(GeneralItem.objects.prefetch_related('images', 'authentications__auth_type', 'authentications__issuer'), pk=pk, collection_id=collection_id)
         images = list(collectible.images.all())
         photomatches = []
     elif collectible_type == 'playergear':
         collectible = get_object_or_404(
-            PlayerGear.objects.select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images', 'photomatches'),
+            PlayerGear.objects.select_related('game_type', 'usage_type', 'gear_type').prefetch_related('gear_images', 'photomatches', 'authentications__auth_type', 'authentications__issuer'),
             pk=pk, collection_id=collection_id,
         )
         images = list(collectible.gear_images.all())
         photomatches = list(collectible.photomatches.all())
     elif collectible_type == 'hockeyjersey':
         collectible = get_object_or_404(
-            HockeyJersey.objects.select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images', 'photomatches'),
+            HockeyJersey.objects.select_related('game_type', 'usage_type', 'gear_type', 'season_set').prefetch_related('gear_images', 'photomatches', 'authentications__auth_type', 'authentications__issuer'),
             pk=pk, collection_id=collection_id,
         )
         images = list(collectible.gear_images.all())
@@ -500,11 +511,13 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
             pass
 
     meigray_entry = None
-    if collectible_type == 'hockeyjersey' and collectible.auth_tag_number and collectible.auth_source_id == 'MEIGRAY':
-        try:
-            meigray_entry = MeiGrayEntry.objects.get(pk=collectible.auth_tag_number)
-        except MeiGrayEntry.DoesNotExist:
-            pass
+    if collectible_type == 'hockeyjersey':
+        meigray_auth = collectible.authentications.filter(issuer_id='MEIGRAY').first()
+        if meigray_auth and meigray_auth.number:
+            try:
+                meigray_entry = MeiGrayEntry.objects.get(pk=meigray_auth.number)
+            except MeiGrayEntry.DoesNotExist:
+                pass
 
     context = {
         'collectible': collectible,
@@ -555,11 +568,13 @@ def create_collectible(request, collection_id):
         else:
             ImageFormSet = CollectibleImageFormSet
         
+        AuthFormSet = _get_auth_formset_class(collectible_type)
         form = FormClass(request.POST, request.FILES, current_user=request.user)
         # Ensure collection is set even if not posted as a field
         form.instance.collection = collection
         image_formset = ImageFormSet(request.POST, request.FILES, prefix='images')
-        if form.is_valid() and image_formset.is_valid():
+        auth_formset = AuthFormSet(request.POST, prefix='authentications')
+        if form.is_valid() and image_formset.is_valid() and auth_formset.is_valid():
             collectible = form.save()
             flickr_url = request.POST.get('flickrAlbum', '').strip()
             if flickr_url:
@@ -567,7 +582,8 @@ def create_collectible(request, collection_id):
                 collectible.save(update_fields=['flickr_url'])
             image_formset.instance = collectible
             image_formset.save()
-            # return redirect('memorabilia:collection', pk=collection_id)
+            auth_formset.instance = collectible
+            auth_formset.save()
             return redirect('memorabilia:collectible', collection_id=collection_id, collectible_type=collectible.collectible_type, pk=collectible.id)
         # On failure, always render with HockeyJerseyForm so all field rows
         # exist in the DOM and the type toggle JS works correctly.
@@ -580,11 +596,13 @@ def create_collectible(request, collection_id):
         collectible_type = 'HockeyJersey'
         form = HockeyJerseyForm(initial={'collection': collection}, current_user=request.user)
         image_formset = PlayerGearImageFormSet(prefix='images')
+        auth_formset = PlayerGearAuthenticationFormSet(prefix='authentications')
 
     profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
         'image_formset': image_formset,
+        'auth_formset': auth_formset,
         'title': 'New Collectible',
         'collection': collection,
         'leagues': League.objects.all(),
@@ -603,6 +621,14 @@ def _get_image_formset_class(ctype):
     elif ctype == 'hockeyjersey':
         return PlayerGearImageFormSet
     return CollectibleImageFormSet
+
+
+def _get_auth_formset_class(ctype):
+    if ctype in ('playergear', 'hockeyjersey', 'PlayerGear', 'HockeyJersey'):
+        return PlayerGearAuthenticationFormSet
+    if ctype in ('playeritem', 'PlayerItem'):
+        return PlayerItemAuthenticationFormSet
+    return GeneralItemAuthenticationFormSet
 
 
 def _update_collage_after_conversion(old_instance, new_instance):
@@ -656,10 +682,6 @@ def _convert_bulk_item(old_instance, new_type, form, collection, post_data=None)
         if hasattr(val, 'pk'):
             return val.pk
         return val or getattr(old_instance, f'{name}_id', None)
-
-    coa_id = get_fk_id('coa')
-    base['coa_id'] = coa_id
-    player_base['coa_id'] = coa_id
 
     if new_type == 'playeritem':
         new_instance = PlayerItem(**player_base)
@@ -733,13 +755,15 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         submitted_type_raw = request.POST.get('collectible_type', '')
         new_type = _TYPE_NORMALIZE.get(submitted_type_raw, submitted_type_raw.lower())
 
+        AuthFormSet = _get_auth_formset_class(collectible_type)
         if new_type == collectible_type:
             # Same type — standard edit
             FormClass = get_collectible_form_class(submitted_type_raw)
             ImageFormSet = _get_image_formset_class(collectible_type)
             form = FormClass(request.POST, request.FILES, instance=collectible, current_user=request.user)
             image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
-            if form.is_valid() and image_formset.is_valid():
+            auth_formset = AuthFormSet(request.POST, instance=collectible, prefix='authentications')
+            if form.is_valid() and image_formset.is_valid() and auth_formset.is_valid():
                 collectible = form.save()
                 flickr_url = request.POST.get('flickrAlbum', '').strip()
                 if flickr_url:
@@ -747,6 +771,8 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
                     collectible.save(update_fields=['flickr_url'])
                 image_formset.instance = collectible
                 image_formset.save()
+                auth_formset.instance = collectible
+                auth_formset.save()
                 return redirect('memorabilia:collectible', collection_id=collectible.collection_id, collectible_type=collectible_type, pk=collectible.pk)
             else:
                 print(form.errors)
@@ -781,6 +807,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             # Show existing images on type-change failure
             ImageFormSet = _get_image_formset_class(collectible_type)
             image_formset = ImageFormSet(instance=collectible, prefix='images')
+            auth_formset = AuthFormSet(instance=collectible, prefix='authentications')
 
         selected_collectible_type = submitted_type_raw
     else:
@@ -794,12 +821,14 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'coa', 'allow_featured', 'team_inventory_number', 'auth_tag_number', 'auth_source']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'allow_featured']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)
         ImageFormSet = _get_image_formset_class(collectible_type)
         image_formset = ImageFormSet(instance=collectible, prefix='images')
+        AuthFormSet = _get_auth_formset_class(collectible_type)
+        auth_formset = AuthFormSet(instance=collectible, prefix='authentications')
         selected_collectible_type = _TYPE_DISPLAY.get(collectible_type, 'HockeyJersey')
 
     _type_labels = {
@@ -812,6 +841,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
     return render(request, 'memorabilia/collectible_form.html', {
         'form': form,
         'image_formset': image_formset,
+        'auth_formset': auth_formset,
         'title': 'Edit Collectible',
         'collectible': collectible,
         'collection': collectible.collection,

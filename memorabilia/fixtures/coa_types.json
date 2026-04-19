@@ -26,5 +26,12 @@
         "fields": {
             "name": "None"
         }
+    },
+    {
+        "model": "memorabilia.coatype",
+        "pk": "printed",
+        "fields": {
+            "name": "Printed on Jersey"
+        }
     }
 ]

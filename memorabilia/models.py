@@ -200,7 +200,6 @@ class Collectible(RulesModel):
     asking_price = models.FloatField(blank=True, null=True)
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
     how_obtained = models.CharField(max_length=255, blank=True, null=True)
-    coa = models.ForeignKey('CoaType', to_field='key', on_delete=models.PROTECT, db_column='coa', blank=True, null=True)
     flickr_url = models.CharField(max_length=255, blank=True, default='')
     last_updated = models.DateTimeField(auto_now=True)
     allow_featured = models.BooleanField(null=True, blank=True)
@@ -275,9 +274,6 @@ class PlayerGear(PlayerGearItem):
 
     season_set = models.ForeignKey('SeasonSet', to_field='key', on_delete=models.PROTECT, db_column='season_set', blank=True, null=True)
     home_away = models.CharField(max_length=1, choices=HOME_AWAY_CHOICES, blank=True, null=True)
-    team_inventory_number = models.CharField(max_length=25, blank=True, default='')
-    auth_tag_number = models.CharField(max_length=50, blank=True, default='')
-    auth_source = models.ForeignKey('AuthSource', to_field='key', on_delete=models.SET_NULL, db_column='auth_source', blank=True, null=True)
 
     @property
     def collectible_type(self):
@@ -356,6 +352,50 @@ class PlayerGearImage(CollectibleImage):
 
 class GeneralItemImage(CollectibleImage):
     collectible = models.ForeignKey(GeneralItem, on_delete=models.CASCADE, related_name='images')
+
+
+class CollectibleAuthentication(models.Model):
+    auth_type = models.ForeignKey(
+        'CoaType', to_field='key', on_delete=models.PROTECT,
+        db_column='auth_type', blank=True, null=True,
+    )
+    number = models.CharField(max_length=100, blank=True, default='')
+    issuer = models.ForeignKey(
+        'AuthSource', to_field='key', on_delete=models.SET_NULL,
+        db_column='issuer', blank=True, null=True,
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        parts = []
+        if self.auth_type:
+            parts.append(str(self.auth_type))
+        if self.number:
+            parts.append(self.number)
+        if self.issuer:
+            parts.append(f'({self.issuer})')
+        return ' '.join(parts) if parts else '—'
+
+
+class PlayerGearAuthentication(CollectibleAuthentication):
+    collectible = models.ForeignKey(
+        PlayerGear, on_delete=models.CASCADE, related_name='authentications',
+    )
+
+
+class PlayerItemAuthentication(CollectibleAuthentication):
+    collectible = models.ForeignKey(
+        PlayerItem, on_delete=models.CASCADE, related_name='authentications',
+    )
+
+
+class GeneralItemAuthentication(CollectibleAuthentication):
+    collectible = models.ForeignKey(
+        GeneralItem, on_delete=models.CASCADE, related_name='authentications',
+    )
+
 
 class PhotoMatch(RulesModel):
     image = models.ImageField(upload_to='images', blank=True, null=True)

@@ -66,10 +66,9 @@
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
                 {% include 'memorabilia/tablerow.html' with label='Season Set' value=object.season_set %}
                 {% include 'memorabilia/tablerow.html' with label='Home/Away' value=object.get_home_away_display %}
-                {% include 'memorabilia/tablerow.html' with label='Team Inventory #' value=object.team_inventory_number %}
-                {% include 'memorabilia/tablerow.html' with label='Authentication Source' value=object.auth_source %}
-                {% include 'memorabilia/tablerow.html' with label='Authentication/Tag #' value=object.auth_tag_number %}
-                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
+                {% for auth in object.authentications.all %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
+                {% endfor %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
@@ -86,7 +85,7 @@
   <div class="flex items-center gap-2 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
     <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
     <h2 class="text-base font-semibold text-blue-800 dark:text-blue-200">MeiGray Authentication Population Report</h2>
-    <span class="ml-auto text-xs text-blue-600 dark:text-blue-400 font-mono">{{ object.auth_tag_number }}</span>
+    <span class="ml-auto text-xs text-blue-600 dark:text-blue-400 font-mono">{{ meigray_entry.tag_number }}</span>
     {% if user.is_authenticated and meigray_entry.report %}
     <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">Download Report ({{ meigray_entry.report.season }})</a>
     {% endif %}

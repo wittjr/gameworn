@@ -53,7 +53,9 @@
             <tbody>
                 {% include 'memorabilia/tablerow.html' with label='Description' value=object.description %}
                 {% include 'memorabilia/tablerow.html' with label='Collection' value=object.collection %}
-                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
+                {% for auth in object.authentications.all %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
+                {% endfor %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}

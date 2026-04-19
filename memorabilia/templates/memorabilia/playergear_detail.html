@@ -64,7 +64,9 @@
                 {% include 'memorabilia/tablerow.html' with label='Size' value=object.size %}
                 {% include 'memorabilia/tablerow.html' with label='Usage Type' value=object.usage_type %}
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
-                {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
+                {% for auth in object.authentications.all %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
+                {% endfor %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% include 'memorabilia/tablerow.html' with label='Gear Type' value=object.gear_type %}
                 {% if object.for_sale %}
