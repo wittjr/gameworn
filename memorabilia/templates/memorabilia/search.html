@@ -154,6 +154,18 @@
       <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.home_away.label }}</label>
       {{ form.home_away }}
     </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]" id="auth-source-filter" style="display:none">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.auth_source.label }}</label>
+      {{ form.auth_source }}
+    </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]" id="auth-tag-filter" style="display:none">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.auth_tag_number.label }}</label>
+      {{ form.auth_tag_number }}
+    </div>
+    <div class="w-full md:w-[calc(33.333%-0.667rem)]" id="team-inv-filter" style="display:none">
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.team_inventory_number.label }}</label>
+      {{ form.team_inventory_number }}
+    </div>
   </div>
 
   <div class="flex justify-end mt-4 space-x-2">
@@ -169,6 +181,9 @@
     if (!itemType) return;
     var gearDiv = document.getElementById('gear-type-filter');
     var homeAwayDiv = document.getElementById('home-away-filter');
+    var authSourceDiv = document.getElementById('auth-source-filter');
+    var authTagDiv = document.getElementById('auth-tag-filter');
+    var teamInvDiv = document.getElementById('team-inv-filter');
     var isGear = itemType.value === 'playergear';
     var isJersey = itemType.value === 'hockeyjersey';
     if (gearDiv) {
@@ -178,6 +193,18 @@
     if (homeAwayDiv) {
       homeAwayDiv.style.display = isJersey ? '' : 'none';
       if (!isJersey) { var s = homeAwayDiv.querySelector('select'); if (s) s.value = ''; }
+    }
+    if (authSourceDiv) {
+      authSourceDiv.style.display = isJersey ? '' : 'none';
+      if (!isJersey) { var s = authSourceDiv.querySelector('select'); if (s) s.value = ''; }
+    }
+    if (authTagDiv) {
+      authTagDiv.style.display = isJersey ? '' : 'none';
+      if (!isJersey) { var i = authTagDiv.querySelector('input'); if (i) i.value = ''; }
+    }
+    if (teamInvDiv) {
+      teamInvDiv.style.display = isJersey ? '' : 'none';
+      if (!isJersey) { var i = teamInvDiv.querySelector('input'); if (i) i.value = ''; }
     }
   }
   document.addEventListener('DOMContentLoaded', function() {

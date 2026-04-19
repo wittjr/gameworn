@@ -527,6 +527,10 @@ def _parse_int(val):
 
 
 def _fk_or_none(Model, key):
+    # Unrecognised keys (e.g. an AuthSource key that exists in the exporting instance
+    # but not the importing one) are silently dropped rather than raising an error.
+    # This matches the behavior for all FK fields (CoaType, GameType, etc.) and keeps
+    # imports non-destructive. The caller is responsible for re-linking if needed.
     if not key:
         return None
     try:

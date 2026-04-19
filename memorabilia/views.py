@@ -164,6 +164,9 @@ def _apply_collectible_filters(qs, data):
     auth_tag_number = data.get('auth_tag_number')
     if auth_tag_number and _model_has_field(qs, 'auth_tag_number'):
         qs = qs.filter(auth_tag_number__icontains=auth_tag_number)
+    team_inventory_number = data.get('team_inventory_number')
+    if team_inventory_number and _model_has_field(qs, 'team_inventory_number'):
+        qs = qs.filter(team_inventory_number__icontains=team_inventory_number)
     return qs
 
 
@@ -173,7 +176,7 @@ def search_collectibles(request):
     # Fields that exist on PlayerItem + PlayerGear but NOT GeneralItem
     _PLAYER_FIELDS = ('league', 'player', 'team', 'number')
     # Fields that only exist on HockeyJersey
-    _JERSEY_ONLY = ('season_set', 'home_away', 'auth_source', 'auth_tag_number')
+    _JERSEY_ONLY = ('season_set', 'home_away', 'auth_source', 'auth_tag_number', 'team_inventory_number')
 
     form = CollectibleSearchForm(request.GET or None)
     gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS')
@@ -216,7 +219,12 @@ def search_collectibles(request):
         other_data = {k: v for k, v in data.items() if k not in _GEAR_ONLY + _PLAYER_FIELDS + _JERSEY_ONLY}
         other_qs = _apply_collectible_filters(other_qs, other_data)
 
-        # Exclude types that don't have the filtered fields
+        # Exclude types that don't have the filtered fields.
+        # Jersey-only fields (season_set, home_away, auth_source, auth_tag_number,
+        # team_inventory_number) are DB columns on PlayerGear but are only exposed
+        # via HockeyJerseyForm — no non-jersey PlayerGear row will ever have them
+        # populated. Zeroing gear_qs here is an intentional product decision: these
+        # filters are semantically jersey-only in the UI, not just in the schema.
         if has_jersey_filter:
             gear_qs = PlayerGear.objects.none()
             player_qs = PlayerItem.objects.none()
@@ -771,7 +779,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'for_trade': collectible.for_trade,
             'asking_price': collectible.asking_price,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'coa', 'allow_featured']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'coa', 'allow_featured', 'team_inventory_number', 'auth_tag_number', 'auth_source']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)

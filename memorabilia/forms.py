@@ -399,6 +399,11 @@ class HockeyJerseyForm(PlayerGearForm):
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
+        # This exclude list fully overrides PlayerGearForm.Meta.exclude — it intentionally
+        # omits season_set, home_away, team_inventory_number, auth_tag_number, and auth_source
+        # so they appear (those are added as explicit fields above). Any new field added to
+        # PlayerGearForm.Meta.exclude to hide it from PlayerGear must also be added here
+        # if it should also be hidden from HockeyJersey.
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
         widgets = {
             **PlayerGearForm.Meta.widgets,
@@ -570,6 +575,7 @@ class CollectibleSearchForm(forms.Form):
     )
     auth_source = forms.ChoiceField(required=False, label="Authentication Source", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
     auth_tag_number = forms.CharField(required=False, label="Authentication/Tag #", widget=flowbite_widgets.FlowbiteTextInput())
+    team_inventory_number = forms.CharField(required=False, label="Team Inventory #", widget=flowbite_widgets.FlowbiteTextInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -602,11 +608,6 @@ class BulkCollectibleForm(ModelForm):
         required=False,
         widget=flowbite_widgets.FlowbiteSelectInput(),
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        val = self.instance.allow_featured if (self.instance and self.instance.pk) else None
-        self.initial['allow_featured'] = 'true' if val is True else ('false' if val is False else '')
 
     class Meta:
         model = PlayerItem

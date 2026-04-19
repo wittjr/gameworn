@@ -2498,3 +2498,151 @@ class HockeyJerseyExportImportTests(BaseTestCase):
         obj = _create_collectible(row, target, zf, is_collection_export=False)
         obj.refresh_from_db()
         self.assertIsNone(obj.auth_source)
+
+
+class TeamInventoryNumberSearchTests(BaseTestCase):
+    """Tests that team_inventory_number search filter scopes to hockey jerseys only."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.inv_col = Collection.objects.create(owner_uid=cls.owner.id, title='Inv Search Collection')
+
+        cls.inv_jersey = HockeyJersey.objects.create(
+            title='Inv Search Jersey',
+            description='Jersey with team inventory number for search',
+            collection=cls.inv_col,
+            league='NHL',
+            player='Brendan Shanahan',
+            brand='Koho',
+            size='54',
+            season='1998',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+            team_inventory_number='TI-99-SHN',
+        )
+        cls.inv_gear = PlayerGear.objects.create(
+            title='Inv Plain Gear',
+            description='Gear without inventory number',
+            collection=cls.inv_col,
+            league='NHL',
+            player='Brendan Shanahan',
+            brand='Bauer',
+            size='L',
+            season='1998',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+        )
+        cls.inv_player = PlayerItem.objects.create(
+            title='Inv Plain Player',
+            description='Player item without inventory number',
+            collection=cls.inv_col,
+            league='NHL',
+            player='Brendan Shanahan',
+        )
+        cls.inv_general = GeneralItem.objects.create(
+            title='Inv Plain General',
+            description='General item without inventory number',
+            collection=cls.inv_col,
+        )
+
+    def _search_url(self, **params):
+        from urllib.parse import urlencode
+        base = reverse('memorabilia:search_collectibles')
+        if params:
+            return f'{base}?{urlencode(params)}'
+        return base
+
+    def test_team_inventory_number_filter_returns_matching_jersey(self):
+        response = self.client.get(self._search_url(team_inventory_number='TI-99-SHN'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Inv Search Jersey', titles)
+
+    def test_team_inventory_number_filter_excludes_playergear(self):
+        response = self.client.get(self._search_url(team_inventory_number='TI-99-SHN'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Inv Plain Gear', titles)
+
+    def test_team_inventory_number_filter_excludes_playeritem(self):
+        response = self.client.get(self._search_url(team_inventory_number='TI-99-SHN'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Inv Plain Player', titles)
+
+    def test_team_inventory_number_filter_excludes_generalitem(self):
+        response = self.client.get(self._search_url(team_inventory_number='TI-99-SHN'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Inv Plain General', titles)
+
+    def test_team_inventory_number_filter_is_case_insensitive_icontains(self):
+        response = self.client.get(self._search_url(team_inventory_number='ti-99'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Inv Search Jersey', titles)
+
+    def test_team_inventory_number_filter_partial_match(self):
+        response = self.client.get(self._search_url(team_inventory_number='SHN'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Inv Search Jersey', titles)
+
+    def test_team_inventory_number_no_match_returns_empty(self):
+        response = self.client.get(self._search_url(team_inventory_number='NOMATCH-XYZ'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Inv Search Jersey', titles)
+
+    def test_search_form_has_team_inventory_number_field(self):
+        from memorabilia.forms import CollectibleSearchForm
+        form = CollectibleSearchForm()
+        self.assertIn('team_inventory_number', form.fields)
+
+
+class BulkCollectibleFormTests(BaseTestCase):
+    """Tests that BulkCollectibleForm instantiates correctly after duplicate __init__ removal."""
+
+    def test_bulk_collectible_form_instantiates_without_error(self):
+        from memorabilia.forms import BulkCollectibleForm
+        form = BulkCollectibleForm()
+        self.assertIsNotNone(form)
+
+    def test_bulk_collectible_form_has_allow_featured_field(self):
+        from memorabilia.forms import BulkCollectibleForm
+        form = BulkCollectibleForm()
+        self.assertIn('allow_featured', form.fields)
+
+    def test_bulk_collectible_form_allow_featured_initial_true_for_featured_instance(self):
+        from memorabilia.forms import BulkCollectibleForm
+        self.player_item.allow_featured = True
+        self.player_item.save(update_fields=['allow_featured'])
+        form = BulkCollectibleForm(instance=self.player_item)
+        self.assertEqual(form.initial['allow_featured'], 'true')
+
+    def test_bulk_collectible_form_allow_featured_initial_false_for_non_featured_instance(self):
+        from memorabilia.forms import BulkCollectibleForm
+        self.player_item.allow_featured = False
+        self.player_item.save(update_fields=['allow_featured'])
+        form = BulkCollectibleForm(instance=self.player_item)
+        self.assertEqual(form.initial['allow_featured'], 'false')
+
+    def test_bulk_collectible_form_allow_featured_initial_empty_for_new_instance(self):
+        from memorabilia.forms import BulkCollectibleForm
+        form = BulkCollectibleForm()
+        self.assertEqual(form.initial.get('allow_featured', ''), '')
+
+    def test_bulk_collectible_form_league_widget_has_placeholder(self):
+        from memorabilia.forms import BulkCollectibleForm
+        form = BulkCollectibleForm()
+        placeholder = form.fields['league'].widget.attrs.get('placeholder', '')
+        self.assertIn('NHL', placeholder)
+
+    def test_bulk_collectible_form_team_widget_has_placeholder(self):
+        from memorabilia.forms import BulkCollectibleForm
+        form = BulkCollectibleForm()
+        placeholder = form.fields['team'].widget.attrs.get('placeholder', '')
+        self.assertIn('team', placeholder.lower())
