@@ -157,6 +157,32 @@ class AuthSource(models.Model):
         return self.name
 
 
+class PopulationReport(models.Model):
+    season = models.CharField(max_length=10, unique=True)
+    file = models.FileField(upload_to='population_reports/')
+    imported_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'MeiGray Population Report {self.season}'
+
+
+class MeiGrayEntry(models.Model):
+    tag_number = models.CharField(max_length=10, primary_key=True)
+    team = models.CharField(max_length=150)
+    player = models.CharField(max_length=100)
+    jersey_number = models.CharField(max_length=10, blank=True)
+    color = models.CharField(max_length=255)
+    set_number = models.CharField(max_length=20)
+    size = models.CharField(max_length=10, blank=True)
+    notes = models.CharField(max_length=500, blank=True)
+    games_worn = models.JSONField(default=list)
+    report = models.ForeignKey(PopulationReport, null=True, blank=True, on_delete=models.SET_NULL)
+    imported_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.tag_number} — {self.player} ({self.team})'
+
+
 class HowObtainedOption(models.Model):
     name = models.CharField(max_length=255, unique=True)
 

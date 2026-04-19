@@ -81,8 +81,58 @@
         </table>
     </div>
 </div>
+{% if meigray_entry %}
+<div class="mt-6 border border-blue-200 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+  <div class="flex items-center gap-2 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
+    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    <h2 class="text-base font-semibold text-blue-800 dark:text-blue-200">MeiGray Authentication Population Report</h2>
+    <span class="ml-auto text-xs text-blue-600 dark:text-blue-400 font-mono">{{ object.auth_tag_number }}</span>
+  </div>
+  <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-700 dark:text-gray-300">
+    <div><span class="font-medium text-gray-900 dark:text-white">Player:</span> {{ meigray_entry.player }}</div>
+    <div><span class="font-medium text-gray-900 dark:text-white">Team:</span> {{ meigray_entry.team }}</div>
+    <div><span class="font-medium text-gray-900 dark:text-white">Jersey #:</span> {{ meigray_entry.jersey_number }}</div>
+    <div><span class="font-medium text-gray-900 dark:text-white">Size:</span> {{ meigray_entry.size }}</div>
+    <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Description:</span> {{ meigray_entry.color }}</div>
+    {% if meigray_entry.notes %}
+    <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Notes:</span> {{ meigray_entry.notes }}</div>
+    {% endif %}
+  </div>
+  {% if meigray_entry.games_worn %}
+  <div class="px-4 pb-4">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Games Worn ({{ meigray_entry.games_worn|length }})</h3>
+      {% if user.is_authenticated and meigray_entry.report %}
+      <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Download Report ({{ meigray_entry.report.season }})</a>
+      {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
+        <thead class="text-gray-500 dark:text-gray-500 uppercase">
+          <tr>
+            <th class="pr-4 pb-1">Date</th>
+            <th class="pr-4 pb-1">Opponent</th>
+            <th class="pb-1">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for game in meigray_entry.games_worn %}
+          <tr class="border-t border-blue-100 dark:border-blue-900">
+            <td class="pr-4 py-1 whitespace-nowrap">{{ game.date }}</td>
+            <td class="pr-4 py-1">{{ game.opponent }}</td>
+            <td class="py-1 text-gray-500">{% if game.comment %}{{ game.comment }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if object.photomatches.all.count > 0 %}
-<h2 class="mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
+<h2 class="mt-8 mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
     {% for image in object.photomatches.all %}
         {% getmediaurl image as image_url %}

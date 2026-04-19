@@ -36,6 +36,8 @@ urlpatterns = [
     # Export
     path("collection/<int:collection_id>/export", views.export_collection, name="export_collection"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/export", views.export_collectible, name="export_collectible"),
+    # Population Reports
+    path("population-report/<str:season>/download", views.download_population_report, name="download_population_report"),
     # Import
     path("import/", views.import_upload, name="import_upload"),
     path("import/preview/", views.import_preview, name="import_preview"),

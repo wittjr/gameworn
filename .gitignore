@@ -1,5 +1,6 @@
 venv
 **/media/images/**
+**/media/population_reports/**
 **__pycache__**
 db.sqlite3
 django-memorabilia

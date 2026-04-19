@@ -112,6 +112,84 @@
     border-bottom: 2px solid #444;
     padding-bottom: 6pt;
   }
+
+  /* ── MeiGray Population Report page ── */
+  .meigray-page {
+    page-break-before: always;
+  }
+
+  .meigray-header {
+    font-size: 14pt;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 2px solid #1e40af;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
+    color: #1e3a8a;
+  }
+
+  .meigray-header .tag {
+    font-size: 10pt;
+    font-weight: normal;
+    color: #3b82f6;
+    margin-top: 3pt;
+  }
+
+  .meigray-source {
+    font-size: 8pt;
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 14pt;
+    font-style: italic;
+  }
+
+  .meigray-fields {
+    column-count: 2;
+    column-gap: 20pt;
+    column-rule: 1px solid #e0e0e0;
+    margin-bottom: 18pt;
+  }
+
+  .meigray-games-header {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #1e3a8a;
+    border-bottom: 1px solid #1e40af;
+    padding-bottom: 4pt;
+    margin-bottom: 8pt;
+  }
+
+  .meigray-games {
+    margin-bottom: 24pt;
+  }
+
+  .meigray-games table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  .meigray-games th {
+    text-align: left;
+    font-size: 8pt;
+    font-weight: bold;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3pt;
+    padding-bottom: 4pt;
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  .meigray-games td {
+    padding: 3pt 6pt 3pt 0;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+  }
+
+  .meigray-games td.note {
+    color: #6b7280;
+    font-style: italic;
+  }
 </style>
 </head>
 <body>
@@ -197,6 +275,52 @@
     {% endif %}
   </div>
 </div>
+
+<!-- MeiGray Population Report page -->
+{% if meigray_entry %}
+<div class="meigray-page">
+  <div class="meigray-header">
+    MeiGray Authentication Population Report
+    <div class="tag">Tag # {{ meigray_entry.tag_number }}</div>
+  </div>
+  <div class="meigray-source">MeiGray Group Game-Worn Jersey Authentication Program &mdash; 2024-2025 NHL Season</div>
+
+  <div class="meigray-fields">
+    <div class="info-row"><div class="info-label">Player</div><div class="info-value">{{ meigray_entry.player }}</div></div>
+    <div class="info-row"><div class="info-label">Team</div><div class="info-value">{{ meigray_entry.team }}</div></div>
+    <div class="info-row"><div class="info-label">Jersey #</div><div class="info-value">{{ meigray_entry.jersey_number }}</div></div>
+    <div class="info-row"><div class="info-label">Size</div><div class="info-value">{{ meigray_entry.size }}</div></div>
+    <div class="info-row" style="column-span: all;"><div class="info-label">Description</div><div class="info-value">{{ meigray_entry.color }}</div></div>
+    {% if meigray_entry.notes %}
+    <div class="info-row" style="column-span: all;"><div class="info-label">Notes</div><div class="info-value">{{ meigray_entry.notes }}</div></div>
+    {% endif %}
+  </div>
+
+  {% if meigray_entry.games_worn %}
+  <div class="meigray-games">
+    <div class="meigray-games-header">Games Worn ({{ meigray_entry.games_worn|length }})</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Opponent</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for game in meigray_entry.games_worn %}
+        <tr>
+          <td>{{ game.date }}</td>
+          <td>{{ game.opponent }}</td>
+          <td class="note">{{ game.comment|default:"" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
 
 <!-- Additional collectible images, one per page -->
 {% for img in secondary_images %}

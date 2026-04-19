@@ -1,9 +1,10 @@
+import os
 from itertools import chain
 
-from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse
+from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import generic
-from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
+from .models import Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile, MeiGrayEntry, PopulationReport
 from .forms import CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm, CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm, BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class, GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet, HockeyJerseyForm, UserProfileForm
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
@@ -427,6 +428,12 @@ class CollectibleView(generic.DetailView):
         else:
             context['primary_image'] = images[0].image if images else None
 
+        if isinstance(collectible, HockeyJersey) and collectible.auth_tag_number and collectible.auth_source_id == 'MEIGRAY':
+            try:
+                context['meigray_entry'] = MeiGrayEntry.objects.get(pk=collectible.auth_tag_number)
+            except MeiGrayEntry.DoesNotExist:
+                context['meigray_entry'] = None
+
         return context
 
 
@@ -492,6 +499,13 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
         except League.DoesNotExist:
             pass
 
+    meigray_entry = None
+    if collectible_type == 'hockeyjersey' and collectible.auth_tag_number and collectible.auth_source_id == 'MEIGRAY':
+        try:
+            meigray_entry = MeiGrayEntry.objects.get(pk=collectible.auth_tag_number)
+        except MeiGrayEntry.DoesNotExist:
+            pass
+
     context = {
         'collectible': collectible,
         'collectible_type': collectible_type,
@@ -499,6 +513,7 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
         'secondary_images': secondary_images,
         'photomatch_data': photomatch_data,
         'league': league,
+        'meigray_entry': meigray_entry,
     }
 
     html_string = render_to_string('memorabilia/collectible_pdf.html', context, request=request)
@@ -1391,6 +1406,14 @@ def export_collection(request, collection_id):
 
 import os as _os
 import tempfile as _tempfile
+
+
+@login_required
+def download_population_report(request, season):
+    report = get_object_or_404(PopulationReport, season=season)
+    filename = os.path.basename(report.file.name)
+    response = FileResponse(report.file.open('rb'), as_attachment=True, filename=filename)
+    return response
 
 
 @login_required

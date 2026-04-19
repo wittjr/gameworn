@@ -43,6 +43,9 @@ check:
 tailwind:
 	$(VENV) && $(DJANGO_ENV) python manage.py tailwind build
 
+import_population_report:
+	$(VENV) && $(DJANGO_ENV) python manage.py import_population_report $(XLSX) --season $(SEASON)
+
 deploy:
 	python manage.py loaddata $(FIXTURES)
 	python manage.py migrate
