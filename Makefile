@@ -1,5 +1,6 @@
 VENV := source ~/Development/gameworn/venv/bin/activate
 SETTINGS ?= dev
+FIXTURES = leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets auth_sources
 
 ifeq ($(SETTINGS),dev)
   DJANGO_SETTINGS := gameworn.dev_settings
@@ -25,7 +26,7 @@ migrate:
 	$(VENV) && $(DJANGO_ENV) python manage.py migrate
 
 loadfixtures:
-	$(VENV) && $(DJANGO_ENV) python manage.py loaddata leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets auth_sources
+	$(VENV) && $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
 
 collectstatic:
 	$(VENV) && $(DJANGO_ENV) python manage.py collectstatic --noinput
@@ -41,3 +42,7 @@ check:
 
 tailwind:
 	$(VENV) && $(DJANGO_ENV) python manage.py tailwind build
+
+deploy:
+	python manage.py loaddata $(FIXTURES)
+	python manage.py migrate
