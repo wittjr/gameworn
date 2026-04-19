@@ -17,20 +17,20 @@ DATABASES = {
 }
 
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "file": {
-            "level": "ERROR",
-            "class": "logging.FileHandler",
-            "filename": "/home/yourusername/django-error.log",
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'error_file': {
+            'level': 'ERROR',  # Set to ERROR to capture only error messages
+            'class': 'logging.FileHandler',
+            'filename': os.environ['LOG_FILE'],  # Specify your error log file path
         },
     },
-    "loggers": {
-        "django": {
-            "handlers": ["file"],
-            "level": "ERROR",
-            "propagate": True,
+    'loggers': {
+        'django': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',  # Set to ERROR to ensure only errors are logged
+            'propagate': True,
         },
     },
 }
