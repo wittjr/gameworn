@@ -54,13 +54,13 @@ COLOR_TO_SCHEDULE = [
 ]
 
 
-def _parse_schedule(ws):
+def _parse_schedule(ws, season):
     """
     Parse the SET DATES sheet into a dict:
         (team_name_lower, schedule_jersey, set_number_int) -> [
             {"date": str, "opponent": str, "comment": str|None}, ...
         ]
-    Team sections are identified by rows containing '2024-25' in column A.
+    Team sections are identified by rows containing the season string in column A.
     """
     rows = list(ws.iter_rows(values_only=True))
     schedule = {}
@@ -68,15 +68,15 @@ def _parse_schedule(ws):
     # Find team section boundaries
     team_boundaries = []
     for i, row in enumerate(rows):
-        if row[0] and '2024-25' in str(row[0]):
+        if row[0] and season in str(row[0]):
             team_boundaries.append(i)
     team_boundaries.append(len(rows))
 
     for idx, start in enumerate(team_boundaries[:-1]):
         end = team_boundaries[idx + 1]
         team_header = str(rows[start][0])
-        # Extract team name: strip the ' 2024-25' suffix
-        team_name = team_header.replace(' 2024-25', '').strip().title()
+        # Extract team name: strip the season suffix
+        team_name = team_header.replace(f' {season}', '').strip().title()
 
         color_set = {}      # jersey_value -> current set number (int)
         pending_advance = {}  # jersey_value -> True when next game starts new set
@@ -168,19 +168,20 @@ class Command(BaseCommand):
                 report.file.save(filename, File(f), save=True)
 
         self.stdout.write('Parsing schedule sheet...')
-        schedule = _parse_schedule(wb['SET DATES - JERSEY SCHEDULES'])
+        schedule = _parse_schedule(wb['SET DATES - JERSEY SCHEDULES'], season)
 
         self.stdout.write('Importing pop report records...')
         ws = wb['POP REPORT BY TAG NUMBER']
         rows = list(ws.iter_rows(values_only=True))
 
-        # Data starts at row index 6 (0-based); skip header/title rows
-        data_rows = [r for r in rows[6:] if r[0] and str(r[0]).startswith('X')]
+        # Data starts at row index 6 (0-based); skip header/title rows.
+        # Tag prefix varies by season (e.g. 'X' for 2024-25, 'W' for 2023-24).
+        data_rows = [r for r in rows[6:] if r[0] and str(r[0])[:1].isalpha()]
 
         created = updated = 0
 
         for row in data_rows:
-            tag, team, player, jsy_num, color, set_raw, size, notes = row
+            tag, team, player, jsy_num, color, set_raw, size, notes = row[:8]
 
             tag = str(tag).strip()
             team = str(team).strip() if team else ''
