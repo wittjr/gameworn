@@ -29,6 +29,8 @@ JERSEY_COMMENT_LABEL = {
     'BLUE': 'Blue',
     'THIRD': 'Third',
     'Third': 'Third',
+    'Black': 'Black',
+    'BLACK': 'Black',
     'Green': 'Green',
     'GREEN': 'Green',
     'Orange': 'Orange',
@@ -42,7 +44,8 @@ JERSEY_COMMENT_LABEL = {
 
 # Maps substrings found in the pop report Color field to the schedule jersey values.
 COLOR_TO_SCHEDULE = [
-    ('third', 'THIRD'),
+    ('third', 'Third'),
+    ('black', 'Black'),
     ('white', 'White'),
     ('blue', 'Blue'),
     ('green', 'Green'),
@@ -54,35 +57,57 @@ COLOR_TO_SCHEDULE = [
 ]
 
 
+def _detect_col_offset(rows, season):
+    """
+    Return the column index where data begins (0 or 1).
+
+    Older files have a blank column A; newer files start at column A.
+    We detect this by finding the season string or 'TAG #' in the first few rows.
+    """
+    for row in rows[:10]:
+        for col_idx in range(min(3, len(row))):
+            val = row[col_idx]
+            if val and (season in str(val) or str(val).strip() == 'TAG #'):
+                return col_idx
+    return 0
+
+
 def _parse_schedule(ws, season):
     """
     Parse the SET DATES sheet into a dict:
         (team_name_lower, schedule_jersey, set_number_int) -> [
             {"date": str, "opponent": str, "comment": str|None}, ...
         ]
-    Team sections are identified by rows containing the season string in column A.
+    Team sections are identified by rows containing the season string.
+    Column layout is auto-detected to support both old (offset=1) and new (offset=0) files.
     """
     rows = list(ws.iter_rows(values_only=True))
     schedule = {}
 
+    col = _detect_col_offset(rows, season)
+
     # Find team section boundaries
     team_boundaries = []
     for i, row in enumerate(rows):
-        if row[0] and season in str(row[0]):
+        if len(row) > col and row[col] and season in str(row[col]):
             team_boundaries.append(i)
     team_boundaries.append(len(rows))
 
     for idx, start in enumerate(team_boundaries[:-1]):
         end = team_boundaries[idx + 1]
-        team_header = str(rows[start][0])
-        # Extract team name: strip the season suffix
+        team_header = str(rows[start][col])
         team_name = team_header.replace(f' {season}', '').strip().title()
 
         color_set = {}      # jersey_value -> current set number (int)
         pending_advance = {}  # jersey_value -> True when next game starts new set
 
         for row in rows[start + 1:end]:
-            date, opponent, jersey, comment = row[0], row[1], row[2], row[3]
+            if len(row) <= col + 2:
+                continue
+            date = row[col]
+            opponent = row[col + 1]
+            jersey = row[col + 2]
+            comment = row[col + 3] if len(row) > col + 3 else None
 
             if not date or not opponent or not jersey:
                 continue
@@ -174,14 +199,17 @@ class Command(BaseCommand):
         ws = wb['POP REPORT BY TAG NUMBER']
         rows = list(ws.iter_rows(values_only=True))
 
-        # Data starts at row index 6 (0-based); skip header/title rows.
-        # Tag prefix varies by season (e.g. 'X' for 2024-25, 'W' for 2023-24).
-        data_rows = [r for r in rows[6:] if r[0] and str(r[0])[:1].isalpha()]
+        # Auto-detect column offset (older files have a blank column A).
+        col = _detect_col_offset(rows, season)
+
+        # Tag prefix varies by season (e.g. 'X' for 2024-25, 'W' for 2023-24, 'M' for 2015-16).
+        data_rows = [r for r in rows[6:] if len(r) > col and r[col] and str(r[col])[:1].isalpha()]
 
         created = updated = 0
 
         for row in data_rows:
-            tag, team, player, jsy_num, color, set_raw, size, notes = row[:8]
+            fields = row[col:col + 8]
+            tag, team, player, jsy_num, color, set_raw, size, notes = (list(fields) + [None] * 8)[:8]
 
             tag = str(tag).strip()
             team = str(team).strip() if team else ''
