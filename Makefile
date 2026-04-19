@@ -1,6 +1,6 @@
-VENV := source ~/Development/gameworn/venv/bin/activate
+VENV ?= source ~/Development/gameworn/venv/bin/activate
 SETTINGS ?= dev
-FIXTURES = leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets auth_sources
+FIXTURES = leagues game_types gear_types usage_types coa_types how_obtained_options externalresources teams season_sets auth_sources
 
 ifeq ($(SETTINGS),dev)
   DJANGO_SETTINGS := gameworn.dev_settings
