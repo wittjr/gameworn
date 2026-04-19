@@ -87,6 +87,9 @@
     <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
     <h2 class="text-base font-semibold text-blue-800 dark:text-blue-200">MeiGray Authentication Population Report</h2>
     <span class="ml-auto text-xs text-blue-600 dark:text-blue-400 font-mono">{{ object.auth_tag_number }}</span>
+    {% if user.is_authenticated and meigray_entry.report %}
+    <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">Download Report ({{ meigray_entry.report.season }})</a>
+    {% endif %}
   </div>
   <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-700 dark:text-gray-300">
     <div><span class="font-medium text-gray-900 dark:text-white">Player:</span> {{ meigray_entry.player }}</div>
@@ -100,12 +103,7 @@
   </div>
   {% if meigray_entry.games_worn %}
   <div class="px-4 pb-4">
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Games Worn ({{ meigray_entry.games_worn|length }})</h3>
-      {% if user.is_authenticated and meigray_entry.report %}
-      <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Download Report ({{ meigray_entry.report.season }})</a>
-      {% endif %}
-    </div>
+    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Games Worn ({{ meigray_entry.games_worn|length }})</h3>
     <div class="overflow-x-auto">
       <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
         <thead class="text-gray-500 dark:text-gray-500 uppercase">
