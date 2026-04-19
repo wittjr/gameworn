@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch, AuthSource
 
 
 class BaseTestCase(TestCase):
@@ -2033,3 +2033,468 @@ class SearchCollectiblesTests(BaseTestCase):
         titles = [r.title for r in results]
         self.assertIn('Search Player Jersey', titles)
         self.assertNotIn('Test Jersey', titles)
+
+
+class AuthSourceModelTests(BaseTestCase):
+    """Tests for the AuthSource lookup model."""
+
+    def test_authsource_str(self):
+        from memorabilia.models import AuthSource
+        src = AuthSource.objects.create(key='PSA', name='PSA Authentication')
+        self.assertEqual(str(src), 'PSA Authentication')
+
+    def test_authsource_ordering_is_alphabetical(self):
+        from memorabilia.models import AuthSource
+        AuthSource.objects.create(key='JSA', name='JSA Authentication')
+        AuthSource.objects.create(key='BAS', name='Beckett Authentication')
+        AuthSource.objects.create(key='PSA2', name='PSA Authentication')
+        sources = list(AuthSource.objects.values_list('name', flat=True))
+        self.assertEqual(sources, sorted(sources))
+
+    def test_authsource_creation_with_key_pk(self):
+        from memorabilia.models import AuthSource
+        src = AuthSource.objects.create(key='TRISTAR', name='Tristar')
+        self.assertEqual(src.pk, 'TRISTAR')
+
+
+class HockeyJerseyAuthFieldsFormTests(BaseTestCase):
+    """Tests that HockeyJerseyForm exposes auth fields and PlayerGearForm does not."""
+
+    def test_hockeyjersey_form_includes_team_inventory_number(self):
+        from memorabilia.forms import HockeyJerseyForm
+        form = HockeyJerseyForm(current_user=self.owner)
+        self.assertIn('team_inventory_number', form.fields)
+
+    def test_hockeyjersey_form_includes_auth_tag_number(self):
+        from memorabilia.forms import HockeyJerseyForm
+        form = HockeyJerseyForm(current_user=self.owner)
+        self.assertIn('auth_tag_number', form.fields)
+
+    def test_hockeyjersey_form_includes_auth_source(self):
+        from memorabilia.forms import HockeyJerseyForm
+        form = HockeyJerseyForm(current_user=self.owner)
+        self.assertIn('auth_source', form.fields)
+
+    def test_playergear_form_excludes_team_inventory_number(self):
+        from memorabilia.forms import PlayerGearForm
+        form = PlayerGearForm(current_user=self.owner)
+        self.assertNotIn('team_inventory_number', form.fields)
+
+    def test_playergear_form_excludes_auth_tag_number(self):
+        from memorabilia.forms import PlayerGearForm
+        form = PlayerGearForm(current_user=self.owner)
+        self.assertNotIn('auth_tag_number', form.fields)
+
+    def test_playergear_form_excludes_auth_source(self):
+        from memorabilia.forms import PlayerGearForm
+        form = PlayerGearForm(current_user=self.owner)
+        self.assertNotIn('auth_source', form.fields)
+
+
+class HockeyJerseyAuthFieldsCRUDTests(BaseTestCase):
+    """Tests that team_inventory_number, auth_tag_number, auth_source persist through create/edit."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from memorabilia.models import AuthSource
+        cls.auth_source = AuthSource.objects.create(key='PSA', name='PSA Authentication')
+
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_create_hockeyjersey_with_auth_fields(self):
+        response = self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._hockey_jersey_post_data(
+                title='Auth Jersey',
+                team_inventory_number='INV-001',
+                auth_tag_number='TAG-12345',
+                auth_source=self.auth_source.key,
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        jersey = HockeyJersey.objects.get(title='Auth Jersey')
+        self.assertEqual(jersey.team_inventory_number, 'INV-001')
+        self.assertEqual(jersey.auth_tag_number, 'TAG-12345')
+        self.assertEqual(jersey.auth_source_id, 'PSA')
+
+    def test_edit_hockeyjersey_saves_auth_fields(self):
+        response = self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id]),
+            self._hockey_jersey_post_data(
+                title='Edited Auth Jersey',
+                team_inventory_number='INV-999',
+                auth_tag_number='TAG-99999',
+                auth_source=self.auth_source.key,
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.hockey_jersey.refresh_from_db()
+        self.assertEqual(self.hockey_jersey.team_inventory_number, 'INV-999')
+        self.assertEqual(self.hockey_jersey.auth_tag_number, 'TAG-99999')
+        self.assertEqual(self.hockey_jersey.auth_source_id, 'PSA')
+
+    def test_edit_hockeyjersey_clears_auth_fields_when_omitted(self):
+        """Posting without auth fields leaves them at their blank defaults."""
+        # First set the fields
+        self.hockey_jersey.team_inventory_number = 'INV-OLD'
+        self.hockey_jersey.auth_tag_number = 'TAG-OLD'
+        self.hockey_jersey.save(update_fields=['team_inventory_number', 'auth_tag_number'])
+        # Post without auth fields (empty strings)
+        response = self.client.post(
+            reverse('memorabilia:edit_collectible',
+                    args=[self.collection.id, 'hockeyjersey', self.hockey_jersey.id]),
+            self._hockey_jersey_post_data(
+                title='Cleared Auth Jersey',
+                team_inventory_number='',
+                auth_tag_number='',
+            ),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.hockey_jersey.refresh_from_db()
+        self.assertEqual(self.hockey_jersey.team_inventory_number, '')
+        self.assertEqual(self.hockey_jersey.auth_tag_number, '')
+        self.assertIsNone(self.hockey_jersey.auth_source)
+
+    def test_auth_fields_default_to_empty_on_create(self):
+        """Creating a HockeyJersey without auth fields leaves them blank/null."""
+        self.client.post(
+            reverse('memorabilia:create_collectible', args=[self.collection.id]),
+            self._hockey_jersey_post_data(title='Default Auth Jersey'),
+        )
+        jersey = HockeyJersey.objects.get(title='Default Auth Jersey')
+        self.assertEqual(jersey.team_inventory_number, '')
+        self.assertEqual(jersey.auth_tag_number, '')
+        self.assertIsNone(jersey.auth_source)
+
+
+class HockeyJerseyAuthFieldsDetailTests(BaseTestCase):
+    """Tests that the detail view renders a jersey with the new auth fields correctly."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from memorabilia.models import AuthSource
+        cls.auth_source = AuthSource.objects.create(key='BAS', name='Beckett Authentication')
+        cls.auth_jersey = HockeyJersey.objects.create(
+            title='Auth Detail Jersey',
+            description='Jersey with auth fields',
+            collection=cls.collection,
+            league='NHL',
+            player='Wayne Gretzky',
+            brand='CCM',
+            size='54',
+            season='1988',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+            team_inventory_number='INV-DETAIL',
+            auth_tag_number='TAG-DETAIL-99',
+            auth_source=cls.auth_source,
+        )
+
+    def _detail_url(self, jersey):
+        return reverse(
+            'memorabilia:collectible',
+            kwargs={
+                'collection_id': self.collection.id,
+                'collectible_type': 'hockeyjersey',
+                'pk': jersey.id,
+            },
+        )
+
+    def test_detail_returns_200(self):
+        response = self.client.get(self._detail_url(self.auth_jersey))
+        self.assertEqual(response.status_code, 200)
+
+    def test_detail_context_collectible_has_team_inventory_number(self):
+        response = self.client.get(self._detail_url(self.auth_jersey))
+        collectible = response.context['object']
+        self.assertEqual(collectible.team_inventory_number, 'INV-DETAIL')
+
+    def test_detail_context_collectible_has_auth_tag_number(self):
+        response = self.client.get(self._detail_url(self.auth_jersey))
+        collectible = response.context['object']
+        self.assertEqual(collectible.auth_tag_number, 'TAG-DETAIL-99')
+
+    def test_detail_context_collectible_has_auth_source(self):
+        response = self.client.get(self._detail_url(self.auth_jersey))
+        collectible = response.context['object']
+        self.assertEqual(collectible.auth_source_id, 'BAS')
+
+    def test_detail_uses_hockeyjersey_template(self):
+        response = self.client.get(self._detail_url(self.auth_jersey))
+        self.assertTemplateUsed(response, 'memorabilia/hockeyjersey_detail.html')
+
+
+class HockeyJerseyAuthFieldsSearchTests(BaseTestCase):
+    """Tests that auth_tag_number and auth_source search filters scope to hockey jerseys only."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from memorabilia.models import AuthSource
+        cls.auth_source = AuthSource.objects.create(key='TRISTAR', name='Tristar')
+        cls.search_col = Collection.objects.create(owner_uid=cls.owner.id, title='Auth Search Collection')
+
+        cls.auth_jersey = HockeyJersey.objects.create(
+            title='Auth Search Jersey',
+            description='Jersey with auth fields for search',
+            collection=cls.search_col,
+            league='NHL',
+            player='Gordie Howe',
+            brand='Koho',
+            size='52',
+            season='1970',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+            team_inventory_number='INV-SEARCH',
+            auth_tag_number='STICKER-ALPHA',
+            auth_source=cls.auth_source,
+        )
+        cls.plain_gear = PlayerGear.objects.create(
+            title='Plain Gear No Auth',
+            description='Gear without auth',
+            collection=cls.search_col,
+            league='NHL',
+            player='Bobby Orr',
+            brand='CCM',
+            size='L',
+            season='1972',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+        )
+        cls.plain_player = PlayerItem.objects.create(
+            title='Plain Player No Auth',
+            description='Player item without auth',
+            collection=cls.search_col,
+            league='NHL',
+            player='Phil Esposito',
+        )
+        cls.plain_general = GeneralItem.objects.create(
+            title='Plain General No Auth',
+            description='General item without auth',
+            collection=cls.search_col,
+        )
+
+    def _search_url(self, **params):
+        from urllib.parse import urlencode
+        base = reverse('memorabilia:search_collectibles')
+        if params:
+            return f'{base}?{urlencode(params)}'
+        return base
+
+    def test_auth_tag_number_filter_returns_matching_jersey(self):
+        response = self.client.get(self._search_url(auth_tag_number='STICKER-ALPHA'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Auth Search Jersey', titles)
+
+    def test_auth_tag_number_filter_excludes_playergear(self):
+        response = self.client.get(self._search_url(auth_tag_number='STICKER-ALPHA'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain Gear No Auth', titles)
+
+    def test_auth_tag_number_filter_excludes_playeritem(self):
+        response = self.client.get(self._search_url(auth_tag_number='STICKER-ALPHA'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain Player No Auth', titles)
+
+    def test_auth_tag_number_filter_excludes_generalitem(self):
+        response = self.client.get(self._search_url(auth_tag_number='STICKER-ALPHA'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain General No Auth', titles)
+
+    def test_auth_tag_number_filter_is_case_insensitive_icontains(self):
+        response = self.client.get(self._search_url(auth_tag_number='sticker'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Auth Search Jersey', titles)
+
+    def test_auth_source_filter_returns_matching_jersey(self):
+        response = self.client.get(self._search_url(auth_source='TRISTAR'))
+        self.assertEqual(response.status_code, 200)
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertIn('Auth Search Jersey', titles)
+
+    def test_auth_source_filter_excludes_playergear(self):
+        response = self.client.get(self._search_url(auth_source='TRISTAR'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain Gear No Auth', titles)
+
+    def test_auth_source_filter_excludes_playeritem(self):
+        response = self.client.get(self._search_url(auth_source='TRISTAR'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain Player No Auth', titles)
+
+    def test_auth_source_filter_excludes_generalitem(self):
+        response = self.client.get(self._search_url(auth_source='TRISTAR'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Plain General No Auth', titles)
+
+    def test_auth_source_filter_no_match_returns_no_jersey(self):
+        """A valid auth_source key that no jersey uses returns results excluding that jersey."""
+        other_source = AuthSource.objects.create(key='JSA_NOONE', name='JSA No Match')
+        response = self.client.get(self._search_url(auth_source='JSA_NOONE'))
+        results = response.context['results']
+        titles = [r.title for r in results]
+        self.assertNotIn('Auth Search Jersey', titles)
+
+    def test_search_form_has_auth_source_field(self):
+        from memorabilia.forms import CollectibleSearchForm
+        form = CollectibleSearchForm()
+        self.assertIn('auth_source', form.fields)
+
+    def test_search_form_has_auth_tag_number_field(self):
+        from memorabilia.forms import CollectibleSearchForm
+        form = CollectibleSearchForm()
+        self.assertIn('auth_tag_number', form.fields)
+
+
+class HockeyJerseyExportImportTests(BaseTestCase):
+    """Tests for export/import round-trip of HockeyJersey auth fields."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from memorabilia.models import AuthSource
+        cls.auth_source = AuthSource.objects.create(key='BECKETT', name='Beckett')
+        cls.export_jersey = HockeyJersey.objects.create(
+            title='Export Auth Jersey',
+            description='Jersey for export testing',
+            collection=cls.collection,
+            league='NHL',
+            player='Mario Lemieux',
+            brand='CCM',
+            size='56',
+            season='1992',
+            game_type=cls.game_type,
+            usage_type=cls.usage_type,
+            team_inventory_number='INV-EXPORT',
+            auth_tag_number='TAG-EXPORT-007',
+            auth_source=cls.auth_source,
+        )
+
+    def _round_trip(self, jersey):
+        """Export a single jersey and import it into a fresh collection. Return the new jersey."""
+        from memorabilia.export_import import build_collectible_zip, parse_zip, _create_collectible
+        import zipfile, io
+
+        zip_bytes = build_collectible_zip(jersey)
+        parsed = parse_zip(zip_bytes)
+        target_collection = Collection.objects.create(
+            owner_uid=self.owner.id, title='Import Target'
+        )
+        zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+        for row in parsed['items']:
+            _create_collectible(row, target_collection, zf, is_collection_export=False)
+        return HockeyJersey.objects.filter(collection=target_collection).first()
+
+    def test_export_contains_team_inventory_number(self):
+        import zipfile, io, csv
+        from memorabilia.export_import import build_collectible_zip
+        zip_bytes = build_collectible_zip(self.export_jersey)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            csv_text = zf.read('collectible.csv').decode()
+        reader = csv.DictReader(io.StringIO(csv_text))
+        row = next(reader)
+        self.assertEqual(row['team_inventory_number'], 'INV-EXPORT')
+
+    def test_export_contains_auth_tag_number(self):
+        import zipfile, io, csv
+        from memorabilia.export_import import build_collectible_zip
+        zip_bytes = build_collectible_zip(self.export_jersey)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            csv_text = zf.read('collectible.csv').decode()
+        reader = csv.DictReader(io.StringIO(csv_text))
+        row = next(reader)
+        self.assertEqual(row['auth_tag_number'], 'TAG-EXPORT-007')
+
+    def test_export_contains_auth_source(self):
+        import zipfile, io, csv
+        from memorabilia.export_import import build_collectible_zip
+        zip_bytes = build_collectible_zip(self.export_jersey)
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            csv_text = zf.read('collectible.csv').decode()
+        reader = csv.DictReader(io.StringIO(csv_text))
+        row = next(reader)
+        self.assertEqual(row['auth_source'], 'BECKETT')
+
+    def test_import_round_trip_preserves_team_inventory_number(self):
+        imported = self._round_trip(self.export_jersey)
+        self.assertIsNotNone(imported)
+        self.assertEqual(imported.team_inventory_number, 'INV-EXPORT')
+
+    def test_import_round_trip_preserves_auth_tag_number(self):
+        imported = self._round_trip(self.export_jersey)
+        self.assertIsNotNone(imported)
+        self.assertEqual(imported.auth_tag_number, 'TAG-EXPORT-007')
+
+    def test_import_round_trip_preserves_auth_source(self):
+        imported = self._round_trip(self.export_jersey)
+        self.assertIsNotNone(imported)
+        self.assertEqual(imported.auth_source_id, 'BECKETT')
+
+    def test_import_round_trip_keeps_collectible_type_hockeyjersey(self):
+        imported = self._round_trip(self.export_jersey)
+        self.assertIsNotNone(imported)
+        self.assertEqual(imported.collectible_type, 'hockeyjersey')
+        self.assertEqual(imported.gear_type_id, 'JRS')
+
+    def test_import_jersey_with_blank_auth_fields(self):
+        """A jersey exported without auth fields imports cleanly with blank/null values."""
+        jersey_no_auth = HockeyJersey.objects.create(
+            title='No Auth Export Jersey',
+            description='No auth',
+            collection=self.collection,
+            league='NHL',
+            player='Brendan Shanahan',
+            brand='Koho',
+            size='52',
+            season='1998',
+            game_type=self.game_type,
+            usage_type=self.usage_type,
+        )
+        imported = self._round_trip(jersey_no_auth)
+        self.assertIsNotNone(imported)
+        self.assertEqual(imported.team_inventory_number, '')
+        self.assertEqual(imported.auth_tag_number, '')
+        self.assertIsNone(imported.auth_source)
+
+    def test_import_with_unknown_auth_source_gracefully_sets_null(self):
+        """Importing a row whose auth_source key does not exist in DB sets auth_source to None."""
+        from memorabilia.export_import import _create_collectible
+        import zipfile, io
+        from memorabilia.export_import import build_collectible_zip
+        zip_bytes = build_collectible_zip(self.export_jersey)
+        zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+        target = Collection.objects.create(owner_uid=self.owner.id, title='Unknown Auth Target')
+        row = {
+            'collectible_type': 'hockeyjersey',
+            'title': 'Unknown Auth Jersey',
+            'description': '',
+            'player': 'Unknown Player',
+            'league': 'NHL',
+            'brand': 'CCM',
+            'size': '54',
+            'season': '2000',
+            'game_type': 'REG',
+            'usage_type': 'GU',
+            'team_inventory_number': '',
+            'auth_tag_number': 'TAG-X',
+            'auth_source': 'NONEXISTENT_KEY',
+            'images_json': '[]',
+            'photomatches_json': '[]',
+        }
+        obj = _create_collectible(row, target, zf, is_collection_export=False)
+        obj.refresh_from_db()
+        self.assertIsNone(obj.auth_source)

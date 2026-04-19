@@ -146,6 +146,17 @@ class CoaType(models.Model):
         return self.name
 
 
+class AuthSource(models.Model):
+    key = models.CharField(max_length=10, primary_key=True)
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class HowObtainedOption(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
@@ -238,6 +249,9 @@ class PlayerGear(PlayerGearItem):
 
     season_set = models.ForeignKey('SeasonSet', to_field='key', on_delete=models.PROTECT, db_column='season_set', blank=True, null=True)
     home_away = models.CharField(max_length=1, choices=HOME_AWAY_CHOICES, blank=True, null=True)
+    team_inventory_number = models.CharField(max_length=25, blank=True, default='')
+    auth_tag_number = models.CharField(max_length=50, blank=True, default='')
+    auth_source = models.ForeignKey('AuthSource', to_field='key', on_delete=models.SET_NULL, db_column='auth_source', blank=True, null=True)
 
     @property
     def collectible_type(self):

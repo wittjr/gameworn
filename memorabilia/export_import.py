@@ -42,6 +42,7 @@ COLLECTIBLE_FIELDNAMES = [
     'brand', 'size', 'season',
     'game_type', 'usage_type', 'gear_type',
     'season_set', 'home_away',
+    'team_inventory_number', 'auth_tag_number', 'auth_source',
     'allow_featured',
     'images_json',
     'photomatches_json',
@@ -178,6 +179,9 @@ def _collectible_to_row(collectible, images_meta, photomatches_meta):
         'gear_type': getattr(collectible, 'gear_type_id', None) or '',
         'season_set': getattr(collectible, 'season_set_id', None) or '',
         'home_away': getattr(collectible, 'home_away', None) or '',
+        'team_inventory_number': getattr(collectible, 'team_inventory_number', '') or '',
+        'auth_tag_number': getattr(collectible, 'auth_tag_number', '') or '',
+        'auth_source': getattr(collectible, 'auth_source_id', None) or '',
         'allow_featured': ('' if collectible.allow_featured is None
                            else str(collectible.allow_featured)),
         'images_json': json.dumps(images_meta),
@@ -362,7 +366,7 @@ def commit_import(zip_bytes, parsed, owner_uid, mode, target_collection_id=None)
 def _create_collectible(row, collection, zf, is_collection_export):
     from .models import (PlayerItem, PlayerItemImage,
                          PlayerGear, PlayerGearImage, GeneralItem, GeneralItemImage,
-                         GameType, UsageType, GearType, SeasonSet, CoaType)
+                         GameType, UsageType, GearType, SeasonSet, CoaType, AuthSource)
 
     ctype = row.get('collectible_type', 'generalitem')
     common = {
@@ -396,10 +400,18 @@ def _create_collectible(row, collection, zf, is_collection_export):
         obj = PlayerItem.objects.create(**common, **player)
         ImageModel = PlayerItemImage
     elif ctype in ('playergear', 'hockeyjersey'):
+        jersey_fields = {}
+        if ctype == 'hockeyjersey':
+            jersey_fields = {
+                'team_inventory_number': row.get('team_inventory_number', '') or '',
+                'auth_tag_number': row.get('auth_tag_number', '') or '',
+                'auth_source': _fk_or_none(AuthSource, row.get('auth_source')),
+            }
         obj = PlayerGear.objects.create(
             **common, **player, **gear,
             home_away=row.get('home_away') or None,
             season_set=_fk_or_none(SeasonSet, row.get('season_set')),
+            **jersey_fields,
         )
         if ctype == 'hockeyjersey':
             obj.gear_type_id = 'JRS'

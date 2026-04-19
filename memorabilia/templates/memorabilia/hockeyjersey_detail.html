@@ -66,6 +66,9 @@
                 {% include 'memorabilia/tablerow.html' with label='Game Type' value=object.game_type %}
                 {% include 'memorabilia/tablerow.html' with label='Season Set' value=object.season_set %}
                 {% include 'memorabilia/tablerow.html' with label='Home/Away' value=object.get_home_away_display %}
+                {% include 'memorabilia/tablerow.html' with label='Team Inventory #' value=object.team_inventory_number %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication Source' value=object.auth_source %}
+                {% include 'memorabilia/tablerow.html' with label='Authentication/Tag #' value=object.auth_tag_number %}
                 {% include 'memorabilia/tablerow.html' with label='Certificate of Authenticity' value=object.coa %}
                 {% include 'memorabilia/tablerow.html' with label='How Obtained' value=object.how_obtained %}
                 {% if object.for_sale %}

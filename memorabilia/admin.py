@@ -6,7 +6,7 @@ from .models import (
     PlayerGear, PlayerGearImage,
     HockeyJersey,
     Collection, PhotoMatch, WantedItem, ExternalResource,
-    Team, League, GameType, GearType, UsageType, CoaType, HowObtainedOption, SeasonSet,
+    Team, League, GameType, GearType, UsageType, CoaType, AuthSource, HowObtainedOption, SeasonSet,
 )
 
 
@@ -66,4 +66,5 @@ admin.site.register(GameType)
 admin.site.register(GearType)
 admin.site.register(UsageType)
 admin.site.register(CoaType)
+admin.site.register(AuthSource)
 admin.site.register(HowObtainedOption)

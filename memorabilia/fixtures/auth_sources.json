@@ -1,0 +1,86 @@
+[
+    {
+        "model": "memorabilia.authsource",
+        "pk": "MEIGRAY",
+        "fields": {
+            "name": "MeiGray"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "STEINER",
+        "fields": {
+            "name": "Steiner Sports"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "FANATICS",
+        "fields": {
+            "name": "Fanatics Authentic"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "MEARS",
+        "fields": {
+            "name": "MEARS Authentication"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "PSA",
+        "fields": {
+            "name": "PSA/DNA"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "BECKETT",
+        "fields": {
+            "name": "Beckett Authentication (BAS)"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "UDA",
+        "fields": {
+            "name": "Upper Deck Authenticated"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "GREYFLAN",
+        "fields": {
+            "name": "Grey Flannel Auctions"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "HERITAGE",
+        "fields": {
+            "name": "Heritage Auctions"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "LELANDS",
+        "fields": {
+            "name": "Lelands"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "JSA",
+        "fields": {
+            "name": "James Spence Authentication (JSA)"
+        }
+    },
+    {
+        "model": "memorabilia.authsource",
+        "pk": "TEAM",
+        "fields": {
+            "name": "Team Authenticated"
+        }
+    }
+]

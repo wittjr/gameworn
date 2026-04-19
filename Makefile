@@ -25,7 +25,7 @@ migrate:
 	$(VENV) && $(DJANGO_ENV) python manage.py migrate
 
 loadfixtures:
-	$(VENV) && $(DJANGO_ENV) python manage.py loaddata leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets
+	$(VENV) && $(DJANGO_ENV) python manage.py loaddata leagues game_types gear_types usage_types loa_types how_obtained_options externalresources teams season_sets auth_sources
 
 collectstatic:
 	$(VENV) && $(DJANGO_ENV) python manage.py collectstatic --noinput

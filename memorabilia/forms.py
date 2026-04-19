@@ -4,7 +4,7 @@ from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
-from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
+from .models import Collectible, Collection, PhotoMatch, League, GameType, UsageType, GearType, CoaType, AuthSource, HowObtainedOption, CollectibleImage, PlayerItem, PlayerItemImage, GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet, HockeyJersey, UserProfile
 from django.conf import settings
 from django.core.files import File
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -334,7 +334,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url']
+        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url', 'team_inventory_number', 'auth_tag_number', 'auth_source']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -390,10 +390,21 @@ class HockeyJerseyForm(PlayerGearForm):
         label='Home/Away',
         widget=flowbite_widgets.FlowbiteSelectInput(),
     )
+    auth_source = ModelChoiceField(
+        queryset=AuthSource.objects.all(),
+        required=False,
+        label='Authentication Source',
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
         exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
+        widgets = {
+            **PlayerGearForm.Meta.widgets,
+            'team_inventory_number': flowbite_widgets.FlowbiteTextInput(),
+            'auth_tag_number': flowbite_widgets.FlowbiteTextInput(),
+        }
 
 
 def get_collectible_form_class(collectible_type='PlayerItem'):
@@ -557,6 +568,8 @@ class CollectibleSearchForm(forms.Form):
         choices=[('', 'Any'), ('H', 'Home'), ('A', 'Away')],
         widget=flowbite_widgets.FlowbiteSelectInput,
     )
+    auth_source = forms.ChoiceField(required=False, label="Authentication Source", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    auth_tag_number = forms.CharField(required=False, label="Authentication/Tag #", widget=flowbite_widgets.FlowbiteTextInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -575,6 +588,7 @@ class CollectibleSearchForm(forms.Form):
         self.fields['collection'].choices = [('', 'Any')] + [(c.id, c.title) for c in Collection.objects.all()]
         self.fields['season_set'].choices = [('', '')] + [(s.key, s.name) for s in SeasonSet.objects.all()]
         self.fields['gear_type'].choices = [('', '')] + [(g.key, g.name) for g in GearType.objects.all()]
+        self.fields['auth_source'].choices = [('', 'Any')] + [(a.key, a.name) for a in AuthSource.objects.all()]
 
 
 class BulkCollectibleForm(ModelForm):
@@ -664,6 +678,7 @@ class BulkHockeyJerseyForm(ModelForm):
     usage_type = ModelChoiceField(queryset=UsageType.objects.all(), widget=flowbite_widgets.FlowbiteSelectInput)
     gear_type = ModelChoiceField(queryset=GearType.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
     season_set = ModelChoiceField(queryset=SeasonSet.objects.all(), required=False, widget=flowbite_widgets.FlowbiteSelectInput)
+    auth_source = ModelChoiceField(queryset=AuthSource.objects.all(), required=False, label='Authentication Source', widget=flowbite_widgets.FlowbiteSelectInput)
     coa = ModelChoiceField(queryset=CoaType.objects.all(), required=False, label='COA', widget=flowbite_widgets.FlowbiteSelectInput)
     number = forms.IntegerField(required=False, widget=flowbite_widgets.FlowbiteNumberInput())
     home_away = forms.ChoiceField(
@@ -682,7 +697,7 @@ class BulkHockeyJerseyForm(ModelForm):
 
     class Meta:
         model = HockeyJersey
-        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'allow_featured']
+        fields = ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'team_inventory_number', 'auth_tag_number', 'auth_source', 'allow_featured']
         widgets = {
             'title': flowbite_widgets.FlowbiteTextInput(),
             'league': flowbite_widgets.FlowbiteTextInput(),
@@ -693,6 +708,8 @@ class BulkHockeyJerseyForm(ModelForm):
             'season': flowbite_widgets.FlowbiteTextInput(),
             'how_obtained': flowbite_widgets.FlowbiteTextInput(attrs={'list': 'how-obtained-list', 'placeholder': 'Select or type how this was obtained...'}),
             'description': flowbite_widgets.FlowbiteTextarea(attrs={'rows': 2}),
+            'team_inventory_number': flowbite_widgets.FlowbiteTextInput(),
+            'auth_tag_number': flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
