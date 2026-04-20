@@ -445,6 +445,27 @@ class CollectibleView(generic.DetailView):
                 except MeiGrayEntry.DoesNotExist:
                     context['meigray_entry'] = None
 
+        collection = collectible.collection
+        all_siblings = sorted(
+            chain(
+                PlayerGear.objects.filter(collection=collection).exclude(gear_type_id='JRS').only('id', 'title', 'collection_id').prefetch_related('gear_images'),
+                HockeyJersey.objects.filter(collection=collection).only('id', 'title', 'collection_id').prefetch_related('gear_images'),
+                PlayerItem.objects.filter(collection=collection).only('id', 'title', 'collection_id').prefetch_related('images'),
+                GeneralItem.objects.filter(collection=collection).only('id', 'title', 'collection_id').prefetch_related('images'),
+            ),
+            key=lambda x: x.title,
+        )
+        current_index = next(
+            (i for i, s in enumerate(all_siblings)
+             if s.collectible_type == collectible.collectible_type and s.id == collectible.id),
+            None,
+        )
+        if current_index is not None:
+            context['prev_item'] = all_siblings[current_index - 1] if current_index > 0 else None
+            context['next_item'] = all_siblings[current_index + 1] if current_index < len(all_siblings) - 1 else None
+            context['item_position'] = current_index + 1
+            context['item_total'] = len(all_siblings)
+
         return context
 
 
