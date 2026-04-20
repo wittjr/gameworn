@@ -1,0 +1,25 @@
+{% if item_total and item_total > 1 %}
+<div class="flex items-center justify-center gap-2 mb-4">
+  {% if prev_item %}
+    {% url 'memorabilia:collectible' prev_item.collection_id prev_item.collectible_type prev_item.id as prev_url %}
+    <a href="{{ prev_url }}" id="nav-prev-item-top" class="inline-flex items-center px-2 py-1 text-sm text-gray-600 border border-gray-300 rounded-full hover:border-blue-500 hover:text-blue-600 transition" aria-label="Previous item: {{ prev_item.title }}">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+  {% else %}
+    <span class="inline-flex items-center px-2 py-1 text-sm text-gray-300 border border-gray-200 rounded-full cursor-not-allowed" aria-disabled="true">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+    </span>
+  {% endif %}
+  <span class="text-sm text-gray-500">{{ item_position }} of {{ item_total }}</span>
+  {% if next_item %}
+    {% url 'memorabilia:collectible' next_item.collection_id next_item.collectible_type next_item.id as next_url %}
+    <a href="{{ next_url }}" id="nav-next-item-top" class="inline-flex items-center px-2 py-1 text-sm text-gray-600 border border-gray-300 rounded-full hover:border-blue-500 hover:text-blue-600 transition" aria-label="Next item: {{ next_item.title }}">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </a>
+  {% else %}
+    <span class="inline-flex items-center px-2 py-1 text-sm text-gray-300 border border-gray-200 rounded-full cursor-not-allowed" aria-disabled="true">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </span>
+  {% endif %}
+</div>
+{% endif %}

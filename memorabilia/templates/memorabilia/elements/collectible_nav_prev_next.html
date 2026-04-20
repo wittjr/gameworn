@@ -1,0 +1,76 @@
+{% if item_total and item_total > 1 %}
+<nav aria-label="Collection item navigation" class="mt-8 mb-2">
+  <p class="text-center text-xs text-gray-400 mb-3">{{ item_position }} of {{ item_total }} in collection</p>
+  <div class="grid grid-cols-2 gap-4">
+
+    {% if prev_item %}
+      {% url 'memorabilia:collectible' prev_item.collection_id prev_item.collectible_type prev_item.id as prev_url %}
+      <a href="{{ prev_url }}"
+         class="flex items-center gap-3 rounded-lg border border-gray-200 p-4 hover:border-blue-400 hover:shadow-sm transition group min-h-[56px]"
+         id="nav-prev-item">
+        <svg class="w-5 h-5 shrink-0 text-gray-400 group-hover:text-blue-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        {% with prev_item.get_primary_image_url as thumb %}
+        {% if thumb %}
+          <img src="{{ thumb }}" alt="" class="w-12 h-12 rounded object-cover shrink-0" aria-hidden="true">
+        {% else %}
+          <div class="w-12 h-12 rounded bg-gray-100 shrink-0 flex items-center justify-center" aria-hidden="true">
+            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 7.5h18"/></svg>
+          </div>
+        {% endif %}
+        {% endwith %}
+        <span class="text-sm font-medium text-gray-700 group-hover:text-blue-600 leading-snug line-clamp-2 min-w-0">
+          <span class="sr-only">Previous item: </span>{{ prev_item.title }}
+        </span>
+      </a>
+    {% else %}
+      <div class="flex items-center gap-3 rounded-lg border border-gray-100 p-4 opacity-40 cursor-not-allowed min-h-[56px]" aria-disabled="true">
+        <svg class="w-5 h-5 shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        <span class="text-sm text-gray-400">First item</span>
+      </div>
+    {% endif %}
+
+    {% if next_item %}
+      {% url 'memorabilia:collectible' next_item.collection_id next_item.collectible_type next_item.id as next_url %}
+      <a href="{{ next_url }}"
+         class="flex items-center justify-end gap-3 rounded-lg border border-gray-200 p-4 hover:border-blue-400 hover:shadow-sm transition group text-right min-h-[56px]"
+         id="nav-next-item">
+        <span class="text-sm font-medium text-gray-700 group-hover:text-blue-600 leading-snug line-clamp-2 min-w-0">
+          <span class="sr-only">Next item: </span>{{ next_item.title }}
+        </span>
+        {% with next_item.get_primary_image_url as thumb %}
+        {% if thumb %}
+          <img src="{{ thumb }}" alt="" class="w-12 h-12 rounded object-cover shrink-0" aria-hidden="true">
+        {% else %}
+          <div class="w-12 h-12 rounded bg-gray-100 shrink-0 flex items-center justify-center" aria-hidden="true">
+            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 7.5h18"/></svg>
+          </div>
+        {% endif %}
+        {% endwith %}
+        <svg class="w-5 h-5 shrink-0 text-gray-400 group-hover:text-blue-500 transition" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </a>
+    {% else %}
+      <div class="flex items-center justify-end gap-3 rounded-lg border border-gray-100 p-4 opacity-40 cursor-not-allowed min-h-[56px]" aria-disabled="true">
+        <span class="text-sm text-gray-400">Last item</span>
+        <svg class="w-5 h-5 shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </div>
+    {% endif %}
+
+  </div>
+</nav>
+<script>
+(function () {
+  var focusable = ['INPUT', 'TEXTAREA', 'SELECT'];
+  document.addEventListener('keydown', function (e) {
+    if (focusable.indexOf(document.activeElement.tagName) !== -1) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'ArrowLeft') {
+      var el = document.getElementById('nav-prev-item');
+      if (el) { e.preventDefault(); el.click(); }
+    } else if (e.key === 'ArrowRight') {
+      var el = document.getElementById('nav-next-item');
+      if (el) { e.preventDefault(); el.click(); }
+    }
+  });
+}());
+</script>
+{% endif %}

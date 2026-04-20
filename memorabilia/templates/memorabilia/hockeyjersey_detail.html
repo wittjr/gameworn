@@ -34,6 +34,8 @@
     {% include 'memorabilia/breadcrumb.html' with label=object.title %}
 {% endblock breadcrumb %}
 
+{% block breadcrumb_extra %}{% include "memorabilia/elements/collectible_nav_compact.html" %}{% endblock breadcrumb_extra %}
+
 {% block content %}
 <h1 class="mb-6 text-4xl text-center font-extrabold tracking-tight leading-none md:text-5xl lg:text-6xl">{{ object.title }}</h1>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
@@ -138,6 +140,7 @@
 </div>
 {% endif %}
 
+{% include "memorabilia/elements/collectible_nav_prev_next.html" %}
 {% include "memorabilia/elements/gallery_lightbox.html" %}
 {% include "memorabilia/elements/gallery_lightbox.html" with gallery_id="photomatch" thumb_class="photomatch-thumb" %}
 {% url 'memorabilia:export_collectible' object.collection.id object.collectible_type object.id as zip_base_url %}
