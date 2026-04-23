@@ -45,6 +45,8 @@ def getmediaurl(context, image):
                 return image.link
             elif image.image and image.image.url:
                 return image.image.url
+            elif image.getty_thumbnail_url:
+                return image.getty_thumbnail_url
     return static('memorabilia/placeholder.svg')
 
 @register.simple_tag(takes_context=True)

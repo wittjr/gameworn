@@ -117,7 +117,10 @@ def _build_photomatch_manifest(collectible, pm_dir, zf, include_external):
             'description': pm.description or '',
             'game_date': str(pm.game_date),
         }
-        if pm.image and pm.image.name:
+        if pm.getty_embed_code:
+            meta.update(source='getty', getty_embed_code=pm.getty_embed_code,
+                        getty_thumbnail_url=pm.getty_thumbnail_url or '')
+        elif pm.image and pm.image.name:
             try:
                 base_name = os.path.basename(pm.image.name)
                 name, counter = base_name, 1
@@ -512,6 +515,7 @@ def _import_photomatches(row, obj, pm_dir, zf):
         }
         filename = meta.get('filename', '')
         link = meta.get('link', '')
+        getty_embed_code = meta.get('getty_embed_code', '')
         if filename:
             zip_path = f"{pm_dir}/{filename}"
             if zip_path in zip_names:
@@ -522,6 +526,10 @@ def _import_photomatches(row, obj, pm_dir, zf):
                 kwargs['link'] = link
         elif link:
             kwargs['link'] = link
+        elif getty_embed_code:
+            if meta.get('getty_thumbnail_url'):
+                kwargs['getty_thumbnail_url'] = meta['getty_thumbnail_url']
+            kwargs['getty_embed_code'] = getty_embed_code
         PhotoMatch.objects.create(**kwargs)
 
 

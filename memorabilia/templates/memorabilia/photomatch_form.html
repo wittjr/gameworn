@@ -25,21 +25,143 @@
 {% endblock breadcrumb %}
 
 {% block content %}
+{# Compute cancel URL from available context — photomatch (edit) or collectible (create) #}
+{% if photomatch %}
+    {% url 'memorabilia:collectible' collection_id=photomatch.collectible.collection.id collectible_type=collectible_type pk=photomatch.collectible.id as cancel_url %}
+{% else %}
+    {% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type=collectible_type pk=collectible.id as cancel_url %}
+{% endif %}
+
+<div class="mx-auto max-w-2xl">
 <h1 class="mb-6 text-xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">{{ title }}</h1>
 <form enctype="multipart/form-data" method="post" novalidate>
-	{% csrf_token %}
-	{{ form }}
-	<div class="flex items-center justify-between gap-3">
-		<div>
-			{% if photomatch %}
-			{% url 'memorabilia:delete_photo_match' collection_id=photomatch.collectible.collection.id collectible_type=collectible_type collectible_id=photomatch.collectible.id photo_match_id=photomatch.id as delete_url %}
-			<a href="{{ delete_url }}" data-delete-label="{{ photomatch }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200">Delete</a>
-			{% endif %}
-		</div>
-		<div class="flex gap-3">
-			<button type="button" class="btn-primary-white" onclick="history.back()">Cancel</button>
-			<button type="submit" class="btn-primary">Save</button>
-		</div>
-	</div>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div role="alert" class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 mb-4">
+        {% for error in form.non_field_errors %}
+            <p class="text-red-700 dark:text-red-400">{{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mb-4{% if form.collectible.errors %} bg-red-50 dark:bg-red-900/20 rounded-lg p-2 field-has-error{% endif %}">
+        <label for="{{ form.collectible.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.collectible.errors %}text-red-700 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ form.collectible.label }}</label>
+        {{ form.collectible }}
+        {% for error in form.collectible.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+        {% endfor %}
+    </div>
+
+    <div class="mb-4{% if form.game_date.errors %} bg-red-50 dark:bg-red-900/20 rounded-lg p-2 field-has-error{% endif %}">
+        <label for="{{ form.game_date.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.game_date.errors %}text-red-700 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ form.game_date.label }}</label>
+        {{ form.game_date }}
+        {% for error in form.game_date.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+        {% endfor %}
+    </div>
+
+    <div class="mb-4{% if form.description.errors %} bg-red-50 dark:bg-red-900/20 rounded-lg p-2 field-has-error{% endif %}">
+        <label for="{{ form.description.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.description.errors %}text-red-700 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ form.description.label }}</label>
+        {{ form.description }}
+        {% for error in form.description.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+        {% endfor %}
+    </div>
+
+    {# Photo tabs — open Getty tab if it has errors or has a value; otherwise open your-photo tab #}
+    {% with getty_active=form.getty_embed_code.value|default:form.getty_embed_code.errors %}
+    <div class="mb-6{% if form.photo.errors %} bg-red-50 dark:bg-red-900/20 rounded-lg p-2{% endif %}">
+        <p id="photo-section-label" class="block mb-2 text-sm font-medium {% if form.photo.errors %}text-red-700 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">Photo</p>
+        <div class="border-b border-gray-200 dark:border-gray-700">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist" aria-labelledby="photo-section-label" id="photomatch-photo-tabs">
+                <li class="me-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg {% if getty_active %}border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300{% else %}border-blue-600 text-blue-600 font-semibold dark:text-blue-500 dark:border-blue-500{% endif %}"
+                        id="your-photo-tab" data-tab-target="your-photo-panel"
+                        type="button" role="tab" aria-controls="your-photo-panel"
+                        aria-selected="{% if getty_active %}false{% else %}true{% endif %}">Add your photo</button>
+                </li>
+                <li class="me-2" role="presentation">
+                    <button class="inline-block p-4 border-b-2 rounded-t-lg {% if getty_active %}border-blue-600 text-blue-600 font-semibold dark:text-blue-500 dark:border-blue-500{% else %}border-transparent hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300{% endif %}"
+                        id="getty-tab" data-tab-target="getty-panel"
+                        type="button" role="tab" aria-controls="getty-panel"
+                        aria-selected="{% if getty_active %}true{% else %}false{% endif %}">Add Getty Embedded Image</button>
+                </li>
+            </ul>
+        </div>
+
+        <div id="photomatch-photo-tab-content">
+            <div id="your-photo-panel" role="tabpanel" aria-labelledby="your-photo-tab" tabindex="0"
+                class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 {% if getty_active %}hidden{% endif %}">
+                {{ form.photo }}
+            </div>
+
+            <div id="getty-panel" role="tabpanel" aria-labelledby="getty-tab" tabindex="0"
+                class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 {% if not getty_active %}hidden{% endif %}">
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                    On Getty Images, find your photo, click the <kbd class="px-1 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600">&lt;/&gt; Embed</kbd> button, and paste the full embed code below.
+                </p>
+                <div class="{% if form.getty_embed_code.errors %}bg-red-50 dark:bg-red-900/20 rounded-lg p-2{% endif %}">
+                    <label for="{{ form.getty_embed_code.id_for_label }}" class="block mb-2 text-sm font-medium {% if form.getty_embed_code.errors %}text-red-700 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ form.getty_embed_code.label }}</label>
+                    {{ form.getty_embed_code }}
+                    {% for error in form.getty_embed_code.errors %}
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% for error in form.photo.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+        {% endfor %}
+    </div>
+    {% endwith %}
+
+    <div class="flex items-center justify-between gap-3">
+        <div>
+            {% if photomatch %}
+            {% url 'memorabilia:delete_photo_match' collection_id=photomatch.collectible.collection.id collectible_type=collectible_type collectible_id=photomatch.collectible.id photo_match_id=photomatch.id as delete_url %}
+            <a href="{{ delete_url }}" data-delete-label="{{ photomatch }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500">Delete</a>
+            {% endif %}
+        </div>
+        <div class="flex gap-3">
+            <a href="{{ cancel_url }}" class="btn-primary-white">Cancel</a>
+            <button type="submit" class="btn-primary">Save</button>
+        </div>
+    </div>
 </form>
+</div>
+
+<script>
+(function () {
+    var tabs = document.getElementById('photomatch-photo-tabs');
+    var panels = ['your-photo-panel', 'getty-panel'];
+
+    tabs.addEventListener('click', function (e) {
+        var btn = e.target.closest('[role="tab"]');
+        if (!btn) return;
+        var targetId = btn.dataset.tabTarget;
+
+        tabs.querySelectorAll('[role="tab"]').forEach(function (t) {
+            var active = t === btn;
+            t.classList.toggle('border-blue-600', active);
+            t.classList.toggle('text-blue-600', active);
+            t.classList.toggle('font-semibold', active);
+            t.classList.toggle('dark:text-blue-500', active);
+            t.classList.toggle('dark:border-blue-500', active);
+            t.classList.toggle('border-transparent', !active);
+            t.classList.toggle('hover:text-gray-600', !active);
+            t.classList.toggle('hover:border-gray-300', !active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        panels.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.toggle('hidden', id !== targetId);
+        });
+
+        var panel = document.getElementById(targetId);
+        if (panel) panel.focus();
+    });
+}());
+</script>
 {% endblock content %}

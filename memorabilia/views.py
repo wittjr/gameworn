@@ -522,7 +522,7 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
     primary = next((img for img in images if img.primary), images[0] if images else None)
     primary_url = resolve_url(primary)
     secondary_images = [{'url': resolve_url(img)} for img in images if img is not primary]
-    photomatch_data = [{'url': resolve_url(pm), 'date': pm.game_date, 'description': pm.description} for pm in photomatches]
+    photomatch_data = [{'url': resolve_url(pm), 'getty_embed_code': pm.getty_embed_code or '', 'date': pm.game_date, 'description': pm.description} for pm in photomatches]
 
     league = None
     if hasattr(collectible, 'league') and collectible.league:

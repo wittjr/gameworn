@@ -20,7 +20,11 @@
 {% block content %}
     <p>{{ object.collectible }}</p>
     <p>{{ object.game_date }}</p>
-    {% if object.image|length > 0 %}
-    <p><img src='{{ MEDIA_URL }}{{ object.image }}' /></p>
+    {% if object.getty_embed_code %}
+    <div class="max-w-full">{{ object.getty_embed_code|safe }}</div>
+    {% elif object.link %}
+    <p><img src="{{ object.link }}" alt="Photo match" /></p>
+    {% elif object.image %}
+    <p><img src="{{ MEDIA_URL }}{{ object.image }}" alt="Photo match" /></p>
     {% endif %}
 {% endblock content %}

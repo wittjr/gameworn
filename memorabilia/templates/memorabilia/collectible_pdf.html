@@ -335,6 +335,14 @@
         {% if pm.description %}{{ pm.description }}{% endif %}
       </div>
     </div>
+    {% elif pm.getty_embed_code %}
+    <div class="image-page">
+      <div class="caption">
+        <strong>Getty Images embed</strong>
+        {% if pm.date %}<br>{{ pm.date }}{% endif %}
+        {% if pm.description %}<br>{{ pm.description }}{% endif %}
+      </div>
+    </div>
     {% endif %}
   {% endfor %}
 {% endif %}

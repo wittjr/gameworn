@@ -1,4 +1,5 @@
 import json
+import re
 
 from django import forms
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
@@ -457,18 +458,38 @@ PlayerGearImageFormSet = inlineformset_factory(
     can_delete=True,
 )
 
+def _fetch_getty_thumbnail(embed_code):
+    import requests
+    match = re.search(r"items:'(\d+)'", embed_code)
+    if not match:
+        return None
+    asset_id = match.group(1)
+    try:
+        resp = requests.get(
+            f'https://embed.gettyimages.com/oembed?url=https://www.gettyimages.com/detail/{asset_id}',
+            timeout=5,
+        )
+        resp.raise_for_status()
+        return resp.json().get('thumbnail_url')
+    except Exception:
+        return None
+
+
 class PhotoMatchForm(ModelForm):
 
     photo = FlowbiteImageDropzoneField(
         label="Photo",
         help_text="Enter an image URL or upload a file",
-        # required=False,
-        # max_file_size=5*1024*1024,  # 2MB
-        # allowed_extensions=['jpg', 'jpeg', 'png']
         file_field_name='image',
         url_field_name='link'
     )
 
+    getty_embed_code = forms.CharField(
+        required=False,
+        label="Getty Embed Code",
+        help_text="Paste the embed code from Getty Images",
+        widget=flowbite_widgets.FlowbiteTextarea(attrs={'rows': 4, 'placeholder': "Paste the embed code from Getty Images here"}),
+    )
 
     class Meta:
         model = PhotoMatch
@@ -476,8 +497,6 @@ class PhotoMatchForm(ModelForm):
         widgets = {
             "collectible": flowbite_widgets.FlowbiteSelectInput(),
             "game_date": flowbite_widgets.FlowbiteTextInput(),
-            # "image": flowbite_widgets.FlowbiteImageDropzone(),
-            # "link": flowbite_widgets.FlowbiteTextInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
         }
 
@@ -486,19 +505,52 @@ class PhotoMatchForm(ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields['photo'].initial = (self.instance.image, self.instance.link)
+            if self.instance.getty_embed_code:
+                self.fields['getty_embed_code'].initial = self.instance.getty_embed_code
 
+    def clean(self):
+        cleaned_data = super().clean()
+        photo = cleaned_data.get('photo') or (None, None)
+        file_value, url_value = photo
+        getty_code = cleaned_data.get('getty_embed_code', '')
+        # Preserve existing photo on edit — only require a new one when creating
+        has_existing = self.instance and self.instance.pk and (
+            self.instance.image or self.instance.link or self.instance.getty_embed_code
+        )
+        if not file_value and not url_value and not getty_code and not has_existing:
+            self.add_error('photo', 'Please add a photo by uploading a file, pasting a URL, or entering a Getty embed code.')
+        return cleaned_data
+
+    def clean_getty_embed_code(self):
+        value = self.cleaned_data.get('getty_embed_code', '').strip()
+        if not value:
+            return ''
+        if 'gettyimages.com' not in value:
+            raise forms.ValidationError('Please paste a valid Getty Images embed code.')
+        return value
 
     def save(self, commit=True):
         pm = super().save(commit=False)
 
-        file_value, url_value = self.cleaned_data['photo']
+        file_value, url_value = self.cleaned_data.get('photo') or (None, None)
+        getty_code = self.cleaned_data.get('getty_embed_code', '')
+
         if file_value:
             pm.image = file_value
             pm.link = None
+            pm.getty_embed_code = None
         elif url_value:
             pm.link = url_value
             pm.image = None
-        # else: no new photo provided — preserve existing image/link on the instance
+            pm.getty_embed_code = None
+        elif getty_code:
+            pm.getty_embed_code = getty_code
+            pm.image = None
+            pm.link = None
+            # Only re-fetch thumbnail if the embed code changed
+            if getty_code != getattr(self.instance, 'getty_embed_code', None):
+                pm.getty_thumbnail_url = _fetch_getty_thumbnail(getty_code)
+        # else: no new photo provided — preserve existing values on the instance
 
         if commit:
             pm.save()

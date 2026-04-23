@@ -400,6 +400,8 @@ class GeneralItemAuthentication(CollectibleAuthentication):
 class PhotoMatch(RulesModel):
     image = models.ImageField(upload_to='images', blank=True, null=True)
     link = models.CharField(max_length=255, blank=True, null=True)
+    getty_embed_code = models.TextField(blank=True, null=True)
+    getty_thumbnail_url = models.CharField(max_length=500, blank=True, null=True)
     description = models.CharField(max_length=500, blank=True, null=True)
     game_date = models.DateField()
     collectible = models.ForeignKey(PlayerGear, on_delete=models.CASCADE, related_name='photomatches')

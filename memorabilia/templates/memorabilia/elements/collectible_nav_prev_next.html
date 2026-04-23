@@ -63,6 +63,7 @@
   document.addEventListener('keydown', function (e) {
     if (focusable.indexOf(document.activeElement.tagName) !== -1) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (document.querySelector('[role="dialog"][aria-hidden="false"]')) return;
     if (e.key === 'ArrowLeft') {
       var el = document.getElementById('nav-prev-item');
       if (el) { e.preventDefault(); el.click(); }
