@@ -61,7 +61,7 @@
                 {% for auth in collectible.authentications.all %}
                 {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
                 {% endfor %}
-                {% include 'memorabilia/tablerow.html' with label='How Obtained' value=collectible.how_obtained %}
+                {% include 'memorabilia/tablerow.html' with label='Obtained' value=collectible.how_obtained %}
                 {% if object.for_sale %}
                     {% include 'memorabilia/tablerow.html' with label='Asking Price' value=collectible.asking_price %}
                 {% endif %}

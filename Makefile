@@ -14,7 +14,10 @@ endif
 
 DJANGO_ENV := DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS)
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind
+DB_FILE ?= db.sqlite3
+BACKUP_DIR ?= backups
+
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore
 
 test:
 	$(VENV) && $(DJANGO_ENV) python manage.py test memorabilia
@@ -42,6 +45,19 @@ check:
 
 tailwind:
 	$(VENV) && $(DJANGO_ENV) python manage.py tailwind build
+
+backup:
+	@mkdir -p $(BACKUP_DIR)
+	@STAMP=$$(date +%Y%m%d_%H%M%S) && cp $(DB_FILE) $(BACKUP_DIR)/db_$$STAMP.sqlite3 && echo "Backed up to $(BACKUP_DIR)/db_$$STAMP.sqlite3"
+
+restore:
+	@if [ -n "$(FILE)" ]; then \
+		cp $(FILE) $(DB_FILE) && echo "Restored from $(FILE)"; \
+	else \
+		LATEST=$$(ls -t $(BACKUP_DIR)/db_*.sqlite3 2>/dev/null | head -1); \
+		if [ -z "$$LATEST" ]; then echo "No backups found in $(BACKUP_DIR)/"; exit 1; fi; \
+		cp $$LATEST $(DB_FILE) && echo "Restored from $$LATEST"; \
+	fi
 
 import_population_report:
 	$(VENV) && $(DJANGO_ENV) python manage.py import_population_report $(XLSX) --season $(SEASON)

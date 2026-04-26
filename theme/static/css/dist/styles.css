@@ -1893,10 +1893,6 @@ tr.field-row.field-error input,
   min-height: 56px;
 }
 
-.min-h-\[200px\] {
-  min-height: 200px;
-}
-
 .w-1\/2 {
   width: 50%;
 }
@@ -2476,6 +2472,11 @@ tr.field-row.field-error input,
   background-color: rgb(255 251 235 / var(--tw-bg-opacity));
 }
 
+.bg-black {
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+}
+
 .bg-black\/90 {
   background-color: rgb(0 0 0 / 0.9);
 }
@@ -2596,11 +2597,6 @@ tr.field-row.field-error input,
   background-color: rgb(253 253 234 / var(--tw-bg-opacity));
 }
 
-.bg-black {
-  --tw-bg-opacity: 1;
-  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
-}
-
 .bg-cover {
   background-size: cover;
 }
@@ -2654,6 +2650,11 @@ tr.field-row.field-error input,
 .px-0 {
   padding-left: 0px;
   padding-right: 0px;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
 .px-16 {
@@ -2744,11 +2745,6 @@ tr.field-row.field-error input,
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
-}
-
-.px-1 {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
 }
 
 .pb-1 {
@@ -3258,11 +3254,6 @@ tr.field-row.field-error input,
 .hover\:bg-white:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
-}
-
-.hover\:bg-gray-800:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(31 41 55 / var(--tw-bg-opacity));
 }
 
 .hover\:text-blue-600:hover {
