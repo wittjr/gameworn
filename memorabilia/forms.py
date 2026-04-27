@@ -12,6 +12,8 @@ from .models import (
     GeneralItem, GeneralItemImage, GeneralItemAuthentication,
     PlayerGear, PlayerGearImage, PlayerGearAuthentication,
     SeasonSet, HockeyJersey, UserProfile,
+    WantListProfile, WantList, WantListItem, WantListItemImage,
+    WANT_LIST_VISIBILITY_CHOICES,
 )
 from django.conf import settings
 from django.core.files import File
@@ -840,3 +842,169 @@ class UserProfileForm(ModelForm):
         help_texts = {
             'flickr_id': 'Your Flickr NSID (e.g. 12345678@N04). Used to pre-fill album imports.',
         }
+
+
+# ── Want List Forms ────────────────────────────────────────────────────────────
+
+_RESERVED_WANT_LIST_SLUGS = {'manage', 'me', 'new', 'edit', 'delete', 'create', 'profile', 'api', 'admin'}
+
+
+class WantListProfileForm(ModelForm):
+    header_image = FlowbiteImageDropzoneField(
+        label='Header Image',
+        help_text='Upload a file or enter an image URL (optional)',
+        required=False,
+        file_field_name='header_image',
+        url_field_name='header_image_link',
+    )
+
+    class Meta:
+        model = WantListProfile
+        fields = ['slug', 'visibility']
+        widgets = {
+            'slug': flowbite_widgets.FlowbiteTextInput(attrs={'placeholder': 'e.g., jamie-witt'}),
+            'visibility': flowbite_widgets.FlowbiteSelectInput(),
+        }
+        labels = {
+            'slug': 'Public URL handle',
+            'visibility': 'Who can see your want list',
+        }
+        help_texts = {
+            'slug': 'Letters, numbers, and hyphens only. This becomes your public URL.',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['header_image'].initial = (
+                self.instance.header_image,
+                self.instance.header_image_link,
+            )
+
+    def clean_slug(self):
+        slug = self.cleaned_data.get('slug', '').lower().strip()
+        if slug in _RESERVED_WANT_LIST_SLUGS:
+            raise forms.ValidationError('That handle is reserved. Please choose another.')
+        return slug
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        file_value, url_value = self.cleaned_data.get('header_image') or (None, None)
+        if file_value:
+            instance.header_image = file_value
+            instance.header_image_link = None
+        elif url_value:
+            instance.header_image_link = url_value
+            instance.header_image = None
+        if commit:
+            instance.save()
+        return instance
+
+
+class WantListForm(ModelForm):
+    class Meta:
+        model = WantList
+        fields = ['title']
+        widgets = {
+            'title': flowbite_widgets.FlowbiteTextInput(),
+        }
+
+
+class WantListItemForm(ModelForm):
+    want_list = ModelChoiceField(
+        queryset=WantList.objects.none(),
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+        empty_label='— Select list —',
+        label='Want List',
+    )
+    league = ModelChoiceField(
+        queryset=League.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput(),
+        empty_label='— Select league —',
+    )
+    game_type = ModelChoiceField(
+        queryset=GameType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    usage_type = ModelChoiceField(
+        queryset=UsageType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    gear_type = ModelChoiceField(
+        queryset=GearType.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    season_set = ModelChoiceField(
+        queryset=SeasonSet.objects.all(),
+        required=False,
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    class Meta:
+        model = WantListItem
+        fields = [
+            'want_list', 'collectible_type', 'league', 'player', 'team', 'number',
+            'season', 'game_type', 'usage_type', 'gear_type', 'season_set',
+            'title', 'description', 'notes',
+        ]
+        widgets = {
+            'collectible_type': flowbite_widgets.FlowbiteSelectInput(),
+            'player': flowbite_widgets.FlowbiteTextInput(),
+            'team': flowbite_widgets.FlowbiteTextInput(),
+            'number': flowbite_widgets.FlowbiteNumberInput(),
+            'season': flowbite_widgets.FlowbiteTextInput(),
+            'title': flowbite_widgets.FlowbiteTextInput(),
+            'description': flowbite_widgets.FlowbiteTextarea(),
+            'notes': flowbite_widgets.FlowbiteTextarea(),
+        }
+        labels = {
+            'title': 'Title',
+            'description': 'Description',
+        }
+
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user')
+        super().__init__(*args, **kwargs)
+        self.fields['want_list'].queryset = WantList.objects.filter(profile__user=current_user)
+        self.fields['team'].widget.attrs.update({
+            'list': 'team-list',
+            'placeholder': 'Start typing a team...',
+        })
+
+    def clean(self):
+        cleaned_data = super().clean()
+        descriptive_fields = [
+            'player', 'team', 'number', 'season', 'league',
+            'game_type', 'usage_type', 'gear_type', 'season_set',
+            'title', 'description', 'notes',
+        ]
+        if not any(cleaned_data.get(f) for f in descriptive_fields):
+            raise forms.ValidationError('Please fill in at least one field describing the item.')
+        return cleaned_data
+
+
+class WantListItemImageForm(ModelForm):
+    class Meta:
+        model = WantListItemImage
+        fields = ['image', 'link']
+        widgets = {
+            'link': flowbite_widgets.FlowbiteTextInput(attrs={'placeholder': 'Or paste an image URL...'}),
+        }
+        labels = {
+            'link': 'Image URL',
+        }
+
+
+WantListItemImageFormSet = inlineformset_factory(
+    WantListItem,
+    WantListItemImage,
+    form=WantListItemImageForm,
+    extra=3,
+    can_delete=True,
+    max_num=3,
+    validate_max=True,
+)

@@ -480,3 +480,145 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profile({self.user.username})"
+
+
+# ── Want List ──────────────────────────────────────────────────────────────────
+
+WANT_LIST_VISIBILITY_CHOICES = [
+    ('public', 'Public'),
+    ('logged_in', 'Logged-in users only'),
+    ('private', 'Private'),
+]
+
+WANT_LIST_ITEM_TYPE_CHOICES = [
+    ('playeritem', 'Player Item'),
+    ('playergear', 'Player Gear'),
+    ('hockeyjersey', 'Hockey Jersey'),
+    ('generalitem', 'General Item'),
+]
+
+
+@rules.predicate
+def is_want_list_profile_owner(user, profile):
+    if profile is None:
+        return False
+    return user.id == profile.user_id
+
+
+@rules.predicate
+def is_want_list_owner(user, want_list):
+    if want_list is None:
+        return False
+    return user.id == want_list.profile.user_id
+
+
+@rules.predicate
+def is_want_list_item_owner(user, item):
+    if item is None:
+        return False
+    return user.id == item.want_list.profile.user_id
+
+
+def _generate_want_list_slug(user):
+    from django.utils.text import slugify
+    base = slugify(user.get_full_name() or user.username or user.email.split('@')[0])
+    if not base:
+        base = f'user{user.pk}'
+    slug = base
+    n = 1
+    while WantListProfile.objects.filter(slug=slug).exists():
+        slug = f'{base}-{n}'
+        n += 1
+    return slug
+
+
+class WantListProfile(RulesModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='want_list_profile')
+    slug = models.SlugField(max_length=50, unique=True)
+    header_image = models.ImageField(upload_to='images', blank=True, null=True)
+    header_image_link = models.CharField(max_length=255, blank=True, null=True)
+    visibility = models.CharField(max_length=10, choices=WANT_LIST_VISIBILITY_CHOICES, default='public')
+
+    class Meta:
+        rules_permissions = {
+            'update': rules.is_authenticated & is_want_list_profile_owner,
+        }
+
+    def get_header_image_url(self):
+        if self.header_image and self.header_image.name:
+            return self.header_image.url
+        if self.header_image_link:
+            return self.header_image_link
+        return None
+
+    def __str__(self):
+        return f'WantListProfile({self.user.username})'
+
+
+class WantList(RulesModel):
+    profile = models.ForeignKey(WantListProfile, on_delete=models.CASCADE, related_name='want_lists')
+    title = models.CharField(max_length=100)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+        rules_permissions = {
+            'update': rules.is_authenticated & is_want_list_owner,
+            'delete': rules.is_authenticated & is_want_list_owner,
+        }
+
+    def __str__(self):
+        return self.title
+
+
+class WantListItem(RulesModel):
+    want_list = models.ForeignKey(WantList, on_delete=models.CASCADE, related_name='items')
+    collectible_type = models.CharField(max_length=15, choices=WANT_LIST_ITEM_TYPE_CHOICES)
+    league = models.ForeignKey('League', to_field='key', on_delete=models.SET_NULL, db_column='league', blank=True, null=True)
+    player = models.CharField(max_length=100, blank=True, null=True)
+    team = models.CharField(max_length=150, blank=True, null=True)
+    number = models.IntegerField(blank=True, null=True)
+    season = models.CharField(max_length=10, blank=True, null=True)
+    game_type = models.ForeignKey('GameType', to_field='key', on_delete=models.SET_NULL, db_column='game_type', blank=True, null=True)
+    usage_type = models.ForeignKey('UsageType', to_field='key', on_delete=models.SET_NULL, db_column='usage_type', blank=True, null=True)
+    gear_type = models.ForeignKey('GearType', to_field='key', on_delete=models.SET_NULL, db_column='gear_type', blank=True, null=True)
+    season_set = models.ForeignKey('SeasonSet', to_field='key', on_delete=models.SET_NULL, db_column='season_set', blank=True, null=True)
+    title = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+        rules_permissions = {
+            'update': rules.is_authenticated & is_want_list_item_owner,
+            'delete': rules.is_authenticated & is_want_list_item_owner,
+        }
+
+    def display_name(self):
+        if self.title:
+            return self.title
+        parts = []
+        if self.player:
+            parts.append(self.player)
+        if self.team:
+            parts.append(self.team)
+        return ' – '.join(parts) if parts else f'Item #{self.pk}'
+
+    def __str__(self):
+        return self.display_name()
+
+
+class WantListItemImage(models.Model):
+    item = models.ForeignKey(WantListItem, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='images', blank=True, null=True)
+    link = models.CharField(max_length=255, blank=True, null=True)
+
+    def delete(self, *args, **kwargs):
+        image = self.image
+        super().delete(*args, **kwargs)
+        if image:
+            image.delete(save=False)
+
+    def __str__(self):
+        return f'Image for {self.item}'

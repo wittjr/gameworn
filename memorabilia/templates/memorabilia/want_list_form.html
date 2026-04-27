@@ -1,0 +1,56 @@
+{% extends "memorabilia/base.html" %}
+{% load static %}
+
+{% block head_title %}{{ title }}{% endblock head_title %}
+
+{% block breadcrumb %}
+    <li>
+        <div class="flex items-center">
+            <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+            </svg>
+            {% url 'memorabilia:want_list_manage' as manage_url %}
+            <a href="{{ manage_url }}" class="text-sm font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white">My Want List</a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+            </svg>
+            <span class="text-sm font-medium text-gray-500">{{ title }}</span>
+        </div>
+    </li>
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl">{{ title }}</h1>
+<div class="container mx-auto max-w-md">
+    <form method="post" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            {% for error in form.non_field_errors %}
+                <p class="text-red-700">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-6{% if form.title.errors %} bg-red-50 rounded-lg p-2{% endif %}">
+            <label for="{{ form.title.id_for_label }}" class="block mb-1 text-sm font-medium {% if form.title.errors %}text-red-700{% else %}text-gray-900 dark:text-white{% endif %}">
+                List Name
+            </label>
+            {{ form.title }}
+            {% for error in form.title.errors %}
+                <p class="mt-1 text-sm text-red-600" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <a href="{% url 'memorabilia:want_list_manage' %}" class="btn-primary-white">Cancel</a>
+            <button type="submit" class="btn-primary">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock content %}

@@ -1,0 +1,86 @@
+{% load static %}
+{% with uid=uid|default:formset.prefix %}
+{{ formset.management_form }}
+{% if formset.non_form_errors %}
+<div class="bg-red-50 border-l-4 border-red-500 p-3 mb-3">
+    {% for error in formset.non_form_errors %}
+    <p class="text-red-700 text-sm">{{ error }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div id="{{ uid }}-thumb-row" class="grid grid-cols-3 gap-3 mb-4">
+    {% for image_form in formset %}
+    {% for hidden in image_form.hidden_fields %}{{ hidden }}{% endfor %}
+    {% if image_form.instance.pk %}
+    <div class="relative">
+        <div class="aspect-square rounded overflow-hidden bg-gray-100">
+            {% if image_form.instance.image %}
+            <img src="{{ image_form.instance.image.url }}" alt="" class="w-full h-full object-cover">
+            {% elif image_form.instance.link %}
+            <img src="{{ image_form.instance.link }}" alt="" class="w-full h-full object-cover">
+            {% endif %}
+        </div>
+        <div class="hidden">{{ image_form.DELETE }}</div>
+        <button type="button" class="mid-saved-remove block mt-1 text-xs text-red-600 hover:underline">Remove</button>
+    </div>
+    {% else %}
+    <div class="{{ uid }}-slot" style="display:none">
+        {{ image_form.image }}
+        {{ image_form.link }}
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<div id="{{ uid }}-dropzone">
+    <div class="mb-2 border rounded-lg border-gray-200 dark:border-gray-700">
+        <ul class="flex -mb-px text-sm font-medium text-center">
+            <li class="w-1/2">
+                <button type="button" id="{{ uid }}-upload-tab" class="inline-block w-full p-3 border-b-2 rounded-tl-lg">Upload</button>
+            </li>
+            <li class="w-1/2">
+                <button type="button" id="{{ uid }}-link-tab" class="inline-block w-full p-3 border-b-2 rounded-tr-lg hover:text-gray-600 hover:border-gray-300">Link</button>
+            </li>
+        </ul>
+    </div>
+    <div id="{{ uid }}-upload-panel" class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <div class="flex items-center justify-center w-full relative">
+            <label for="{{ uid }}-file-input" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                    <svg class="w-8 h-8 mb-3 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                    </svg>
+                    <p class="mb-1 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG or GIF</p>
+                </div>
+                <input id="{{ uid }}-file-input" type="file" accept="image/*" class="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer">
+            </label>
+        </div>
+    </div>
+    <div id="{{ uid }}-link-panel" class="hidden p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Image URL</label>
+        <div class="flex gap-2">
+            <input id="{{ uid }}-url-input" type="url" placeholder="https://..." class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+            <button type="button" id="{{ uid }}-add-url-btn" class="btn-primary shrink-0">Add</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'django_flowbite_widgets/multi_image_dropzone.js' %}"></script>
+<script>
+initMultiImageDropzone({
+    dropzoneId:    '{{ uid }}-dropzone',
+    thumbRowId:    '{{ uid }}-thumb-row',
+    fileInputId:   '{{ uid }}-file-input',
+    urlInputId:    '{{ uid }}-url-input',
+    addUrlBtnId:   '{{ uid }}-add-url-btn',
+    uploadTabId:   '{{ uid }}-upload-tab',
+    linkTabId:     '{{ uid }}-link-tab',
+    uploadPanelId: '{{ uid }}-upload-panel',
+    linkPanelId:   '{{ uid }}-link-panel',
+    slotClass:     '{{ uid }}-slot',
+    formsetPrefix: '{{ formset.prefix }}',
+});
+</script>
+{% endwith %}

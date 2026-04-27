@@ -69,6 +69,8 @@
                   {% include "memorabilia/elements/usernavitem.html" with link=the_url label="My Collections" %}
                   {% url 'memorabilia:create_collection' as the_url %}
                   {% include "memorabilia/elements/usernavitem.html" with link=the_url label="Add Collection" %}
+                  {% url 'memorabilia:want_list_manage' as the_url %}
+                  {% include "memorabilia/elements/usernavitem.html" with link=the_url label="My Want List" %}
 
                   {% block page_navigation %}{% endblock page_navigation %}
                </ul>

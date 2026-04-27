@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
          img.src = event.target.result
          img.id ='dropzone-image-preview'
          document.getElementById('dropzone-preview').appendChild(img)
-          
       }
    })
 })
