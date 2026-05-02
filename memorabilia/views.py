@@ -276,6 +276,7 @@ def search_collectibles(request):
 
 class ExternalResourceListView(generic.ListView):
     model = ExternalResource
+    ordering = ['title']
 
     # def get_context_data(self, **kwargs):
     #     context = super(ExternalResourceListView, self).get_context_data(**kwargs)
