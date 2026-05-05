@@ -52,5 +52,77 @@
     "description": "Message board hosted by the Dirty Laundry Game Worn Podcase",
     "link": "https://forums.dirtylaundryhockey.com"
   }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 7,
+  "fields": {
+    "title": "Red Wings Team Store",
+    "description": "shophockeytown has some game used things",
+    "link": "https://shophockeytown.com/hockeytown-authentics/?sort=pricedesc"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 8,
+  "fields": {
+    "title": "Signature Pro Auctions",
+    "description": "Canadians gear is sometimes auctioned here",
+    "link": "https://signaturepro.bid/en"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 9,
+  "fields": {
+    "title": "Detroit Hockey Co",
+    "description": "Strangely enough has Arizona Coyotes gear and some others",
+    "link": "https://www.detroithockeyco.com"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 10,
+  "fields": {
+    "title": "Ditch Hockey",
+    "description": "Has some Arizone Coyotes gear",
+    "link": "https://ditchhockey.com/storefront/product-category/game-worn-jersey/"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 11,
+  "fields": {
+    "title": "Real Sports Auctions",
+    "description": "Toronto Maple Leafs auctions",
+    "link": "https://auctions.realsports.ca/iSynApp/allProduct.action?sid=1103961&sort=price_asc&rc=12&layout=grid&&selectedCatId=28040&query=&qMode=&pgmode1=catpage&pgcust1=&&qt[0].type=fieldmatch&qt[0].name=panname_teamname_s&qt[0].value1=leafs&rs=0"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 12,
+  "fields": {
+    "title": "Tampa Bay Sports",
+    "description": "Tampa Bay pro teams including the Lightning",
+    "link": "https://tampabaysports.com"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 14,
+  "fields": {
+    "title": "The Realest",
+    "description": "Has PWHL among other sports",
+    "link": "https://therealest.com/pwhl"
+  }
+},
+{
+  "model": "memorabilia.externalresource",
+  "pk": 15,
+  "fields": {
+    "title": "Van Base",
+    "description": "Vancouver teams store",
+    "link": "https://vanbase.ca"
+  }
 }
 ]
