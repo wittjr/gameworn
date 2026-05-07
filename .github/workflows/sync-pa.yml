@@ -1,26 +1,50 @@
 name: Sync pa with main
 
 on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: write
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 jobs:
   sync:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.SYNC_PAT }}
 
-      - name: Fast-forward pa to main
+      - name: Check if sync PR already exists
+        id: check_pr
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout pa
-          git merge origin/main --ff-only
-          git push origin pa
+          EXISTING=$(gh pr list --base uat --head main --state open --json number --jq '.[0].number')
+          echo "pr_number=$EXISTING" >> $GITHUB_OUTPUT
+
+      - name: Create sync PR
+        if: steps.check_pr.outputs.pr_number == ''
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base uat \
+            --head main \
+            --title "chore: sync uat with main" \
+            --body "Automated sync of uat with main after merge.")
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Merge sync PR
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+        run: |
+          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr view ${{ steps.create_pr.outputs.pr_url }} --json number --jq '.number')
+          fi
+          gh pr merge $PR_NUMBER --squash --auto --delete-branch=false
