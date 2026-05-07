@@ -23,7 +23,7 @@ jobs:
         run: python manage.py collectstatic --noinput
         env:
           DJANGO_SETTINGS_MODULE: gameworn.settings
-          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
