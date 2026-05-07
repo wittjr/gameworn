@@ -1,6 +1,6 @@
 -r requirements.txt
 aiosmtpd==1.4.6
-django-browser-reload==1.18.0
+django-browser-reload==1.21.0
 django-debug-toolbar==6.3.0
 django_compressor==4.5.1
 celery==5.6.3
