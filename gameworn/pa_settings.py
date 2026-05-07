@@ -8,7 +8,8 @@ if not SECRET_KEY:
 
 
 # IPs (or CIDR ranges) allowed to access /admin/. Empty list = no restriction.
-ADMIN_ALLOWED_IPS = []
+_developer_ip = os.environ.get('DEVELOPER_IP', '')
+ADMIN_ALLOWED_IPS = [_developer_ip] if _developer_ip else []
 
 DATABASES = {
     "default": {
