@@ -127,7 +127,7 @@ resource app 'Microsoft.Web/sites@2023-01-01' = {
     clientCertMode: 'Optional'
     siteConfig: {
       linuxFxVersion: 'PYTHON|3.13'
-      appCommandLine: 'python -m gunicorn --bind=0.0.0.0 --timeout 600 -w 3 gameworn.wsgi'
+      appCommandLine: 'bash startup.sh'
       ipSecurityRestrictionsDefaultAction: 'Deny'
       ipSecurityRestrictions: ipRestrictions
       scmIpSecurityRestrictionsUseMain: true
