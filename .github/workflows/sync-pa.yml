@@ -23,7 +23,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          EXISTING=$(gh pr list --base uat --head main --state open --json number --jq '.[0].number')
+          EXISTING=$(gh pr list --base pa --head main --state open --json number --jq '.[0].number')
           echo "pr_number=$EXISTING" >> $GITHUB_OUTPUT
 
       - name: Create sync PR
@@ -33,10 +33,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_URL=$(gh pr create \
-            --base uat \
+            --base pa \
             --head main \
-            --title "chore: sync uat with main" \
-            --body "Automated sync of uat with main after merge.")
+            --title "chore: sync pa with main" \
+            --body "Automated sync of pa with main after merge.")
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
 
       - name: Merge sync PR
