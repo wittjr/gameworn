@@ -1,5 +1,6 @@
 {% extends 'memorabilia/base.html' %}
 {% load memorabilia_extras %}
+{% load static %}
 
 {% block head_title %}
     {{ title }}
@@ -7,7 +8,8 @@
 
 {% block extrahead %}
     {{ image_formset.media }}
-    <script nonce="{{ request.csp_nonce }}">window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "{{ collectible.flickr_url|default:''|escapejs }}";</script>
+    <script nonce="{{ request.csp_nonce }}">window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "{{ collectible.flickr_url|default:''|escapejs }}"; window.TEAMS_URL = "{% url 'memorabilia:get_teams' %}";</script>
+    <script src="{% static 'memorabilia/teams_datalist.js' %}" nonce="{{ request.csp_nonce }}"></script>
 {% endblock extrahead %}
 
 {% block breadcrumb %}
@@ -176,65 +178,27 @@
                                 {% if field.name == 'team' %}
                                     <datalist id="team-list"></datalist>
                                     <script nonce="{{ request.csp_nonce }}">
-                                      (function() {
-                                        function fillTopOptionOnTab(e, inputEl, listId) {
-                                          if (e.key !== 'Tab') return;
-                                          const list = document.getElementById(listId);
-                                          if (!list) return;
-                                          const q = (inputEl.value || '').trim().toLowerCase();
-                                          if (!q) return;
-                                          const opts = Array.from(list.options || []);
-                                          // Prefer startsWith match; fallback to contains
-                                          let match = opts.find(o => (o.value || '').toLowerCase().startsWith(q));
-                                          if (!match) match = opts.find(o => (o.value || '').toLowerCase().includes(q));
-                                          if (match) {
-                                            inputEl.value = match.value;
-                                            // Do not prevent default so Tab still moves focus forward
-                                            return true;
-                                          }
-                                          return false;
+                                      document.addEventListener('DOMContentLoaded', function() {
+                                        const leagueInput = document.querySelector('[name="league"]');
+                                        const teamInput = document.querySelector('[name="team"]');
+                                        const leagueList = document.getElementById('league-list');
+                                        const teamList = document.getElementById('team-list');
+                                        if (leagueInput) {
+                                          TeamsDatalist.populateTeams(leagueInput.value, teamList, window.TEAMS_URL);
+                                          leagueInput.addEventListener('input', function(e) {
+                                            TeamsDatalist.populateTeams(e.target.value, teamList, window.TEAMS_URL);
+                                          });
+                                          leagueInput.addEventListener('keydown', function(e) {
+                                            if (TeamsDatalist.fillTopOptionOnTab(e, leagueInput, leagueList))
+                                              TeamsDatalist.populateTeams(leagueInput.value, teamList, window.TEAMS_URL);
+                                          });
                                         }
-                                        function populateTeams(leagueVal) {
-                                          const list = document.getElementById('team-list');
-                                          if (!list) return;
-                                          list.innerHTML = '';
-                                          if (!leagueVal) return;
-                                          fetch(`{% url 'memorabilia:get_teams' %}?league=${encodeURIComponent(leagueVal)}`)
-                                            .then(r => r.json())
-                                            .then(data => {
-                                              (data.teams || []).forEach(name => {
-                                                const opt = document.createElement('option');
-                                                opt.value = name;
-                                                list.appendChild(opt);
-                                              });
-                                            })
-                                            .catch(() => {});
+                                        if (teamInput) {
+                                          teamInput.addEventListener('keydown', function(e) {
+                                            TeamsDatalist.fillTopOptionOnTab(e, teamInput, teamList);
+                                          });
                                         }
-                                        // On load
-                                        document.addEventListener('DOMContentLoaded', function() {
-                                          const leagueInput = document.querySelector('[name="league"]');
-                                          const teamInput = document.querySelector('[name="team"]');
-                                          if (leagueInput) {
-                                            populateTeams(leagueInput.value);
-                                            leagueInput.addEventListener('input', function(e) {
-                                              populateTeams(e.target.value);
-                                            });
-                                            leagueInput.addEventListener('keydown', function(e) {
-                                              const filled = fillTopOptionOnTab(e, leagueInput, 'league-list');
-                                              if (filled) {
-                                                // Ensure teams datalist updates before focus leaves
-                                                populateTeams(leagueInput.value);
-                                              }
-                                            });
-                                          }
-                                          if (teamInput) {
-                                            teamInput.addEventListener('keydown', function(e) {
-                                              fillTopOptionOnTab(e, teamInput, 'team-list');
-                                            });
-                                          }
-                                          // If team has a value and list empty, keep it; options populate lazily
-                                        });
-                                      })();
+                                      });
                                     </script>
                                 {% endif %}
                                 {% if field.help_text %}

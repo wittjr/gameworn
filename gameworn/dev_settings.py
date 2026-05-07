@@ -4,8 +4,6 @@ INSTALLED_APPS = [
     *INSTALLED_APPS,
     'django_browser_reload',
     'debug_toolbar',
-    'compressor',
-
 ]
 MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
@@ -35,16 +33,6 @@ INTERNAL_IPS = [
 ]
 
 TAILWIND_APP_NAME = 'theme'
-
-COMPRESS_ROOT = os.path.join(BASE_DIR, 'static')
-
-COMPRESS_ENABLED = True
-
-STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder',
-]
 
 STATIC_ROOT = BASE_DIR / 'static'
 

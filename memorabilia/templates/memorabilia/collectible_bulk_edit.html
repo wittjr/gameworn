@@ -1,6 +1,11 @@
 {% extends "memorabilia/base.html" %}
 {% load static %}
 
+{% block extrahead %}
+    <script nonce="{{ request.csp_nonce }}">window.TEAMS_URL = "{% url 'memorabilia:get_teams' %}";</script>
+    <script src="{% static 'memorabilia/teams_datalist.js' %}" nonce="{{ request.csp_nonce }}"></script>
+{% endblock extrahead %}
+
 {% block breadcrumb %}
     {% url 'memorabilia:list_collections' as the_url %}
     {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
@@ -567,37 +572,8 @@
         if (leagueInput) leagueInput.setAttribute('list', 'league-list');
         if (teamInput) {
           const prefix = row.getAttribute('data-row-prefix');
-          const listId = `team-list-${prefix}`;
-          teamInput.setAttribute('list', listId);
+          teamInput.setAttribute('list', `team-list-${prefix}`);
         }
-      }
-      function fillTopOptionOnTab(e, inputEl, listEl) {
-        if (e.key !== 'Tab') return false;
-        if (!listEl) return false;
-        const opts = Array.from(listEl.querySelectorAll('option'));
-        if (!opts.length) return false;
-        const val = (inputEl.value || '').toLowerCase();
-        let match = val ? opts.find(o => (o.value || '').toLowerCase().startsWith(val)) : null;
-        if (!match) match = opts[0];
-        if (match) { inputEl.value = match.value; return true; }
-        return false;
-      }
-      function populateTeams(leagueKey, list) {
-        if (!list) return;
-        list.innerHTML = '';
-        if (!leagueKey) return;
-        const url = new URL('{% url "memorabilia:get_teams" %}', window.location.origin);
-        url.searchParams.set('league', leagueKey);
-        fetch(url)
-          .then(r => r.json())
-          .then(data => {
-            (data.teams || []).forEach(name => {
-              const opt = document.createElement('option');
-              opt.value = name;
-              list.appendChild(opt);
-            });
-          })
-          .catch(() => {});
       }
       document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('[data-row-prefix]').forEach(row => {
@@ -607,24 +583,23 @@
           if (leagueInput) {
             const listId = teamInput ? teamInput.getAttribute('list') : null;
             const listEl = listId ? document.getElementById(listId) : null;
-            populateTeams(leagueInput.value, listEl);
+            TeamsDatalist.populateTeams(leagueInput.value, listEl, window.TEAMS_URL);
             leagueInput.addEventListener('input', function(e) {
               if (teamInput) teamInput.value = '';
-              populateTeams(e.target.value, listEl);
+              TeamsDatalist.populateTeams(e.target.value, listEl, window.TEAMS_URL);
             });
             leagueInput.addEventListener('keydown', function(e) {
               const leagueList = document.getElementById('league-list');
-              const accepted = fillTopOptionOnTab(e, leagueInput, leagueList);
-              if (accepted) {
+              if (TeamsDatalist.fillTopOptionOnTab(e, leagueInput, leagueList)) {
                 if (teamInput) teamInput.value = '';
-                populateTeams(leagueInput.value, listEl);
+                TeamsDatalist.populateTeams(leagueInput.value, listEl, window.TEAMS_URL);
               }
             });
           }
           if (teamInput) {
             teamInput.addEventListener('keydown', function(e) {
               const listEl = document.getElementById(teamInput.getAttribute('list'));
-              fillTopOptionOnTab(e, teamInput, listEl);
+              TeamsDatalist.fillTopOptionOnTab(e, teamInput, listEl);
             });
           }
         });
