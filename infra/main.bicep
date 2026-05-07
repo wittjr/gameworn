@@ -76,7 +76,7 @@ var plainAppSettings = [
   { name: 'DJANGO_SETTINGS_MODULE',          value: 'gameworn.settings' }
   { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
   { name: 'ENABLE_ORYX_BUILD',             value: 'true' }
-  { name: 'DISABLE_COLLECTSTATIC',         value: '1' }
+  { name: 'DISABLE_COLLECTSTATIC',         value: 'true' }
   { name: 'PRE_BUILD_COMMAND',             value: 'cat requirements-azure.txt >> requirements.txt' }
   { name: 'AZURE_SQL_SERVER',                value: sqlServer.properties.fullyQualifiedDomainName }
   { name: 'AZURE_SQL_DATABASE',              value: sqlDb.name }
