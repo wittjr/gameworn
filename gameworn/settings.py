@@ -81,7 +81,14 @@ if _storage_account:
     }
     MEDIA_URL = f"https://{_storage_account}.blob.core.windows.net/media/"
 else:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 # Azure sets WEBSITE_HOSTNAME automatically (e.g. heavyuse.azurewebsites.net).
 website_hostname = os.environ.get('WEBSITE_HOSTNAME', '')
