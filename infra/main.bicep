@@ -130,7 +130,7 @@ resource app 'Microsoft.Web/sites@2023-01-01' = {
       appCommandLine: 'bash startup.sh'
       ipSecurityRestrictionsDefaultAction: 'Deny'
       ipSecurityRestrictions: ipRestrictions
-      scmIpSecurityRestrictionsUseMain: true
+      scmIpSecurityRestrictionsUseMain: false
       appSettings: concat(plainAppSettings, secretAppSettings)
     }
   }
