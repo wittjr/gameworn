@@ -195,7 +195,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     function selectImageOption(option) {
         document.querySelectorAll('.image-option-card').forEach(function (card) {

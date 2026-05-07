@@ -61,7 +61,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     let albums = [];
     let flickrUsername = '';
     const BATCH_URL = "{% url 'memorabilia:bulk_add_flickr_batch' collection.id %}";

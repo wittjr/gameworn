@@ -118,7 +118,7 @@
     {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     const container = document.getElementById('sortable-lists');
     if (!container) return;

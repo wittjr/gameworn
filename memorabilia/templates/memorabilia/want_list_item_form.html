@@ -79,7 +79,7 @@
 </form>
 
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     // Type toggle
     const typeSelect = document.getElementById('id_collectible_type');

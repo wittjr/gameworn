@@ -37,6 +37,7 @@ if HOSTNAME != None:
 # Application definition
 
 INSTALLED_APPS = [
+    'axes',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,8 +59,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'gameworn.middleware.CloudflareSecretHeaderMiddleware',
+    'gameworn.middleware.CloudflareOriginPullMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'gameworn.middleware.AdminIPWhitelistMiddleware',
@@ -99,13 +103,16 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT')
 # EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
+    'axes.backends.AxesStandaloneBackend',
     'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
-
-    # `allauth` specific authentication methods, such as login by email
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+from datetime import timedelta
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(hours=1)
+AXES_RESET_ON_SUCCESS = True
 
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_ONLY = True

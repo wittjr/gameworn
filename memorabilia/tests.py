@@ -2905,6 +2905,184 @@ class WantListConvertTests(WantListBaseTestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class ImageSizeValidationTests(TestCase):
+    """Unit tests for ImageSizeValidationMixin.
+
+    The mixin's clean_image() runs after ImageField's own Pillow validation.
+    We test it by calling clean_image() directly on a form instance with
+    pre-populated cleaned_data, which isolates our size-check logic from
+    the Pillow image-content check.
+    """
+
+    MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+    def _make_fake_upload(self, size_bytes, name='test.jpg'):
+        """Return a SimpleUploadedFile whose .size attribute equals size_bytes."""
+        upload = SimpleUploadedFile(name, b'', content_type='image/jpeg')
+        upload.size = size_bytes
+        return upload
+
+    def _apply_mixin_directly(self, form_class, upload):
+        """
+        Instantiate form_class, set cleaned_data['image'] to upload, and
+        call clean_image(). Returns (result, raised_exception).
+        """
+        from django.core.exceptions import ValidationError
+        form = form_class.__new__(form_class)
+        form.cleaned_data = {'image': upload}
+        try:
+            result = form.clean_image()
+            return result, None
+        except ValidationError as exc:
+            return None, exc
+
+    # ── CollectibleImageForm (PlayerItemImage) ────────────────────────────────
+
+    def test_collectible_image_form_rejects_oversized_file(self):
+        from .forms import CollectibleImageForm
+        upload = self._make_fake_upload(self.MAX_BYTES + 1)
+        _, exc = self._apply_mixin_directly(CollectibleImageForm, upload)
+        self.assertIsNotNone(exc, "Expected ValidationError for oversized image")
+        self.assertIn('too large', exc.message)
+
+    def test_collectible_image_form_accepts_small_file(self):
+        from .forms import CollectibleImageForm
+        upload = self._make_fake_upload(1 * 1024 * 1024)
+        result, exc = self._apply_mixin_directly(CollectibleImageForm, upload)
+        self.assertIsNone(exc, f"Unexpected ValidationError for small image: {exc}")
+        self.assertEqual(result, upload)
+
+    def test_collectible_image_form_accepts_exactly_10mb(self):
+        from .forms import CollectibleImageForm
+        upload = self._make_fake_upload(self.MAX_BYTES)
+        result, exc = self._apply_mixin_directly(CollectibleImageForm, upload)
+        self.assertIsNone(exc, "Exactly 10 MB should be accepted")
+
+    def test_collectible_image_form_no_image_passes(self):
+        from .forms import CollectibleImageForm
+        form = CollectibleImageForm.__new__(CollectibleImageForm)
+        form.cleaned_data = {'image': None}
+        result = form.clean_image()
+        self.assertIsNone(result)
+
+    # ── GeneralItemImageForm ──────────────────────────────────────────────────
+
+    def test_general_item_image_form_rejects_oversized_file(self):
+        from .forms import GeneralItemImageForm
+        upload = self._make_fake_upload(self.MAX_BYTES + 1)
+        _, exc = self._apply_mixin_directly(GeneralItemImageForm, upload)
+        self.assertIsNotNone(exc)
+        self.assertIn('too large', exc.message)
+
+    def test_general_item_image_form_accepts_small_file(self):
+        from .forms import GeneralItemImageForm
+        upload = self._make_fake_upload(1 * 1024 * 1024)
+        result, exc = self._apply_mixin_directly(GeneralItemImageForm, upload)
+        self.assertIsNone(exc)
+        self.assertEqual(result, upload)
+
+    # ── PlayerGearImageForm ───────────────────────────────────────────────────
+
+    def test_player_gear_image_form_rejects_oversized_file(self):
+        from .forms import PlayerGearImageForm
+        upload = self._make_fake_upload(self.MAX_BYTES + 1)
+        _, exc = self._apply_mixin_directly(PlayerGearImageForm, upload)
+        self.assertIsNotNone(exc)
+        self.assertIn('too large', exc.message)
+
+    def test_player_gear_image_form_accepts_small_file(self):
+        from .forms import PlayerGearImageForm
+        upload = self._make_fake_upload(1 * 1024 * 1024)
+        result, exc = self._apply_mixin_directly(PlayerGearImageForm, upload)
+        self.assertIsNone(exc)
+        self.assertEqual(result, upload)
+
+    # ── WantListItemImageForm ─────────────────────────────────────────────────
+
+    def test_want_list_item_image_form_rejects_oversized_file(self):
+        from .forms import WantListItemImageForm
+        upload = self._make_fake_upload(self.MAX_BYTES + 1)
+        _, exc = self._apply_mixin_directly(WantListItemImageForm, upload)
+        self.assertIsNotNone(exc)
+        self.assertIn('too large', exc.message)
+
+    def test_want_list_item_image_form_accepts_small_file(self):
+        from .forms import WantListItemImageForm
+        upload = self._make_fake_upload(1 * 1024 * 1024)
+        result, exc = self._apply_mixin_directly(WantListItemImageForm, upload)
+        self.assertIsNone(exc)
+        self.assertEqual(result, upload)
+
+    # ── Object without .size attribute should be returned as-is ──────────────
+
+    def test_object_without_size_attribute_passes(self):
+        """clean_image should not crash on an object that lacks .size (e.g. a URL string)."""
+        from .forms import CollectibleImageForm
+        form = CollectibleImageForm.__new__(CollectibleImageForm)
+        form.cleaned_data = {'image': 'https://example.com/photo.jpg'}
+        result = form.clean_image()
+        self.assertEqual(result, 'https://example.com/photo.jpg')
+
+
+class SecuritySettingsTests(TestCase):
+    """Smoke tests that verify security-critical settings are wired correctly."""
+
+    def test_axes_backend_is_first_in_authentication_backends(self):
+        from django.conf import settings
+        backends = settings.AUTHENTICATION_BACKENDS
+        self.assertTrue(
+            len(backends) > 0,
+            "AUTHENTICATION_BACKENDS must not be empty"
+        )
+        self.assertEqual(
+            backends[0],
+            'axes.backends.AxesStandaloneBackend',
+            f"AxesStandaloneBackend must be first in AUTHENTICATION_BACKENDS, got: {backends[0]}"
+        )
+
+    def test_axes_failure_limit_configured(self):
+        from django.conf import settings
+        self.assertTrue(
+            hasattr(settings, 'AXES_FAILURE_LIMIT'),
+            "AXES_FAILURE_LIMIT must be set"
+        )
+        self.assertGreater(settings.AXES_FAILURE_LIMIT, 0)
+
+    def test_axes_cooloff_time_configured(self):
+        from datetime import timedelta
+        from django.conf import settings
+        self.assertTrue(
+            hasattr(settings, 'AXES_COOLOFF_TIME'),
+            "AXES_COOLOFF_TIME must be set"
+        )
+        self.assertIsInstance(settings.AXES_COOLOFF_TIME, timedelta)
+        # Must be a positive cooloff
+        self.assertGreater(settings.AXES_COOLOFF_TIME, timedelta(0))
+
+    def test_axes_reset_on_success_is_true(self):
+        from django.conf import settings
+        self.assertTrue(
+            getattr(settings, 'AXES_RESET_ON_SUCCESS', False),
+            "AXES_RESET_ON_SUCCESS must be True so successful logins clear lockout counters"
+        )
+
+    def test_axes_middleware_present(self):
+        from django.conf import settings
+        self.assertIn(
+            'axes.middleware.AxesMiddleware',
+            settings.MIDDLEWARE,
+            "axes.middleware.AxesMiddleware must be in MIDDLEWARE"
+        )
+
+    def test_axes_in_installed_apps(self):
+        from django.conf import settings
+        self.assertIn(
+            'axes',
+            settings.INSTALLED_APPS,
+            "'axes' must be in INSTALLED_APPS"
+        )
+
+
 class WantListPublicFilterTests(WantListBaseTestCase):
     def test_filter_by_type(self):
         WantListItem.objects.create(

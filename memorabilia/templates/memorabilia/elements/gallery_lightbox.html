@@ -24,7 +24,7 @@
     <span id="{{ pfx }}-counter" class="absolute bottom-0 translate-y-8 text-white text-sm"></span>
   </div>
 </div>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   const lightbox    = document.getElementById('{{ pfx }}-lightbox');
   const img         = document.getElementById('{{ pfx }}-img');

@@ -57,7 +57,7 @@
 
   </div>
 </nav>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   var focusable = ['INPUT', 'TEXTAREA', 'SELECT'];
   document.addEventListener('keydown', function (e) {

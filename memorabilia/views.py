@@ -30,6 +30,8 @@ from .forms import (
 )
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from csp.decorators import csp_replace
 from rules.contrib.views import permission_required, objectgetter
 from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery, Q
@@ -391,6 +393,17 @@ class PhotoMatchView(generic.DetailView):
     model = PhotoMatch
 
 
+@method_decorator(
+    csp_replace({"script-src": [
+        "'self'",
+        "'unsafe-inline'",
+        "https://cdn.jsdelivr.net",
+        "https://www.googletagmanager.com",
+        "https://static.cloudflareinsights.com",
+        "https://embed-cdn.gettyimages.com",
+    ]}),
+    name='dispatch'
+)
 class CollectibleView(generic.DetailView):
     model = PlayerItem  # Default model for URL resolution
     

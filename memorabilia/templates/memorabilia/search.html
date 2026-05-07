@@ -46,7 +46,7 @@
       <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.team.label }}</label>
       {{ form.team }}
       <datalist id="team-list"></datalist>
-      <script>
+      <script nonce="{{ request.csp_nonce }}">
         (function() {
           function fillTopOptionOnTab(e, inputEl, listId) {
             if (e.key !== 'Tab') return;
@@ -170,7 +170,7 @@
   </div>
 </form>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
   function updateFilterVisibility() {
     var itemType = document.querySelector('[name="item_type"]');

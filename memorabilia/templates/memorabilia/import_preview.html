@@ -117,7 +117,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         var picker = document.getElementById('merge-picker');

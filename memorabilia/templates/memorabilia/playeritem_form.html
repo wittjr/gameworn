@@ -63,7 +63,7 @@
                                 {% endif %}
                                 {% if field.name == 'team' %}
                                     <datalist id="team-list"></datalist>
-                                    <script>
+                                    <script nonce="{{ request.csp_nonce }}">
                                       (function() {
                                         function fillTopOptionOnTab(e, inputEl, listId) {
                                           if (e.key !== 'Tab') return;

@@ -131,7 +131,7 @@
 </form>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     var tabs = document.getElementById('photomatch-photo-tabs');
     var panels = ['your-photo-panel', 'getty-panel'];

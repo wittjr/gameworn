@@ -1,0 +1,455 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.43.1.21952",
+      "templateHash": "2111102886503266804"
+    }
+  },
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "Base name used for all resources (e.g. \"gameworn\"). Must be globally unique for SQL and App Service."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "sqlAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL administrator username."
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "SQL administrator password. Required on first deploy to create the server. Leave empty on subsequent deploys once AAD-only auth is enabled — passing it after that causes a deployment failure."
+      }
+    },
+    "developerIp": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Your local IP address to allow SQL access during setup. Leave empty to skip."
+      }
+    },
+    "aadAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD login name for the SQL server admin (e.g. your email address)."
+      }
+    },
+    "aadAdminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AD object ID for the SQL server admin. Run: az ad signed-in-user show --query id -o tsv"
+      }
+    },
+    "appSecrets": {
+      "type": "secureObject",
+      "metadata": {
+        "description": "All application secrets. Each key becomes an environment variable and a Key Vault secret (underscores converted to hyphens)."
+      }
+    },
+    "googleTagId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Google Tag Manager ID. Not a secret — appears in page source."
+      }
+    },
+    "hostname": {
+      "type": "string",
+      "metadata": {
+        "description": "Custom domain for the app (e.g. heavyuse.us). Sets ALLOWED_HOSTS in Django."
+      }
+    }
+  },
+  "variables": {
+    "copy": [
+      {
+        "name": "cfRestrictions",
+        "count": "[length(variables('cloudflareRanges'))]",
+        "input": {
+          "ipAddress": "[variables('cloudflareRanges')[copyIndex('cfRestrictions')]]",
+          "action": "Allow",
+          "priority": "[add(100, copyIndex('cfRestrictions'))]",
+          "name": "[format('Cloudflare-{0}', add(copyIndex('cfRestrictions'), 1))]"
+        }
+      },
+      {
+        "name": "secretAppSettings",
+        "count": "[length(items(parameters('appSecrets')))]",
+        "input": {
+          "name": "[items(parameters('appSecrets'))[copyIndex('secretAppSettings')].key]",
+          "value": "[format('@Microsoft.KeyVault(SecretUri={0}{1}/)', variables('kvBaseUri'), toLower(replace(items(parameters('appSecrets'))[copyIndex('secretAppSettings')].key, '_', '-')))]"
+        }
+      }
+    ],
+    "cloudflareRanges": [
+      "173.245.48.0/20",
+      "103.21.244.0/22",
+      "103.22.200.0/22",
+      "103.31.4.0/22",
+      "141.101.64.0/18",
+      "108.162.192.0/18",
+      "190.93.240.0/20",
+      "188.114.96.0/20",
+      "197.234.240.0/22",
+      "198.41.128.0/17",
+      "162.158.0.0/15",
+      "104.16.0.0/13",
+      "104.24.0.0/14",
+      "172.64.0.0/13",
+      "131.0.72.0/22",
+      "2400:cb00::/32",
+      "2606:4700::/32",
+      "2803:f800::/32",
+      "2405:b500::/32",
+      "2405:8100::/32",
+      "2a06:98c0::/29",
+      "2c0f:f248::/32"
+    ],
+    "ipRestrictions": "[if(not(equals(parameters('developerIp'), '')), concat(variables('cfRestrictions'), createArray(createObject('ipAddress', format('{0}/32', parameters('developerIp')), 'action', 'Allow', 'priority', 200, 'name', 'Developer'))), variables('cfRestrictions'))]",
+    "kvBaseUri": "[format('https://{0}-kv{1}/secrets/', parameters('appName'), environment().suffixes.keyvaultDns)]",
+    "kvSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6",
+    "kvSecretsOfficerRoleId": "b86a8fe4-44ce-4948-aee5-eccb2c155cd7",
+    "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}-plan', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic"
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('appName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('appName')))]",
+        "httpsOnly": true,
+        "clientCertEnabled": true,
+        "clientCertMode": "Optional",
+        "siteConfig": {
+          "linuxFxVersion": "PYTHON|3.13",
+          "appCommandLine": "python -m gunicorn --bind=0.0.0.0 --timeout 600 gameworn.wsgi",
+          "ipSecurityRestrictionsDefaultAction": "Deny",
+          "ipSecurityRestrictions": "[variables('ipRestrictions')]",
+          "scmIpSecurityRestrictionsUseMain": true,
+          "appSettings": "[concat(createArray(createObject('name', 'DJANGO_SETTINGS_MODULE', 'value', 'gameworn.settings'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true'), createObject('name', 'ENABLE_ORYX_BUILD', 'value', 'true'), createObject('name', 'PRE_BUILD_COMMAND', 'value', 'cat requirements-azure.txt >> requirements.txt'), createObject('name', 'POST_BUILD_COMMAND', 'value', 'python manage.py collectstatic --noinput'), createObject('name', 'AZURE_SQL_SERVER', 'value', reference(resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName'))), '2023-05-01-preview').fullyQualifiedDomainName), createObject('name', 'AZURE_SQL_DATABASE', 'value', format('{0}-db', parameters('appName'))), createObject('name', 'AZURE_SQL_AUTHENTICATION', 'value', 'ActiveDirectoryMsi'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', format('{0}media', parameters('appName'))), createObject('name', 'DEVELOPER_IP', 'value', parameters('developerIp')), createObject('name', 'WEBSITE_HTTPLOGGING_RETENTION_DAYS', 'value', '3'), createObject('name', 'PIP_CACHE_DIR', 'value', '/home/pip-cache'), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '1'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('{0}-insights', parameters('appName'))), '2020-02-02').ConnectionString), createObject('name', 'ApplicationInsightsAgent_EXTENSION_VERSION', 'value', '~3'), createObject('name', 'GOOGLE_TAG_ID', 'value', parameters('googleTagId')), createObject('name', 'HOSTNAME', 'value', parameters('hostname'))), variables('secretAppSettings'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}-insights', parameters('appName')))]",
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('appName')))]",
+        "[resourceId('Microsoft.Sql/servers/databases', format('{0}-sql', parameters('appName')), format('{0}-db', parameters('appName')))]",
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}-sql', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": "[union(createObject('administratorLogin', parameters('sqlAdminLogin'), 'minimalTlsVersion', '1.2'), if(not(equals(parameters('sqlAdminPassword'), '')), createObject('administratorLoginPassword', parameters('sqlAdminPassword')), createObject()))]"
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), format('{0}-db', parameters('appName')))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Free",
+        "tier": "Free"
+      },
+      "properties": {
+        "freeLimitExhaustionBehavior": "AutoPause"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('aadAdminObjectId'), ''))]",
+      "type": "Microsoft.Sql/servers/administrators",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), 'ActiveDirectory')]",
+      "properties": {
+        "administratorType": "ActiveDirectory",
+        "login": "[parameters('aadAdminLogin')]",
+        "sid": "[parameters('aadAdminObjectId')]",
+        "tenantId": "[tenant().tenantId]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('aadAdminObjectId'), ''))]",
+      "type": "Microsoft.Sql/servers/azureADOnlyAuthentications",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), 'Default')]",
+      "properties": {
+        "azureADOnlyAuthentication": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers/administrators', format('{0}-sql', parameters('appName')), 'ActiveDirectory')]",
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}-vnet', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "app-subnet",
+            "properties": {
+              "addressPrefix": "10.0.1.0/24",
+              "delegations": [
+                {
+                  "name": "app-service",
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
+                }
+              ],
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql",
+                  "locations": [
+                    "[parameters('location')]"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/networkConfig",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/{1}', parameters('appName'), 'virtualNetwork')]",
+      "properties": {
+        "subnetResourceId": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('appName'))), '2023-09-01').subnets[0].id]",
+        "swiftSupported": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers/virtualNetworkRules",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), 'AppServiceVnet')]",
+      "properties": {
+        "virtualNetworkSubnetId": "[reference(resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('appName'))), '2023-09-01').subnets[0].id]",
+        "ignoreMissingVnetServiceEndpoint": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('appName')))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('developerIp'), ''))]",
+      "type": "Microsoft.Sql/servers/firewallRules",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), 'DeveloperAccess')]",
+      "properties": {
+        "startIpAddress": "[parameters('developerIp')]",
+        "endIpAddress": "[parameters('developerIp')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}-kv', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[tenant().tenantId]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7
+      }
+    },
+    {
+      "copy": {
+        "name": "kvSecrets",
+        "count": "[length(items(parameters('appSecrets')))]"
+      },
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv', parameters('appName')), toLower(replace(items(parameters('appSecrets'))[copyIndex()].key, '_', '-')))]",
+      "properties": {
+        "value": "[items(parameters('appSecrets'))[copyIndex()].value]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName')))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName'))), resourceId('Microsoft.Web/sites', parameters('appName')), variables('kvSecretsUserRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('kvSecretsUserRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2023-01-01', 'full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName')))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName'))), parameters('aadAdminObjectId'), variables('kvSecretsOfficerRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('kvSecretsOfficerRoleId'))]",
+        "principalId": "[parameters('aadAdminObjectId')]",
+        "principalType": "User"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}media', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": true,
+        "minimumTlsVersion": "TLS1_2"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/default/media', format('{0}media', parameters('appName')))]",
+      "properties": {
+        "publicAccess": "Blob"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName')))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName'))), resourceId('Microsoft.Web/sites', parameters('appName')), variables('storageBlobDataContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2023-01-01', 'full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('appName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}-logs', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[format('{0}-insights', parameters('appName'))]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('appName')))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('appName')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "appUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2023-01-01').defaultHostName)]"
+    },
+    "appPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', parameters('appName')), '2023-01-01', 'full').identity.principalId]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName'))), '2023-05-01-preview').fullyQualifiedDomainName]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "value": "[format('{0}-db', parameters('appName'))]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[format('{0}media', parameters('appName'))]"
+    },
+    "mediaUrl": {
+      "type": "string",
+      "value": "[format('{0}media/', reference(resourceId('Microsoft.Storage/storageAccounts', format('{0}media', parameters('appName'))), '2023-01-01').primaryEndpoints.blob)]"
+    }
+  }
+}

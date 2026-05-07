@@ -33,7 +33,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         var checkbox = document.getElementById('zip-include-external');

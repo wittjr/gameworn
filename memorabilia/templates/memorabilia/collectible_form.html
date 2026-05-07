@@ -7,7 +7,7 @@
 
 {% block extrahead %}
     {{ image_formset.media }}
-    <script>window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "{{ collectible.flickr_url|default:''|escapejs }}";</script>
+    <script nonce="{{ request.csp_nonce }}">window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "{{ collectible.flickr_url|default:''|escapejs }}";</script>
 {% endblock extrahead %}
 
 {% block breadcrumb %}
@@ -175,7 +175,7 @@
                                 {% endif %}
                                 {% if field.name == 'team' %}
                                     <datalist id="team-list"></datalist>
-                                    <script>
+                                    <script nonce="{{ request.csp_nonce }}">
                                       (function() {
                                         function fillTopOptionOnTab(e, inputEl, listId) {
                                           if (e.key !== 'Tab') return;
@@ -300,7 +300,7 @@
                     Add Authentication
                 </button>
             </div>
-            <script>
+            <script nonce="{{ request.csp_nonce }}">
             (function() {
                 var formsetPrefix = '{{ auth_formset.prefix }}';
                 document.getElementById('add-auth-btn').addEventListener('click', function() {
@@ -356,7 +356,7 @@
     {% if not collectible %}</div>{% endif %}{# end wizard-step2 #}
 </form>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Fix 3: Link error messages to their inputs via aria-describedby
     document.querySelectorAll('div.field-row.field-error').forEach(function(row) {
         var errMsgs = row.querySelectorAll('.field-error-msg');
@@ -386,7 +386,7 @@
 </script>
 
 {% if not collectible %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     const TYPE_LABELS = {
         'GeneralItem':  'General Item',
@@ -459,7 +459,7 @@
 </script>
 {% endif %}
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Handle toggling form fields based on collectible type
     (function() {
         const playerFields = ['league', 'player', 'team', 'number'];
@@ -512,7 +512,7 @@
 </script>
 
 {% if collectible %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     const convertBtn    = document.getElementById('convert-type-btn');
     const convertPanel  = document.getElementById('convert-type-panel');

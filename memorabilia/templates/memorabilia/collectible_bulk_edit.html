@@ -372,7 +372,7 @@
     {% endfor %}
   </datalist>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
   // ── Quick Fill ──
   (function () {
     // Fields that use a <select> in the row (copy options from first visible match)
@@ -460,7 +460,7 @@
   })();
   </script>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     // Fields visible per item type
     const TYPE_FIELDS = {
       playergear: ['title', 'description', 'how_obtained', 'coa', 'league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'allow_featured'],
@@ -496,7 +496,7 @@
     });
   </script>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
   // Restore extra field values and type selectors from POST data on validation errors.
   // The formset-bound fields are restored by Django automatically; these are the
   // plain HTML inputs (item_type_<prefix>, and gear FK fields on player/other rows).
@@ -531,7 +531,7 @@
   })();
   </script>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     // Bulk delete logic
     function updateDeleteBtn() {
       const any = document.querySelector('.delete-cb:checked');
@@ -559,7 +559,7 @@
     }
   </script>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     (function() {
       function attachLists(row) {
         const leagueInput = row.querySelector('[name$="-league"]');

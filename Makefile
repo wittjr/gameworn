@@ -17,7 +17,7 @@ DJANGO_ENV := DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS)
 DB_FILE ?= db.sqlite3
 BACKUP_DIR ?= backups
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy
 
 test:
 	$(VENV) && $(DJANGO_ENV) python manage.py test memorabilia
@@ -63,5 +63,5 @@ import_population_report:
 	$(VENV) && $(DJANGO_ENV) python manage.py import_population_report $(XLSX) --season $(SEASON)
 
 deploy:
-	python manage.py loaddata $(FIXTURES)
-	python manage.py migrate
+	$(VENV) && $(DJANGO_ENV) python manage.py migrate
+	$(VENV) && $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)

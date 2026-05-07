@@ -40,6 +40,9 @@ def rename_image_table_forward(apps, schema_editor):
         )
         schema_editor.execute("DROP TABLE memorabilia_playeritemimage")
         schema_editor.execute("PRAGMA foreign_keys = ON")
+    elif db == 'microsoft':
+        schema_editor.execute("EXEC sp_rename 'memorabilia_playeritem', 'memorabilia_playergearitem'")
+        schema_editor.execute("EXEC sp_rename 'memorabilia_playeritemimage', 'memorabilia_playergearitemimage'")
     else:
         # MySQL / PostgreSQL: rename both tables; FK references are preserved
         schema_editor.execute(
@@ -75,6 +78,9 @@ def rename_image_table_backward(apps, schema_editor):
         )
         schema_editor.execute("DROP TABLE memorabilia_playergearitemimage")
         schema_editor.execute("PRAGMA foreign_keys = ON")
+    elif db == 'microsoft':
+        schema_editor.execute("EXEC sp_rename 'memorabilia_playergearitem', 'memorabilia_playeritem'")
+        schema_editor.execute("EXEC sp_rename 'memorabilia_playergearitemimage', 'memorabilia_playeritemimage'")
     else:
         schema_editor.execute(
             "ALTER TABLE memorabilia_playergearitem RENAME TO memorabilia_playeritem"

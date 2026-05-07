@@ -7,10 +7,11 @@ backups/
 django-memorabilia
 django-polls
 .DS_Store
-.env
+.env*
 **/CACHE/css
 **/static/debug_toolbar
 **/static/django-browser-reload
 backend
 .vscode
 .claude
+deploy.zip

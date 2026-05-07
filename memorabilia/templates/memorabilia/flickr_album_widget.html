@@ -31,7 +31,7 @@
         <input type="text" id="flickrAlbum" name="flickrAlbum"
             class="w-full mb-2 p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             placeholder="https://www.flickr.com/photos/<flickr ID>/albums/<album ID>">
-        <script>
+        <script nonce="{{ request.csp_nonce }}">
         (function() {
             var fid = (typeof window.FLICKR_ID !== 'undefined') ? window.FLICKR_ID : '';
             var existing = (typeof window.FLICKR_URL !== 'undefined') ? window.FLICKR_URL : '';
@@ -91,7 +91,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     // --- Tab switching ---
     document.getElementById('add-image-tabs').addEventListener('click', function (e) {
@@ -292,7 +292,7 @@
 </div>
 </fieldset>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     function queryFlickr() {
         const button = document.getElementById('queryFlickrBtn');
         const buttonText = document.getElementById('queryFlickrText');
@@ -489,7 +489,7 @@
     }
 </script>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Sync selected primary radio to hidden primary checkboxes on submit
     (function() {
         const form = document.querySelector('form');
@@ -508,7 +508,7 @@
         });
     })();
  </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 // Sync radio selection to hidden primary checkboxes before submit
 (function() {
     const container = document.getElementById('album');
@@ -540,7 +540,7 @@
     }
 })();
 </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     function allCards() {
         return Array.from(document.querySelectorAll('#album .image-form'));

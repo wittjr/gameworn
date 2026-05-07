@@ -6,7 +6,7 @@
 
 {% block extrahead %}
     {{ image_formset.media }}
-    <script>window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "";</script>
+    <script nonce="{{ request.csp_nonce }}">window.FLICKR_ID = "{{ flickr_id|escapejs }}"; window.FLICKR_URL = "";</script>
 {% endblock extrahead %}
 
 {% block breadcrumb %}
@@ -138,7 +138,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     const playerFields = ['league', 'player', 'team', 'number'];
     const gearFields = ['brand', 'size', 'season', 'game_type', 'usage_type'];

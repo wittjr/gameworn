@@ -12,3 +12,5 @@ PyJWT==2.12.1
 cryptography==46.0.7
 weasyprint==68.1
 openpyxl==3.1.5
+django-axes==8.3.1
+django-csp==4.0

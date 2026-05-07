@@ -2,6 +2,7 @@ import json
 import re
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet, ModelForm, CheckboxInput, ImageField, ModelChoiceField, ClearableFileInput, FileField, FilePathField, MultiValueField, inlineformset_factory
 
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneField
@@ -23,6 +24,25 @@ from django.core.files.storage import default_storage
 from .widgets import FlickrAlbumWidget, ImageGallery
 from django_flowbite_widgets import flowbite_widgets
 from django.core.exceptions import PermissionDenied
+
+
+MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+class ImageSizeValidationMixin:
+    """Rejects uploaded images larger than MAX_IMAGE_UPLOAD_BYTES.
+
+    Django's ImageField already validates content via Pillow; this adds a size cap.
+    Apply to any ModelForm that has an `image` field.
+    """
+
+    def clean_image(self):
+        image = self.cleaned_data.get('image')
+        if image and hasattr(image, 'size') and image.size > MAX_IMAGE_UPLOAD_BYTES:
+            raise ValidationError(
+                f"Image file is too large. Maximum size is {MAX_IMAGE_UPLOAD_BYTES // (1024 * 1024)} MB."
+            )
+        return image
 
 
 class MultipleFileInput(ClearableFileInput):
@@ -222,7 +242,7 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         return value.strip()
 
 
-class CollectibleImageForm(ModelForm):
+class CollectibleImageForm(ImageSizeValidationMixin, ModelForm):
 
     # images = ImageGallery(required=False)
 
@@ -237,7 +257,7 @@ class CollectibleImageForm(ModelForm):
         }
 
 
-class GeneralItemImageForm(ModelForm):
+class GeneralItemImageForm(ImageSizeValidationMixin, ModelForm):
     """Form for GeneralItem images"""
     class Meta:
         model = GeneralItemImage
@@ -283,7 +303,7 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
         self.fields['allow_featured'] = self.fields.pop('allow_featured')
 
 
-class PlayerGearImageForm(ModelForm):
+class PlayerGearImageForm(ImageSizeValidationMixin, ModelForm):
     """Form for PlayerGear images"""
     class Meta:
         model = PlayerGearImage
@@ -987,7 +1007,7 @@ class WantListItemForm(ModelForm):
         return cleaned_data
 
 
-class WantListItemImageForm(ModelForm):
+class WantListItemImageForm(ImageSizeValidationMixin, ModelForm):
     class Meta:
         model = WantListItemImage
         fields = ['image', 'link']
