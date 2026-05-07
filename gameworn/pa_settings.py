@@ -6,6 +6,7 @@ if not SECRET_KEY:
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+STATIC_ROOT = BASE_DIR / 'static'
 
 # IPs (or CIDR ranges) allowed to access /admin/. Empty list = no restriction.
 _developer_ip = os.environ.get('DEVELOPER_IP', '')
