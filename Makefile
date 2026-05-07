@@ -1,18 +1,24 @@
-VENV ?= source ~/Development/gameworn/venv/bin/activate
 SETTINGS ?= dev
 FIXTURES = leagues game_types gear_types usage_types coa_types how_obtained_options externalresources teams season_sets auth_sources
 
 ifeq ($(SETTINGS),dev)
   DJANGO_SETTINGS := gameworn.dev_settings
+  VENV ?= ~/Development/gameworn/venv/bin/activate
 else ifeq ($(SETTINGS),test)
   DJANGO_SETTINGS := gameworn.test_settings
+  VENV ?=
+else ifeq ($(SETTINGS),pa)
+  DJANGO_SETTINGS := gameworn.pa_settings
+  VENV ?=
 else ifeq ($(SETTINGS),prod)
   DJANGO_SETTINGS := gameworn.settings
+  VENV ?=
 else
   $(error Unknown SETTINGS value '$(SETTINGS)'. Use dev, test, or prod)
 endif
 
 DJANGO_ENV := DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS)
+VENV_CMD = $(if $(VENV),source $(VENV) &&,)
 
 DB_FILE ?= db.sqlite3
 BACKUP_DIR ?= backups
@@ -20,31 +26,31 @@ BACKUP_DIR ?= backups
 .PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy
 
 test:
-	$(VENV) && $(DJANGO_ENV) python manage.py test memorabilia
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia
 
 migrations:
-	$(VENV) && $(DJANGO_ENV) python manage.py makemigrations
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py makemigrations
 
 migrate:
-	$(VENV) && $(DJANGO_ENV) python manage.py migrate
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py migrate
 
 loadfixtures:
-	$(VENV) && $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
 
 collectstatic:
-	$(VENV) && $(DJANGO_ENV) python manage.py collectstatic --noinput
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py collectstatic --noinput
 
 run:
-	$(VENV) && $(DJANGO_ENV) python manage.py runserver
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py runserver
 
 shell:
-	$(VENV) && $(DJANGO_ENV) python manage.py shell
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py shell
 
 check:
-	$(VENV) && $(DJANGO_ENV) python manage.py check memorabilia
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py check memorabilia
 
 tailwind:
-	$(VENV) && $(DJANGO_ENV) python manage.py tailwind build
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py tailwind build
 
 backup:
 	@mkdir -p $(BACKUP_DIR)
@@ -60,8 +66,8 @@ restore:
 	fi
 
 import_population_report:
-	$(VENV) && $(DJANGO_ENV) python manage.py import_population_report $(XLSX) --season $(SEASON)
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py import_population_report $(XLSX) --season $(SEASON)
 
 deploy:
-	$(VENV) && $(DJANGO_ENV) python manage.py migrate
-	$(VENV) && $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py migrate
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
