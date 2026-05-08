@@ -1,0 +1,13 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: wittjr/workflows/.github/workflows/azure-heavyuse-deploy.yml@main
+    secrets:
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      AZURE_APP_NAME: ${{ secrets.AZURE_APP_NAME }}
+      AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_PUBLISH_PROFILE }}
