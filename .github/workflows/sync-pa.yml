@@ -44,11 +44,12 @@ jobs:
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
 
       - name: Merge sync PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
-          if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh pr view ${{ steps.create_pr.outputs.pr_url }} --json number --jq '.number')
-          fi
-          gh pr merge $PR_NUMBER --squash --auto --delete-branch=false
+          env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            PR_NUMBER=${{ steps.check_pr.outputs.pr_number }}
+            if [ -z "$PR_NUMBER" ]; then
+              PR_NUMBER=$(gh pr view ${{ steps.create_pr.outputs.pr_url }} --json number --jq '.number')
+            fi
+            sleep 5
+            gh pr merge $PR_NUMBER --squash --delete-branch=false
