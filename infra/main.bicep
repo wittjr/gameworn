@@ -76,6 +76,7 @@ var plainAppSettings = [
   { name: 'DJANGO_SETTINGS_MODULE',          value: 'gameworn.settings' }
   { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
   { name: 'ENABLE_ORYX_BUILD',             value: 'true' }
+  { name: 'DISABLE_COLLECTSTATIC',         value: 'true' }
   { name: 'PRE_BUILD_COMMAND',             value: 'cat requirements-azure.txt >> requirements.txt' }
   { name: 'AZURE_SQL_SERVER',                value: sqlServer.properties.fullyQualifiedDomainName }
   { name: 'AZURE_SQL_DATABASE',              value: sqlDb.name }
@@ -127,10 +128,10 @@ resource app 'Microsoft.Web/sites@2023-01-01' = {
     clientCertMode: 'Optional'
     siteConfig: {
       linuxFxVersion: 'PYTHON|3.13'
-      appCommandLine: 'python -m gunicorn --bind=0.0.0.0 --timeout 600 -w 3 gameworn.wsgi'
+      appCommandLine: 'bash startup.sh'
       ipSecurityRestrictionsDefaultAction: 'Deny'
       ipSecurityRestrictions: ipRestrictions
-      scmIpSecurityRestrictionsUseMain: true
+      scmIpSecurityRestrictionsUseMain: false
       appSettings: concat(plainAppSettings, secretAppSettings)
     }
   }
