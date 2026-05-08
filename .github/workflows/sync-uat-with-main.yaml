@@ -6,10 +6,11 @@ on:
       - closed
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   sync:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     uses: wittjr/workflows/.github/workflows/sync-uat-with-main.yml@main
     secrets:
       SYNC_PAT: ${{ secrets.SYNC_PAT }}
