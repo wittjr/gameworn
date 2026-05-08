@@ -26,6 +26,7 @@ CONTENT_SECURITY_POLICY = {
             "https://cdn.jsdelivr.net",
             "https://www.googletagmanager.com",
             "https://static.cloudflareinsights.com",
+            "https://kit.fontawesome.com",
             NONCE,
         ],
         "img-src": list(filter(None, [
@@ -35,11 +36,12 @@ CONTENT_SECURITY_POLICY = {
             f"https://{_storage_account_name}.blob.core.windows.net" if _storage_account_name else None,
         ])),
         "style-src": ["'self'", "'unsafe-inline'"],
-        "font-src": ["'self'"],
+        "font-src": ["'self'", "https://ka-f.fontawesome.com"],
         "connect-src": [
             "'self'",
             "https://*.google-analytics.com",
             "https://*.googletagmanager.com",
+            "https://ka-f.fontawesome.com",
         ],
         "object-src": ["'none'"],
         "base-uri": ["'self'"],
