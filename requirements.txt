@@ -1,7 +1,6 @@
 Django==6.0.5
 python-dotenv==1.2.2
 django-allauth==65.15.1
-fontawesomefree==6.6.0
 requests==2.33.1
 requests-oauthlib==2.0.0
 rules==3.5
