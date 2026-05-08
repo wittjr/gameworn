@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'memorabilia.apps.MemorabiliaConfig',
     'tailwind',
     'django_flowbite_widgets',
-    'fontawesomefree',
     'rules',
     'theme',
     'django_gravatar',
