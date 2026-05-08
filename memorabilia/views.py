@@ -31,7 +31,7 @@ from .forms import (
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from csp.decorators import csp_replace
+from csp.decorators import csp_update
 from rules.contrib.views import permission_required, objectgetter
 from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery, Q
@@ -394,12 +394,8 @@ class PhotoMatchView(generic.DetailView):
 
 
 @method_decorator(
-    csp_replace({"script-src": [
-        "'self'",
+    csp_update({"script-src": [
         "'unsafe-inline'",
-        "https://cdn.jsdelivr.net",
-        "https://www.googletagmanager.com",
-        "https://static.cloudflareinsights.com",
         "https://embed-cdn.gettyimages.com",
     ]}),
     name='dispatch'
