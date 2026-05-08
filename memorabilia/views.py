@@ -31,7 +31,8 @@ from .forms import (
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from csp.decorators import csp_update
+from csp.decorators import csp_replace
+from csp.constants import NONCE
 from rules.contrib.views import permission_required, objectgetter
 from django.contrib.auth.models import User
 from django.db.models import OuterRef, Subquery, Q
@@ -393,11 +394,14 @@ class PhotoMatchView(generic.DetailView):
     model = PhotoMatch
 
 
+def _collectible_script_src():
+    csp = getattr(settings, 'CONTENT_SECURITY_POLICY', {})
+    base = csp.get('DIRECTIVES', {}).get('script-src', ["'self'"])
+    return [s for s in base if s is not NONCE] + ["'unsafe-inline'", "https://embed-cdn.gettyimages.com"]
+
+
 @method_decorator(
-    csp_update({"script-src": [
-        "'unsafe-inline'",
-        "https://embed-cdn.gettyimages.com",
-    ]}),
+    csp_replace({"script-src": _collectible_script_src()}),
     name='dispatch'
 )
 class CollectibleView(generic.DetailView):
