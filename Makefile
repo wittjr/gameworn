@@ -71,3 +71,4 @@ import_population_report:
 deploy:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py migrate
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py loaddata $(FIXTURES)
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py collectstatic --noinput
