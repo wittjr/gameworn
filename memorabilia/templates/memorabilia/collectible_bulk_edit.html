@@ -55,11 +55,11 @@
           <select id="qfValueSelect" class="hidden bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 w-full p-2.5"></select>
         </div>
         <div class="flex gap-2 shrink-0">
-          <button type="button" id="qfApplyAll" onclick="quickFillApply(false)" disabled
+          <button type="button" id="qfApplyAll" disabled
             class="px-3 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
             Apply to all
           </button>
-          <button type="button" id="qfApplySelected" onclick="quickFillApply(true)" disabled
+          <button type="button" id="qfApplySelected" disabled
             class="px-3 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
             Apply to selected
           </button>
@@ -359,7 +359,7 @@
     <div class="mt-6 flex gap-2 items-center">
       <a href="{% url 'memorabilia:collection' pk=collection.id %}" class="px-4 py-2 bg-gray-100 rounded border">Cancel</a>
       <button type="submit" class="btn-primary">Save Changes</button>
-      <button type="button" id="deleteSelectedBtn" onclick="deleteSelected()"
+      <button type="button" id="deleteSelectedBtn"
         class="btn-primary-red ml-auto"
         disabled>Delete Selected</button>
     </div>
@@ -462,6 +462,8 @@
     };
 
     updateButtons();
+    qfApplyAll.addEventListener('click', function() { window.quickFillApply(false); });
+    qfApplySelected.addEventListener('click', function() { window.quickFillApply(true); });
   })();
   </script>
 
@@ -562,6 +564,7 @@
       document.querySelectorAll('.delete-cb:not(:checked)').forEach(cb => cb.disabled = true);
       document.getElementById('bulkEditForm').submit();
     }
+    document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
   </script>
 
   <script nonce="{{ request.csp_nonce }}">

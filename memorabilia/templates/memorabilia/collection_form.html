@@ -60,8 +60,7 @@
                      tabindex="0"
                      aria-pressed="true"
                      aria-label="Keep current header image"
-                     onclick="selectImageOption('current')"
-                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('current')}">
+>
                     <div class="h-32 overflow-hidden">
                         <img src="{{ collection.get_header_image_url }}" class="w-full h-full object-cover" alt="Current image" />
                     </div>
@@ -79,8 +78,7 @@
                      tabindex="0"
                      aria-pressed="{% if collection and collection.get_header_image_url %}false{% else %}true{% endif %}"
                      aria-label="Upload a new image or paste a link"
-                     onclick="selectImageOption('new')"
-                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('new')}">
+>
                     <div class="h-32 flex items-center justify-center bg-gray-50 dark:bg-gray-700">
                         <svg class="w-10 h-10 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -100,8 +98,7 @@
                      tabindex="0"
                      aria-pressed="{% if collection and not collection.get_header_image_url %}true{% else %}false{% endif %}"
                      aria-label="Auto Collage: builds the header image automatically from your item photos"
-                     onclick="selectImageOption('collage')"
-                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectImageOption('collage')}">
+>
                     <div class="h-32 overflow-hidden bg-gray-800">
                         {% if collection %}
                             {% with collage_imgs=collage_images %}
@@ -163,7 +160,7 @@
                     <div class="collage-pick-card relative rounded-lg overflow-hidden border-2 border-gray-300 cursor-pointer select-none"
                          data-type="{{ img_info.type }}"
                          data-id="{{ img_info.id }}"
-                         onclick="toggleCollagePick(this)">
+>
                         <img src="{{ img_info.url }}" class="w-full aspect-square object-cover bg-gray-100" alt="{{ img_info.title }}" />
                         <div class="check-indicator hidden absolute top-1 right-1 bg-blue-600 rounded-full w-5 h-5">
                             <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,6 +273,21 @@
     } else {
         var activeCard = document.querySelector('.image-option-card.border-blue-500');
         if (activeCard) selectImageOption(activeCard.dataset.option);
+    }
+
+    document.querySelectorAll('.image-option-card').forEach(function(card) {
+        card.addEventListener('click', function() { selectImageOption(card.dataset.option); });
+        card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectImageOption(card.dataset.option); }
+        });
+    });
+
+    var collagePicker = document.getElementById('collage-picker');
+    if (collagePicker) {
+        collagePicker.addEventListener('click', function(e) {
+            var card = e.target.closest('.collage-pick-card');
+            if (card) toggleCollagePick(card);
+        });
     }
 })();
 </script>
