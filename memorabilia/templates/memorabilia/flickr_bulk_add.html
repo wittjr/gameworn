@@ -21,7 +21,7 @@
     <div class="mb-6 flex gap-2">
         <input type="text" id="flickrUsername" value="{{ flickr_id }}" placeholder="Flickr user ID (e.g. 12345678@N04)"
             class="flex-1 p-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <button type="button" id="queryBtn" onclick="queryAlbums()" class="btn-primary">
+        <button type="button" id="queryBtn" class="btn-primary">
             <span id="queryBtnText">Query Albums</span>
             <span id="queryBtnSpinner" class="hidden ml-2">
                 <svg class="animate-spin inline h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -39,10 +39,10 @@
     <div id="batchError" class="hidden mb-4 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-sm"></div>
 
     <div id="submitRow" style="display:none" class="items-center gap-4">
-        <button type="button" onclick="selectAll()" class="text-sm text-blue-600 hover:underline">Select All</button>
-        <button type="button" onclick="selectNone()" class="text-sm text-blue-600 hover:underline">Select None</button>
+        <button type="button" id="selectAllBtn" class="text-sm text-blue-600 hover:underline">Select All</button>
+        <button type="button" id="selectNoneBtn" class="text-sm text-blue-600 hover:underline">Select None</button>
         <span id="selectedCount" class="text-sm text-gray-600 ml-auto"></span>
-        <button type="button" id="submitBtn" onclick="createItems()" class="btn-primary flex items-center">
+        <button type="button" id="submitBtn" class="btn-primary flex items-center">
             <span id="submitBtnText">Create Items</span>
             <span id="submitBtnSpinner" class="hidden ml-2">
                 <svg class="animate-spin inline h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -288,5 +288,10 @@
             unlockBatchUI();
         }
     }
+
+    document.getElementById('queryBtn').addEventListener('click', queryAlbums);
+    document.getElementById('submitBtn').addEventListener('click', createItems);
+    document.getElementById('selectAllBtn').addEventListener('click', selectAll);
+    document.getElementById('selectNoneBtn').addEventListener('click', selectNone);
 </script>
 {% endblock content %}
