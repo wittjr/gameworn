@@ -104,6 +104,20 @@
   </div>
   {% if meigray_entry.games_worn %}
   <div class="px-4 pb-4">
+    {% if meigray_entry.games_worn.0.type %}
+    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Set Dates</h3>
+    <div class="text-xs text-gray-600 dark:text-gray-400">
+      {% with entry=meigray_entry.games_worn.0 %}
+      {% if entry.type == 'range' %}
+        {{ entry.start }} – {{ entry.end }}
+      {% elif entry.type == 'preseason' %}
+        Preseason
+      {% elif entry.type == 'preseason+' %}
+        Preseason + {{ entry.extra_dates|join:", " }}
+      {% endif %}
+      {% endwith %}
+    </div>
+    {% else %}
     <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Games Worn ({{ meigray_entry.games_worn|length }})</h3>
     <div class="overflow-x-auto">
       <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
@@ -125,6 +139,7 @@
         </tbody>
       </table>
     </div>
+    {% endif %}
   </div>
   {% endif %}
 </div>

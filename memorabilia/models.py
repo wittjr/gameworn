@@ -157,17 +157,32 @@ class AuthSource(models.Model):
         return self.name
 
 
+class PopulationReportManager(models.Manager):
+    def get_by_natural_key(self, season, league):
+        return self.get(season=season, league=league)
+
+
 class PopulationReport(models.Model):
-    season = models.CharField(max_length=10, unique=True)
+    objects = PopulationReportManager()
+
+    season = models.CharField(max_length=10)
+    league = models.CharField(max_length=10, default='NHL')
     file = models.FileField(upload_to='population_reports/')
     imported_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('season', 'league')
+
+    def natural_key(self):
+        return (self.season, self.league)
+
     def __str__(self):
-        return f'MeiGray Population Report {self.season}'
+        return f'MeiGray Population Report {self.season} {self.league}'
 
 
 class MeiGrayEntry(models.Model):
     tag_number = models.CharField(max_length=10, primary_key=True)
+    league = models.CharField(max_length=10, default='NHL')
     team = models.CharField(max_length=150)
     player = models.CharField(max_length=100)
     jersey_number = models.CharField(max_length=10, blank=True)
@@ -176,7 +191,7 @@ class MeiGrayEntry(models.Model):
     size = models.CharField(max_length=10, blank=True)
     notes = models.CharField(max_length=500, blank=True)
     games_worn = models.JSONField(default=list)
-    report = models.ForeignKey(PopulationReport, null=True, blank=True, on_delete=models.SET_NULL)
+    report = models.ForeignKey(PopulationReport, null=True, blank=True, on_delete=models.CASCADE)
     imported_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

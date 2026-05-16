@@ -7,6 +7,7 @@ from .models import (
     HockeyJersey,
     Collection, PhotoMatch, WantedItem, ExternalResource,
     Team, League, GameType, GearType, UsageType, CoaType, AuthSource, HowObtainedOption, SeasonSet,
+    PopulationReport, MeiGrayEntry,
 )
 
 
@@ -68,3 +69,48 @@ admin.site.register(UsageType)
 admin.site.register(CoaType)
 admin.site.register(AuthSource)
 admin.site.register(HowObtainedOption)
+
+
+@admin.register(PopulationReport)
+class PopulationReportAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'season', 'league', 'imported_at')
+    fields = ('season', 'league', 'file')
+    actions = ['import_entries_action']
+
+    @admin.action(description='Import entries from file')
+    def import_entries_action(self, request, queryset):
+        from memorabilia.meigray_import import import_entries
+        total_deleted = total_created = total_with = total_without = 0
+        errors = []
+        for report in queryset:
+            try:
+                deleted, created, _, duplicates, with_dates, without_dates = import_entries(report)
+                total_deleted += deleted
+                total_created += created
+                total_with += with_dates
+                total_without += without_dates
+                if duplicates:
+                    self.message_user(
+                        request,
+                        f'{report}: duplicate tags kept last occurrence — {", ".join(duplicates)}',
+                        level='warning',
+                    )
+            except Exception as e:
+                errors.append(f'{report}: {e}')
+        if errors:
+            self.message_user(request, f'Errors: {"; ".join(errors)}', level='error')
+        if total_created:
+            self.message_user(
+                request,
+                f'Imported: {total_deleted} removed, {total_created} created. '
+                f'Dates: {total_with} with, {total_without} without.',
+            )
+
+
+@admin.register(MeiGrayEntry)
+class MeiGrayEntryAdmin(admin.ModelAdmin):
+    list_display = ('tag_number', 'player', 'team', 'league', 'color', 'set_number', 'report')
+    list_filter = ('league', 'report')
+    search_fields = ('tag_number', 'player', 'team')
+    readonly_fields = ('tag_number', 'league', 'player', 'team', 'jersey_number', 'color',
+                       'set_number', 'size', 'notes', 'games_worn', 'report', 'imported_at')
