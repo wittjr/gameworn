@@ -40,7 +40,7 @@
             if (fid) { input.placeholder = 'https://www.flickr.com/photos/' + fid + '/albums/<album ID>'; }
         })();
         </script>
-        <button type="button" id="queryFlickrBtn" onclick="queryFlickr()"
+        <button type="button" id="queryFlickrBtn"
             class="btn-primary w-full flex items-center justify-center">
             <span id="queryFlickrText">Query Flickr</span>
             <span id="queryFlickrSpinner" class="hidden ml-2">
@@ -487,6 +487,8 @@
             if (errEl) errEl.classList.remove('hidden');
         });
     }
+
+    document.getElementById('queryFlickrBtn').addEventListener('click', queryFlickr);
 </script>
 
 <script nonce="{{ request.csp_nonce }}">
