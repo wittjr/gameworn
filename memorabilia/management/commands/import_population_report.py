@@ -3,7 +3,7 @@ import os
 from django.core.files import File
 from django.core.management.base import BaseCommand, CommandError
 
-from memorabilia.meigray_import import analyze_file, import_entries
+from memorabilia.meigray import analyze_file, import_entries
 from memorabilia.models import PopulationReport
 
 
@@ -41,7 +41,8 @@ class Command(BaseCommand):
 
         self.stdout.write('Importing entries...')
         try:
-            deleted, created, total, duplicates, with_dates, without_dates = import_entries(report)
+            (deleted, created, total, duplicates, with_dates, without_dates,
+             dateless_special) = import_entries(report)
         except ValueError as e:
             raise CommandError(str(e))
         except Exception as e:
@@ -51,11 +52,23 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 f'Duplicate tag numbers in file (last occurrence kept): {", ".join(duplicates)}'
             ))
+        if dateless_special:
+            self.stdout.write(self.style.WARNING(
+                'Dateless special sets (no schedule data, left empty by design): '
+                + self._format_special(dateless_special)
+            ))
         self.stdout.write(self.style.SUCCESS(
             f'Done. {deleted} removed, {created} created from {total} records '
             f'(season: {season}, league: {league}). '
             f'Dates: {with_dates} with, {without_dates} without.'
         ))
+
+    @staticmethod
+    def _format_special(dateless_special):
+        return ', '.join(
+            f'{code} x{n}'
+            for code, n in sorted(dateless_special.items(), key=lambda x: (-x[1], x[0]))
+        )
 
     def _dry_run(self, path, season, league):
         self.stdout.write(self.style.WARNING(
@@ -73,8 +86,10 @@ class Command(BaseCommand):
         w = self.stdout.write
 
         # --- Counts ---
+        trailing_blank = result.get('trailing_blank', 0)
         w('Records')
-        w(f"  Raw rows after header : {result['total_raw']}")
+        w(f"  Raw rows after header : {result['total_raw']}"
+          + (f"  ({trailing_blank} trailing blank rows ignored)" if trailing_blank else ''))
         w(f"  Passed tag filter     : {result['total_parsed']}"
           + (f"  ({len(skipped)} skipped)" if skipped else ''))
         w(f"  Unique entries        : {result['unique']}"
@@ -105,9 +120,39 @@ class Command(BaseCommand):
         w(f"  Without dates : {result['without_dates']}")
         w('')
 
+        # --- Dateless special sets ---
+        dateless_special = result['dateless_special']
+        if dateless_special:
+            total = sum(dateless_special.values())
+            w(self.style.WARNING(
+                f'Dateless special sets ({total} total, no schedule data, '
+                f'left empty by design):'
+            ))
+            w('  ' + self._format_special(dateless_special))
+            w('')
+
         # --- No-dates breakdown ---
         if result['no_dates_breakdown']:
             w(f"Without-dates breakdown ({result['without_dates']} entries):")
             rows = sorted(result['no_dates_breakdown'].items(), key=lambda x: (-x[1], x[0]))
+            reasons = result.get('no_dates_reasons', {})
+            for (team, set_num), count in rows:
+                rc = reasons.get((team, set_num))
+                why = ('  [' + ', '.join(
+                    f'{r} x{n}' for r, n
+                    in sorted(rc.items(), key=lambda x: (-x[1], x[0]))) + ']'
+                    ) if rc else ''
+                w(f'  {team:<45} {set_num:<20} {count}{why}')
+            w('')
+
+        # --- Unexpected dateless (NOT by design) ---
+        dateless_unexpected = result['dateless_unexpected']
+        if dateless_unexpected:
+            total = sum(dateless_unexpected.values())
+            w(self.style.WARNING(
+                f'Unexpected dateless ({total} entries, standard sets with no '
+                f'date match -- investigate):'
+            ))
+            rows = sorted(dateless_unexpected.items(), key=lambda x: (-x[1], x[0]))
             for (team, set_num), count in rows:
                 w(f'  {team:<45} {set_num:<20} {count}')

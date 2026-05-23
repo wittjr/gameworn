@@ -79,12 +79,13 @@ class PopulationReportAdmin(admin.ModelAdmin):
 
     @admin.action(description='Import entries from file')
     def import_entries_action(self, request, queryset):
-        from memorabilia.meigray_import import import_entries
+        from memorabilia.meigray import import_entries
         total_deleted = total_created = total_with = total_without = 0
         errors = []
         for report in queryset:
             try:
-                deleted, created, _, duplicates, with_dates, without_dates = import_entries(report)
+                (deleted, created, _, duplicates, with_dates, without_dates,
+                 _) = import_entries(report)
                 total_deleted += deleted
                 total_created += created
                 total_with += with_dates

@@ -180,6 +180,11 @@ class PopulationReport(models.Model):
         return f'MeiGray Population Report {self.season} {self.league}'
 
 
+def default_meigray_notes():
+    """Canonical empty notes structure: a list per source."""
+    return {'tag': [], 'schedule': [], 'generated': []}
+
+
 class MeiGrayEntry(models.Model):
     tag_number = models.CharField(max_length=10, primary_key=True)
     league = models.CharField(max_length=10, default='NHL')
@@ -189,13 +194,27 @@ class MeiGrayEntry(models.Model):
     color = models.CharField(max_length=255)
     set_number = models.CharField(max_length=20)
     size = models.CharField(max_length=10, blank=True)
-    notes = models.CharField(max_length=500, blank=True)
+    # {'tag': [...], 'schedule': [...], 'generated': [...]}
+    #   tag       -- verbatim Customizations/Comments column from the tag tab
+    #   schedule  -- annotations from the schedule tabs (populated later)
+    #   generated -- notes the import scripts produce (e.g. duplicate-tag info)
+    notes = models.JSONField(default=default_meigray_notes, blank=True)
     games_worn = models.JSONField(default=list)
     report = models.ForeignKey(PopulationReport, null=True, blank=True, on_delete=models.CASCADE)
     imported_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f'{self.tag_number} — {self.player} ({self.team})'
+
+    @property
+    def notes_display(self):
+        """Flatten the notes structure to a single readable string for
+        templates (tag, then schedule, then generated)."""
+        n = self.notes or {}
+        parts = []
+        for key in ('tag', 'schedule', 'generated'):
+            parts.extend(n.get(key, []) or [])
+        return ' | '.join(p for p in parts if p)
 
 
 class HowObtainedOption(models.Model):

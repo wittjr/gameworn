@@ -282,8 +282,8 @@
     <div class="info-row"><div class="info-label">Jersey #</div><div class="info-value">{{ meigray_entry.jersey_number }}</div></div>
     <div class="info-row"><div class="info-label">Size</div><div class="info-value">{{ meigray_entry.size }}</div></div>
     <div class="info-row" style="column-span: all;"><div class="info-label">Description</div><div class="info-value">{{ meigray_entry.color }}</div></div>
-    {% if meigray_entry.notes %}
-    <div class="info-row" style="column-span: all;"><div class="info-label">Notes</div><div class="info-value">{{ meigray_entry.notes }}</div></div>
+    {% if meigray_entry.notes_display %}
+    <div class="info-row" style="column-span: all;"><div class="info-label">Notes</div><div class="info-value">{{ meigray_entry.notes_display }}</div></div>
     {% endif %}
   </div>
 

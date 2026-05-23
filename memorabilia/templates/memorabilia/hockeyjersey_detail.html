@@ -98,8 +98,8 @@
     <div><span class="font-medium text-gray-900 dark:text-white">Jersey #:</span> {{ meigray_entry.jersey_number }}</div>
     <div><span class="font-medium text-gray-900 dark:text-white">Size:</span> {{ meigray_entry.size }}</div>
     <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Description:</span> {{ meigray_entry.color }}</div>
-    {% if meigray_entry.notes %}
-    <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Notes:</span> {{ meigray_entry.notes }}</div>
+    {% if meigray_entry.notes_display %}
+    <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Notes:</span> {{ meigray_entry.notes_display }}</div>
     {% endif %}
   </div>
   {% if meigray_entry.games_worn %}
