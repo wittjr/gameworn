@@ -13,7 +13,7 @@ from .models import (
     Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType,
     HowObtainedOption, PlayerItem, PlayerItemImage, ExternalResource, Team,
     GeneralItem, GeneralItemImage, PlayerGear, PlayerGearImage, SeasonSet,
-    HockeyJersey, UserProfile, MeiGrayEntry, PopulationReport,
+    HockeyJersey, UserProfile, MeiGrayTagEntry, MeiGrayPopulationReport,
     PlayerGearAuthentication, PlayerItemAuthentication, GeneralItemAuthentication,
     WantListProfile, WantList, WantListItem, WantListItemImage,
     _generate_want_list_slug,
@@ -460,12 +460,17 @@ class CollectibleView(generic.DetailView):
             context['primary_image'] = images[0].image if images else None
 
         if isinstance(collectible, HockeyJersey):
-            meigray_auth = collectible.authentications.filter(issuer_id='MEIGRAY').first()
-            if meigray_auth and meigray_auth.number:
-                try:
-                    context['meigray_entry'] = MeiGrayEntry.objects.get(pk=meigray_auth.number)
-                except MeiGrayEntry.DoesNotExist:
-                    context['meigray_entry'] = None
+            tag_numbers = [
+                a.number for a in collectible.authentications.all()
+                if a.issuer_id == 'MEIGRAY' and a.number
+            ]
+            if tag_numbers:
+                context['meigray_entries'] = list(
+                    MeiGrayTagEntry.objects
+                    .select_related('schedule', 'report')
+                    .prefetch_related('schedule__games', 'schedule__set_ranges')
+                    .filter(pk__in=tag_numbers)
+                )
 
         collection = collectible.collection
         all_siblings = sorted(
@@ -553,14 +558,19 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
         except League.DoesNotExist:
             pass
 
-    meigray_entry = None
+    meigray_entries = []
     if collectible_type == 'hockeyjersey':
-        meigray_auth = collectible.authentications.filter(issuer_id='MEIGRAY').first()
-        if meigray_auth and meigray_auth.number:
-            try:
-                meigray_entry = MeiGrayEntry.objects.get(pk=meigray_auth.number)
-            except MeiGrayEntry.DoesNotExist:
-                pass
+        tag_numbers = [
+            a.number for a in collectible.authentications.all()
+            if a.issuer_id == 'MEIGRAY' and a.number
+        ]
+        if tag_numbers:
+            meigray_entries = list(
+                MeiGrayTagEntry.objects
+                .select_related('schedule', 'report')
+                .prefetch_related('schedule__games', 'schedule__set_ranges')
+                .filter(pk__in=tag_numbers)
+            )
 
     context = {
         'collectible': collectible,
@@ -569,7 +579,7 @@ def collectible_pdf(request, collection_id, collectible_type, pk):
         'secondary_images': secondary_images,
         'photomatch_data': photomatch_data,
         'league': league,
-        'meigray_entry': meigray_entry,
+        'meigray_entries': meigray_entries,
     }
 
     html_string = render_to_string('memorabilia/collectible_pdf.html', context, request=request)
@@ -1482,8 +1492,8 @@ import tempfile as _tempfile
 
 
 @login_required
-def download_population_report(request, season):
-    report = get_object_or_404(PopulationReport, season=season)
+def download_population_report(request, league, season):
+    report = get_object_or_404(MeiGrayPopulationReport, league=league, season=season)
     filename = os.path.basename(report.file.name)
     response = FileResponse(report.file.open('rb'), as_attachment=True, filename=filename)
     return response
