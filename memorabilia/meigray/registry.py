@@ -2,8 +2,8 @@
 Season -> parser registry.
 
 Every supported report is one YearSpec: a sheet manifest plus the two callables
-that turn that year's workbook into a schedule and into tag entries. A season
-with no exact entry inherits the most recent earlier season's spec ("assume the
+that turn that year's workbook into tag rows and schedule rows. A season with
+no exact entry inherits the most recent earlier season's spec ("assume the
 next year uses this format until it doesn't"). When a year's format diverges,
 add a new YearSpec for it; earlier years are untouched.
 """
@@ -17,7 +17,7 @@ class SheetManifest:
     """Exhaustive accounting of every sheet a year's workbook may contain.
 
     tag       -- the population-report (tag) sheet
-    schedule  -- sheets that contribute worn dates
+    schedule  -- sheets that carry team schedule data
     omit      -- sheets deliberately ignored (alternate sort orders, etc.)
 
     Any sheet in the workbook not covered by one of these is a hard error, so a
@@ -32,14 +32,11 @@ class SheetManifest:
 @dataclass(frozen=True)
 class YearSpec:
     manifest: SheetManifest
-    # (wb, sheets, manifest, season) -> schedule dict
-    build_schedule: Callable
-    # (rows, col, header_idx, headers, league, schedule, season, report)
-    #   -> (entries, total_rows)
+    # (wb, actual, manifest, report) -> list of MeiGrayTagEntry (unsaved)
     parse_tags: Callable
-    # Optional per-file fixups, run last (after One-Game-Only / GI passes,
-    # before dedupe): (entries) -> None.
-    corrections: Callable = None
+    # (wb, actual, manifest, report, tag_teams) -> ([game dicts], [set-range dicts])
+    # Each dict carries a 'team' key; the orchestrator groups by team.
+    parse_schedule: Callable
 
 
 # Populated by parsers_*.py at import time via register().
@@ -64,6 +61,7 @@ def resolve(league, season):
             f'(and no earlier {league} season to inherit from). '
             f'Add a YearSpec in memorabilia/meigray/parsers_*.py.'
         )
+    print(f'No exact parser for {season} {league}; using {earlier[-1]} spec.')
     return REPORTS[(league, earlier[-1])]
 
 

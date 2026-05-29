@@ -13,3 +13,4 @@ weasyprint==68.1
 openpyxl==3.1.5
 django-axes==8.3.1
 django-csp==4.0
+uuid6==2025.0.1

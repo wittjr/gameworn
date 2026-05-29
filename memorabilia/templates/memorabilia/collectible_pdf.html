@@ -268,7 +268,7 @@
 </div>
 
 <!-- MeiGray Population Report page -->
-{% if meigray_entry %}
+{% for meigray_entry in meigray_entries %}
 <div class="meigray-page">
   <div class="meigray-header">
     MeiGray Authentication Population Report
@@ -281,37 +281,71 @@
     <div class="info-row"><div class="info-label">Team</div><div class="info-value">{{ meigray_entry.team }}</div></div>
     <div class="info-row"><div class="info-label">Jersey #</div><div class="info-value">{{ meigray_entry.jersey_number }}</div></div>
     <div class="info-row"><div class="info-label">Size</div><div class="info-value">{{ meigray_entry.size }}</div></div>
+    <div class="info-row"><div class="info-label">Set</div><div class="info-value">{{ meigray_entry.set_number }}</div></div>
     <div class="info-row" style="column-span: all;"><div class="info-label">Description</div><div class="info-value">{{ meigray_entry.color }}</div></div>
     {% if meigray_entry.notes %}
     <div class="info-row" style="column-span: all;"><div class="info-label">Notes</div><div class="info-value">{{ meigray_entry.notes }}</div></div>
     {% endif %}
   </div>
 
-  {% if meigray_entry.games_worn %}
-  <div class="meigray-games">
-    <div class="meigray-games-header">Games Worn ({{ meigray_entry.games_worn|length }})</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Opponent</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for game in meigray_entry.games_worn %}
-        <tr>
-          <td>{{ game.date }}</td>
-          <td>{{ game.opponent }}</td>
-          <td class="note">{{ game.comment|default:"" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% if meigray_entry.schedule %}
+    {% with games=meigray_entry.schedule.games.all set_ranges=meigray_entry.schedule.set_ranges.all %}
+    {% if games %}
+    <div class="meigray-games">
+      <div class="meigray-games-header">{{ meigray_entry.team }} Schedule ({{ games|length }} game{{ games|length|pluralize }})</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>H/A</th>
+            <th>Opponent</th>
+            <th>Jersey</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for game in games %}
+          <tr>
+            <td>{{ game.game_date|date:"Y-m-d" }}</td>
+            <td>{{ game.game_type|default:"" }}</td>
+            <td>{% if game.home_game %}Home{% else %}Away{% endif %}</td>
+            <td>{{ game.opponent }}</td>
+            <td>{{ game.jersey|default:"" }}</td>
+            <td class="note">{{ game.comment|default:"" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% if set_ranges %}
+    <div class="meigray-games">
+      <div class="meigray-games-header">{{ meigray_entry.team }} Set Summary Schedule ({{ set_ranges|length }})</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Set</th>
+            <th>Games</th>
+            <th>Dates</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in set_ranges %}
+          <tr>
+            <td>{{ s.set_label }}</td>
+            <td>{{ s.game_count|default:"" }}</td>
+            <td class="note">{{ s.dates|default:"" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% endwith %}
   {% endif %}
 </div>
-{% endif %}
+{% endfor %}
 
 <!-- Additional collectible images, one per page -->
 {% for img in secondary_images %}

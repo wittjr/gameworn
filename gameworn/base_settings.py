@@ -196,6 +196,10 @@ MEDIA_URL = 'media/'
 # Path where media is stored
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
+# Population reports can have tens of thousands of tags; admin bulk-delete
+# submits one hidden form field per selected row.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 100000
+
 SITE_NAME = 'Heavy Use'
 
 FLICKR_KEY = os.environ.get('FLICKR_KEY', '')

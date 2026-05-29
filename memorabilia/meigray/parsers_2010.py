@@ -1,24 +1,13 @@
 """
-2010-11 NHL population report (the original .xls was converted to .xlsx).
+2010-11 NHL population report.
 
-Same per-team 'Set | Dates | Games' summary-table model as 2008-10
-(parse_set_dates_table), with drift the generalized parser absorbs:
-  - team header is '<City> 2010-11' (no 'Season' word)
-  - 'Black Set 3 / Playoffs' labels (the '/ Playoffs' qualifier is stripped)
-  - 'Black SCF Set N' rows are ignored (SCF stays dateless-special)
-  - single-date values are real datetime cells
-Tag sheet 'Pop Report - Sorted by Inv Tag ' has a 'Version' column before
-Customizations (comment column located from the header).
+Tag sheet 'Pop Report - Sorted by Inv Tag'; schedule on 'Jersey Set Dates'
+(per-team summary table + per-game block).
 Ignored: 'Pop Report - Sorted by Player'.
 """
 
 from memorabilia.meigray import toolbox
-from memorabilia.meigray.registry import (
-    SheetManifest,
-    YearSpec,
-    register,
-    sheet,
-)
+from memorabilia.meigray.registry import SheetManifest, YearSpec, register
 
 MANIFEST_2010 = SheetManifest(
     tag='Pop Report - Sorted by Inv Tag',
@@ -27,37 +16,22 @@ MANIFEST_2010 = SheetManifest(
 )
 
 
-# Per-file summary-table cell fixups. Washington 'Red Set 2/PO' start date
-# is typo'd '2/8/10' (should be 2/8/11 -- Feb of the 2010-11 season).
-_CELL_CORRECTIONS = {
-    '2/8/10 - 4/13/11': '2/8/11 - 4/13/11',
-}
+def parse_tags_2010(wb, actual, manifest, report):
+    return toolbox.read_tag_rows(wb, actual, manifest, report)
 
 
-def build_schedule_2010(wb, actual, manifest, season, tag_teams):
-    rows = list(wb[sheet(actual, 'Jersey Set Dates')].iter_rows(values_only=True))
-    # Use BOTH sources: the per-game list (exact dates per set, incl. Set 3 /
-    # playoffs via the 'OS2 Ends' markers) is authoritative; the summary table
-    # fills any (team, set) the per-game block doesn't cover.
-    schedule = toolbox.parse_set_dates_table(
-        rows, season, tag_teams, cell_corrections=_CELL_CORRECTIONS)
-    schedule.update(toolbox.parse_pergame_schedule(rows, season, tag_teams))
-    return schedule
+def parse_schedule_2010(wb, actual, manifest, report, tag_teams):
+    games, set_ranges = toolbox.read_combined_schedule(
+    wb, actual, 'Jersey Set Dates', report.season, tag_teams, 'Set')
+    # The schedule sheet does not label the playoff section.
+    for g in games:
+        if g['date'] >= '2011-04-13':
+            g['game_type'] = 'Playoffs'
+        elif g['date'] < '2010-10-07':
+            g['game_type'] = 'Preseason'
+        else:
+            g['game_type'] = 'Regular Season'
+    return games, set_ranges
 
 
-def parse_tags_2010(rows, col, header_idx, headers, league, schedule, season, report):
-    from memorabilia.models import MeiGrayEntry
-    entries, total = toolbox.parse_entries_color_set(
-        rows, col, header_idx, league, schedule, report, MeiGrayEntry
-    )
-    toolbox.enrich_vintage(entries, schedule)
-    return entries, total
-
-
-SPEC_2010 = YearSpec(
-    manifest=MANIFEST_2010,
-    build_schedule=build_schedule_2010,
-    parse_tags=parse_tags_2010,
-)
-
-register('NHL', '2010-11', SPEC_2010)
+register('NHL', '2010-11', YearSpec(MANIFEST_2010, parse_tags_2010, parse_schedule_2010))

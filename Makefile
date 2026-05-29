@@ -23,7 +23,7 @@ VENV_CMD = $(if $(VENV),source $(VENV) &&,)
 DB_FILE ?= db.sqlite3
 BACKUP_DIR ?= backups
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report dry_run_population_report export_population_report_data
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data
 
 test:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia
@@ -89,27 +89,8 @@ import_population_report:
 		echo "Cancelled."; \
 	fi
 
-dry_run_population_report:
-	@if [ -z "$(XLSX)" ]; then echo "Usage: make dry_run_population_report XLSX=path/to/file.xlsx [SETTINGS=dev]"; exit 1; fi
-	@BASENAME=$$(basename "$(XLSX)" .xlsx); \
-	RAW_SEASON=$$(echo "$$BASENAME" | grep -oE '[0-9]{4}-[0-9]{2}' | head -1); \
-	if [ -n "$$RAW_SEASON" ]; then \
-		START_YEAR=$$(echo "$$RAW_SEASON" | cut -c1-4); \
-		CENTURY=$$(echo "$$START_YEAR" | cut -c1-2); \
-		SHORT_SUFFIX=$$(echo "$$RAW_SEASON" | grep -oE '[0-9]{2}$$'); \
-		SUGGESTED_SEASON="$${START_YEAR}-$${CENTURY}$${SHORT_SUFFIX}"; \
-	else \
-		SUGGESTED_SEASON=""; \
-	fi; \
-	AFTER_SEASON=$$(echo "$$BASENAME" | sed "s/$$RAW_SEASON//"); \
-	SUGGESTED_LEAGUE=$$(echo "$$AFTER_SEASON" | sed 's/[-_]/ /g; s/[Pp][Oo][Pp][Uu][Ll][Aa][Tt][Ii][Oo][Nn].*//' | xargs | tr '[:lower:]' '[:upper:]'); \
-	SUGGESTED_LEAGUE=$${SUGGESTED_LEAGUE:-NHL}; \
-	printf "Season [$$SUGGESTED_SEASON]: "; read SEASON; SEASON=$${SEASON:-$$SUGGESTED_SEASON}; \
-	printf "League [$$SUGGESTED_LEAGUE]: "; read LEAGUE; LEAGUE=$${LEAGUE:-$$SUGGESTED_LEAGUE}; \
-	$(VENV_CMD) $(DJANGO_ENV) python manage.py import_population_report "$(XLSX)" --season "$$SEASON" --league "$$LEAGUE" --dry-run
-
 export_population_report_data:
-	@if [ -z "$(SEASON)" ]; then echo "Usage: make export_population_report_data SEASON=2024-25 [LEAGUE=NHL] [OUTPUT=file.json] [SETTINGS=dev]"; exit 1; fi
+	@if [ -z "$(SEASON)" ]; then echo "Usage: make export_population_report_data SEASON=2024-2025 [LEAGUE=NHL] [OUTPUT=file.json] [SETTINGS=dev]"; exit 1; fi
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py export_population_report_data --season "$(SEASON)" $(if $(LEAGUE),--league "$(LEAGUE)",) $(if $(OUTPUT),--output "$(OUTPUT)",)
 
 deploy:

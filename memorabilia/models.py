@@ -5,7 +5,7 @@ from rules.contrib.models import RulesModel
 from django.contrib.auth.models import User
 import rules
 import uuid
-
+from uuid6 import uuid7
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
 
 
@@ -157,27 +157,128 @@ class AuthSource(models.Model):
         return self.name
 
 
-class PopulationReport(models.Model):
-    season = models.CharField(max_length=10, unique=True)
+class MeiGrayPopulationReportManager(models.Manager):
+    def get_by_natural_key(self, season, league):
+        return self.get(season=season, league=league)
+
+
+class MeiGrayPopulationReport(models.Model):
+    objects = MeiGrayPopulationReportManager()
+    season = models.CharField(max_length=10)
+    league = models.CharField(max_length=10, default='NHL')
     file = models.FileField(upload_to='population_reports/')
     imported_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('season', 'league')
+
+    def natural_key(self):
+        return (self.season, self.league)
+    
     def __str__(self):
-        return f'MeiGray Population Report {self.season}'
+        return f'MeiGray Population Report {self.season} {self.league}'
 
 
-class MeiGrayEntry(models.Model):
-    tag_number = models.CharField(max_length=10, primary_key=True)
+class MeiGrayScheduleEntry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False, unique=True)
+    season = models.CharField(max_length=10)
+    league = models.CharField(max_length=10, default='NHL')
+    team = models.CharField(max_length=150)
+    report = models.ForeignKey(MeiGrayPopulationReport, null=True, blank=True, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["team", "season", "league"], name="uq_schedule_team_season_league")
+        ]
+
+        indexes = [
+            models.Index(fields=["team", "season"], name="idx_schedule_team_season")
+        ]
+
+        ordering = ["team", "season"]
+    
+    def __str__(self):
+        return f'{self.team} {self.league} {self.season}'
+
+
+class MeiGrayScheduleGameEntry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
+    schedule = models.ForeignKey(MeiGrayScheduleEntry, on_delete=models.CASCADE, related_name="games", db_index=True)
+    opponent = models.CharField(max_length=100)
+    game_date = models.DateField(db_index=True)
+    jersey = models.CharField(max_length=100, blank=True)
+    comment = models.CharField(max_length=255, blank=True, null=True)
+    home_game = models.BooleanField(default=True)
+    game_type = models.CharField(max_length=25, blank=True, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["schedule", "game_date", "opponent"],
+                name="uq_game_schedule_date_opponent",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["schedule", "game_date"],
+                name="idx_game_schedule_date",
+            ),
+            models.Index(
+                fields=["opponent", "game_date"],
+                name="idx_game_opponent_date",
+            ),
+        ]
+
+        ordering = ["game_date"]
+
+    def __str__(self):
+        return f"{self.schedule.team} vs " f"{self.opponent} on {self.game_date}"
+
+    @property
+    def game_type_short(self):
+        if not self.game_type:
+            return ''
+        key = self.game_type.lower().replace(' ', '')
+        return {'preseason': 'PRE', 'regularseason': 'REG', 'playoffs': 'P/O', 'exhibition': 'EXH', 'round-robin': 'RR'}.get(key, self.game_type)
+
+
+class MeiGrayScheduleSetEntry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
+    schedule = models.ForeignKey(MeiGrayScheduleEntry, on_delete=models.CASCADE, related_name="set_ranges", db_index=True)
+    set_label = models.CharField(max_length=50)
+    game_count = models.CharField(max_length=150, null=True, blank=True)
+    dates = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["set_label"]
+
+    def __str__(self):
+        return f"{self.schedule.team} {self.set_label}"
+
+
+class MeiGrayTagEntry(models.Model):
+    season = models.CharField(max_length=10)
+    league = models.CharField(max_length=5)
+    tag_number = models.CharField(max_length=15, primary_key=True)
     team = models.CharField(max_length=150)
     player = models.CharField(max_length=100)
     jersey_number = models.CharField(max_length=10, blank=True)
     color = models.CharField(max_length=255)
-    set_number = models.CharField(max_length=20)
+    set_number = models.CharField(max_length=20, blank=True)
     size = models.CharField(max_length=10, blank=True)
     notes = models.CharField(max_length=500, blank=True)
-    games_worn = models.JSONField(default=list)
-    report = models.ForeignKey(PopulationReport, null=True, blank=True, on_delete=models.SET_NULL)
+    report = models.ForeignKey(MeiGrayPopulationReport, null=True, blank=True, on_delete=models.CASCADE)
+    schedule = models.ForeignKey(MeiGrayScheduleEntry, null=True, blank=True, on_delete=models.SET_NULL, related_name="tags", db_index=True)
     imported_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["schedule"],
+                name="idx_item_schedule",
+            ),
+        ]
 
     def __str__(self):
         return f'{self.tag_number} — {self.player} ({self.team})'
