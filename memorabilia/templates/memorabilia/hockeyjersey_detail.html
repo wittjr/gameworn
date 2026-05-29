@@ -82,53 +82,100 @@
         </table>
     </div>
 </div>
-{% if meigray_entry %}
+{% for meigray_entry in meigray_entries %}
 <div class="mt-6 border border-blue-200 rounded-lg shadow-sm bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-  <div class="flex items-center gap-2 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
+  <div class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
     <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
     <h2 class="text-base font-semibold text-blue-800 dark:text-blue-200">MeiGray Authentication Population Report</h2>
-    <span class="ml-auto text-xs text-blue-600 dark:text-blue-400 font-mono">{{ meigray_entry.tag_number }}</span>
-    {% if user.is_authenticated and meigray_entry.report %}
-    <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">Download Report ({{ meigray_entry.report.season }})</a>
-    {% endif %}
+    <div class="basis-full sm:basis-auto sm:ml-auto flex items-center gap-3">
+      <span class="text-xs text-blue-600 dark:text-blue-400 font-mono">{{ meigray_entry.tag_number }}</span>
+      {% if user.is_authenticated and meigray_entry.report %}
+      <a href="{% url 'memorabilia:download_population_report' meigray_entry.report.league meigray_entry.report.season %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">Download Report ({{ meigray_entry.report.season }})</a>
+      {% endif %}
+    </div>
   </div>
   <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-700 dark:text-gray-300">
     <div><span class="font-medium text-gray-900 dark:text-white">Player:</span> {{ meigray_entry.player }}</div>
     <div><span class="font-medium text-gray-900 dark:text-white">Team:</span> {{ meigray_entry.team }}</div>
     <div><span class="font-medium text-gray-900 dark:text-white">Jersey #:</span> {{ meigray_entry.jersey_number }}</div>
     <div><span class="font-medium text-gray-900 dark:text-white">Size:</span> {{ meigray_entry.size }}</div>
+    <div><span class="font-medium text-gray-900 dark:text-white">Set:</span> {{ meigray_entry.set_number }}</div>
     <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Description:</span> {{ meigray_entry.color }}</div>
     {% if meigray_entry.notes %}
     <div class="sm:col-span-2"><span class="font-medium text-gray-900 dark:text-white">Notes:</span> {{ meigray_entry.notes }}</div>
     {% endif %}
   </div>
-  {% if meigray_entry.games_worn %}
-  <div class="px-4 pb-4">
-    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Games Worn ({{ meigray_entry.games_worn|length }})</h3>
-    <div class="overflow-x-auto">
-      <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
-        <thead class="text-gray-500 dark:text-gray-500 uppercase">
-          <tr>
-            <th class="pr-4 pb-1">Date</th>
-            <th class="pr-4 pb-1">Opponent</th>
-            <th class="pb-1">Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for game in meigray_entry.games_worn %}
-          <tr class="border-t border-blue-100 dark:border-blue-900">
-            <td class="pr-4 py-1 whitespace-nowrap">{{ game.date }}</td>
-            <td class="pr-4 py-1">{{ game.opponent }}</td>
-            <td class="py-1 text-gray-500">{% if game.comment %}{{ game.comment }}{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  {% if meigray_entry.schedule %}
+    {% with games=meigray_entry.schedule.games.all set_ranges=meigray_entry.schedule.set_ranges.all %}
+    {% if games %}
+    <details class="px-4 pb-4 group">
+      <summary class="text-sm font-semibold text-gray-900 dark:text-white mb-2 cursor-pointer list-none flex items-center gap-2">
+        <svg class="w-4 h-4 transition-transform group-open:rotate-90 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>{{ meigray_entry.team }} Schedule ({{ games|length }} game{{ games|length|pluralize }})</span>
+      </summary>
+      <div class="overflow-auto max-h-60 border border-blue-100 dark:border-blue-900 rounded">
+        <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
+          <thead class="text-gray-500 dark:text-gray-500 uppercase sticky top-0 bg-blue-50 dark:bg-blue-950 z-10">
+            <tr>
+              <th class="px-2 py-1">Date</th>
+              <th class="px-2 py-1">Type</th>
+              <th class="px-2 py-1 hidden sm:table-cell">H/A</th>
+              <th class="px-2 py-1">Opponent</th>
+              <th class="px-2 py-1">Jersey</th>
+              <th class="px-2 py-1">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for game in games %}
+            <tr class="border-t border-blue-100 dark:border-blue-900">
+              <td class="px-2 py-1 whitespace-nowrap">{{ game.game_date|date:"Y-m-d" }}</td>
+              <td class="px-2 py-1">
+                <span class="sm:hidden">{{ game.game_type_short }}</span>
+                <span class="hidden sm:inline">{{ game.game_type|default:"" }}</span>
+              </td>
+              <td class="px-2 py-1 hidden sm:table-cell">{% if game.home_game %}Home{% else %}Away{% endif %}</td>
+              <td class="px-2 py-1">{{ game.opponent }}</td>
+              <td class="px-2 py-1">{{ game.jersey|default:"" }}</td>
+              <td class="px-2 py-1 text-gray-500">{{ game.comment|default:"" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+    {% if set_ranges %}
+    <details class="px-4 pb-4 group">
+      <summary class="text-sm font-semibold text-gray-900 dark:text-white mb-2 cursor-pointer list-none flex items-center gap-2">
+        <svg class="w-4 h-4 transition-transform group-open:rotate-90 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <span>{{ meigray_entry.team }} Set Summary Schedule ({{ set_ranges|length }})</span>
+      </summary>
+      <div class="overflow-auto max-h-80 border border-blue-100 dark:border-blue-900 rounded">
+        <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
+          <thead class="text-gray-500 dark:text-gray-500 uppercase sticky top-0 bg-blue-50 dark:bg-blue-950 z-10">
+            <tr>
+              <th class="px-2 py-1">Set</th>
+              <th class="px-2 py-1">Dates</th>
+              <th class="px-2 py-1">Games</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in set_ranges %}
+            <tr class="border-t border-blue-100 dark:border-blue-900">
+              <td class="px-2 py-1 whitespace-nowrap">{{ s.set_label }}</td>
+              <td class="px-2 py-1 text-gray-500">{{ s.dates|default:"" }}</td>
+              <td class="px-2 py-1">{{ s.game_count|default:"" }}</td>
+                </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+    {% endwith %}
   {% endif %}
 </div>
-{% endif %}
+{% endfor %}
 
 {% if object.photomatches.all.count > 0 %}
 <h2 class="mt-8 mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
