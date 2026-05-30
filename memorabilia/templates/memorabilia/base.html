@@ -52,8 +52,24 @@
                id="user-menu-button" aria-expanded="false" data-dropdown-toggle="user-dropdown"
                data-dropdown-placement="bottom">
                <span class="sr-only">Open user menu</span>
-               <img class="w-10 h-10 rounded-full" src="{{ user_avatar_url }}" alt="user photo" />
+               <img id="user-avatar-img" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700"
+                  width="40" height="40" decoding="async" alt="user photo"
+                  src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                  data-avatar-src="{{ user_avatar_url }}" />
             </button>
+            <script nonce="{{ request.csp_nonce }}">
+               (function () {
+                  var img = document.getElementById('user-avatar-img');
+                  if (!img) return;
+                  var url = img.getAttribute('data-avatar-src');
+                  if (!url) return;
+                  // Load the avatar out-of-band so a slow/failed Discord CDN
+                  // never blocks the page; keep the placeholder on error.
+                  var probe = new Image();
+                  probe.onload = function () { img.src = url; };
+                  probe.src = url;
+               })();
+            </script>
             <!-- Dropdown menu -->
             <div
                class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700 dark:divide-gray-600"

@@ -9,7 +9,13 @@ def user_avatar(request):
     if user.is_authenticated:
         social_info = SocialAccount.objects.filter(user=request.user, provider='discord')
         if len(social_info) > 0:
-            return {'user_avatar_url':f"https://cdn.discordapp.com/avatars/{social_info[0].extra_data['id']}/{social_info[0].extra_data['avatar']}"}
+            discord_id = social_info[0].extra_data.get('id')
+            avatar = social_info[0].extra_data.get('avatar')
+            if discord_id and avatar:
+                # Animated avatars are prefixed 'a_' and need .gif; others .png.
+                ext = 'gif' if str(avatar).startswith('a_') else 'png'
+                return {'user_avatar_url': f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar}.{ext}"}
+            # No custom Discord avatar -> fall through to gravatar below.
 
         social_info = SocialAccount.objects.filter(user=request.user, provider='facebook')
         if len(social_info) > 0:
