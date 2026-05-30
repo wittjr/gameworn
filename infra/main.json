@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.1.21952",
-      "templateHash": "2111102886503266804"
+      "templateHash": "3483684995348559441"
     }
   },
   "parameters": {
@@ -156,11 +156,11 @@
         "clientCertMode": "Optional",
         "siteConfig": {
           "linuxFxVersion": "PYTHON|3.13",
-          "appCommandLine": "python -m gunicorn --bind=0.0.0.0 --timeout 600 gameworn.wsgi",
+          "appCommandLine": "bash startup.sh",
           "ipSecurityRestrictionsDefaultAction": "Deny",
           "ipSecurityRestrictions": "[variables('ipRestrictions')]",
-          "scmIpSecurityRestrictionsUseMain": true,
-          "appSettings": "[concat(createArray(createObject('name', 'DJANGO_SETTINGS_MODULE', 'value', 'gameworn.settings'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true'), createObject('name', 'ENABLE_ORYX_BUILD', 'value', 'true'), createObject('name', 'PRE_BUILD_COMMAND', 'value', 'cat requirements-azure.txt >> requirements.txt'), createObject('name', 'POST_BUILD_COMMAND', 'value', 'python manage.py collectstatic --noinput'), createObject('name', 'AZURE_SQL_SERVER', 'value', reference(resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName'))), '2023-05-01-preview').fullyQualifiedDomainName), createObject('name', 'AZURE_SQL_DATABASE', 'value', format('{0}-db', parameters('appName'))), createObject('name', 'AZURE_SQL_AUTHENTICATION', 'value', 'ActiveDirectoryMsi'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', format('{0}media', parameters('appName'))), createObject('name', 'DEVELOPER_IP', 'value', parameters('developerIp')), createObject('name', 'WEBSITE_HTTPLOGGING_RETENTION_DAYS', 'value', '3'), createObject('name', 'PIP_CACHE_DIR', 'value', '/home/pip-cache'), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '1'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('{0}-insights', parameters('appName'))), '2020-02-02').ConnectionString), createObject('name', 'ApplicationInsightsAgent_EXTENSION_VERSION', 'value', '~3'), createObject('name', 'GOOGLE_TAG_ID', 'value', parameters('googleTagId')), createObject('name', 'HOSTNAME', 'value', parameters('hostname'))), variables('secretAppSettings'))]"
+          "scmIpSecurityRestrictionsUseMain": false,
+          "appSettings": "[concat(createArray(createObject('name', 'DJANGO_SETTINGS_MODULE', 'value', 'gameworn.settings'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true'), createObject('name', 'ENABLE_ORYX_BUILD', 'value', 'true'), createObject('name', 'DISABLE_COLLECTSTATIC', 'value', 'true'), createObject('name', 'PRE_BUILD_COMMAND', 'value', 'cat requirements-azure.txt >> requirements.txt'), createObject('name', 'AZURE_SQL_SERVER', 'value', reference(resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName'))), '2023-05-01-preview').fullyQualifiedDomainName), createObject('name', 'AZURE_SQL_DATABASE', 'value', format('{0}-db', parameters('appName'))), createObject('name', 'AZURE_SQL_AUTHENTICATION', 'value', 'ActiveDirectoryMsi'), createObject('name', 'AZURE_STORAGE_ACCOUNT_NAME', 'value', format('{0}media', parameters('appName'))), createObject('name', 'DEVELOPER_IP', 'value', parameters('developerIp')), createObject('name', 'WEBSITE_HTTPLOGGING_RETENTION_DAYS', 'value', '3'), createObject('name', 'PIP_CACHE_DIR', 'value', '/home/pip-cache'), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '1'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('{0}-insights', parameters('appName'))), '2020-02-02').ConnectionString), createObject('name', 'GOOGLE_TAG_ID', 'value', parameters('googleTagId')), createObject('name', 'HOSTNAME', 'value', parameters('hostname'))), variables('secretAppSettings'))]"
         }
       },
       "dependsOn": [
@@ -189,6 +189,28 @@
       },
       "properties": {
         "freeLimitExhaustionBehavior": "AutoPause"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-sql', parameters('appName')), format('{0}-db-free', parameters('appName')))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "GP_S_Gen5_2",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 2
+      },
+      "properties": {
+        "useFreeLimit": true,
+        "freeLimitExhaustionBehavior": "AutoPause",
+        "autoPauseDelay": 60,
+        "minCapacity": "[json('0.5')]",
+        "maxSizeBytes": 34359738368
       },
       "dependsOn": [
         "[resourceId('Microsoft.Sql/servers', format('{0}-sql', parameters('appName')))]"
