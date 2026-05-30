@@ -1,0 +1,8 @@
+{% load memorabilia_extras %}
+{% for collectible in collectibles %}
+    {% url 'memorabilia:collectible' collectible.collection.id collectible.collectible_type collectible.id as the_url %}
+    {% getmediaurl collectible.get_primary_image as image_url %}
+    {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url %}
+{% empty %}
+    <p class="text-gray-500 dark:text-gray-400">No recent items to show yet.</p>
+{% endfor %}

@@ -2706,6 +2706,10 @@ tr.field-row.field-error input,
   background-repeat: no-repeat;
 }
 
+.fill-blue-600 {
+  fill: #1C64F2;
+}
+
 .object-contain {
   -o-object-fit: contain;
      object-fit: contain;
@@ -3143,6 +3147,11 @@ tr.field-row.field-error input,
 .text-yellow-800 {
   --tw-text-opacity: 1;
   color: rgb(114 59 19 / var(--tw-text-opacity));
+}
+
+.text-gray-200 {
+  --tw-text-opacity: 1;
+  color: rgb(229 231 235 / var(--tw-text-opacity));
 }
 
 .underline {
