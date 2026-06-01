@@ -63,6 +63,13 @@ def _get_collectible(request, **view_kwargs):
 _FEATURED_Q = Q(allow_featured=True) | Q(allow_featured__isnull=True, collection__allow_featured=True)
 
 
+def _has_image_q(rel):
+    """Q matching collectibles with at least one image to show — either an
+    uploaded file or an external link — via the given reverse relation name
+    ('images' or 'gear_images'). Mirrors what get_primary_image() renders."""
+    return Q(**{f'{rel}__image__gt': ''}) | Q(**{f'{rel}__link__gt': ''})
+
+
 def home(request):
     # No DB access here so the page shell returns instantly even when the
     # Azure serverless DB is asleep. The recent-items grid is lazy-loaded
@@ -71,10 +78,10 @@ def home(request):
 
 
 def home_recent(request):
-    recent = PlayerItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
-    recent_gear = PlayerGear.objects.filter(_FEATURED_Q).exclude(gear_type_id='JRS').select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
-    recent_jersey = HockeyJersey.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
-    recent_other = GeneralItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
+    recent = PlayerItem.objects.filter(_FEATURED_Q).filter(_has_image_q('images')).select_related('collection').prefetch_related('images').order_by('-last_updated').distinct()[:6]
+    recent_gear = PlayerGear.objects.filter(_FEATURED_Q).exclude(gear_type_id='JRS').filter(_has_image_q('gear_images')).select_related('collection').prefetch_related('gear_images').order_by('-last_updated').distinct()[:6]
+    recent_jersey = HockeyJersey.objects.filter(_FEATURED_Q).filter(_has_image_q('gear_images')).select_related('collection').prefetch_related('gear_images').order_by('-last_updated').distinct()[:6]
+    recent_other = GeneralItem.objects.filter(_FEATURED_Q).filter(_has_image_q('images')).select_related('collection').prefetch_related('images').order_by('-last_updated').distinct()[:6]
     data = sorted(chain(recent, recent_gear, recent_jersey, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
     return render(request, 'memorabilia/_recent_items.html', {'collectibles': data})
 
