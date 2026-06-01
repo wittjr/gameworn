@@ -5,12 +5,12 @@
 {% block head_title %}Heavy Use{% endblock head_title %}
 
 {% block content %}
-<!-- Full-bleed hero. Drop a Creative Commons photo at static/memorabilia/hero.png
-     to fill the background; until then it falls back to the slate→blue gradient.
+<!-- Full-bleed hero. Background photo lives at static/memorabilia/hero.webp;
+     if it's missing the section falls back to the slate→blue gradient.
      Horizontal gradient keeps the left-aligned text legible while letting the
      photo show through on the right. -->
 <section class="relative overflow-hidden bg-gray-900 bg-cover bg-center w-screen ml-[calc(50%-50vw)] -mt-6 flex items-center min-h-[26rem] lg:min-h-[32rem]"
-    style="background-image: linear-gradient(to right, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.6) 45%, rgba(30,58,138,0.4) 100%), url('{% static 'memorabilia/hero.png' %}');">
+    style="background-image: linear-gradient(to right, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.6) 45%, rgba(30,58,138,0.4) 100%), url('{% static 'memorabilia/hero.webp' %}');">
     <div class="w-full px-4 sm:px-6 mx-auto max-w-screen-xl">
         <div class="max-w-2xl">
             <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl drop-shadow-sm">Game-worn. Well-loved.</h1>
