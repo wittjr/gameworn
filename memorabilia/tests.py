@@ -164,6 +164,13 @@ class PublicViewTests(BaseTestCase):
         response = self.client.get(reverse('memorabilia:home'))
         self.assertEqual(response.status_code, 200)
 
+    def test_home_recent_fragment(self):
+        # The recent-items grid is lazy-loaded from its own endpoint so the
+        # home page shell can render without touching the DB.
+        response = self.client.get(reverse('memorabilia:home_recent'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'memorabilia/_recent_items.html')
+
     def test_list_collections(self):
         response = self.client.get(reverse('memorabilia:list_collections'))
         self.assertEqual(response.status_code, 200)

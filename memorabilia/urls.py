@@ -4,6 +4,7 @@ from . import views
 app_name = "memorabilia"
 urlpatterns = [
     path("", views.home, name="home"),
+    path("recent-items", views.home_recent, name="home_recent"),
     path("search", views.search_collectibles, name="search_collectibles"),
     path('accounts/', include('allauth.urls')),
     path("collection/create", views.create_collection, name="create_collection"),

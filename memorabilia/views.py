@@ -64,12 +64,19 @@ _FEATURED_Q = Q(allow_featured=True) | Q(allow_featured__isnull=True, collection
 
 
 def home(request):
+    # No DB access here so the page shell returns instantly even when the
+    # Azure serverless DB is asleep. The recent-items grid is lazy-loaded
+    # client-side from home_recent() once the DB has warmed up.
+    return render(request, 'memorabilia/index.html')
+
+
+def home_recent(request):
     recent = PlayerItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
     recent_gear = PlayerGear.objects.filter(_FEATURED_Q).exclude(gear_type_id='JRS').select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
     recent_jersey = HockeyJersey.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('gear_images').order_by('-last_updated')[:6]
     recent_other = GeneralItem.objects.filter(_FEATURED_Q).select_related('collection').prefetch_related('images').order_by('-last_updated')[:6]
     data = sorted(chain(recent, recent_gear, recent_jersey, recent_other), key=lambda x: x.last_updated, reverse=True)[:6]
-    return render(request, 'memorabilia/index.html', {'collectibles': data})
+    return render(request, 'memorabilia/_recent_items.html', {'collectibles': data})
 
 
 @login_required
