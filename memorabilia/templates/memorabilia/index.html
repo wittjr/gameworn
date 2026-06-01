@@ -1,23 +1,78 @@
 {% extends 'memorabilia/base.html' %}
+{% load static %}
 {% load memorabilia_extras %}
 
 {% block head_title %}Heavy Use{% endblock head_title %}
 
 {% block content %}
-<section class="bg-white dark:bg-gray-900">
-    <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-16">
-        <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-gray-900 md:text-5xl lg:text-6xl dark:text-white">My Sports Memorabilia</h1>
-        <p class="mb-8 text-lg font-normal text-gray-500 lg:text-xl sm:px-16 lg:px-48 dark:text-gray-400">Welcome to where I am cataloging and displaying my sports memorabilia collection. It's still under development, expect some hiccups here and there.</p>
-        <!-- <span class="mb-4 text-3xl font-bold tracking-tight leading-none text-gray-900 md:text-4xl lg:text-5xl dark:text-white">Recent Updates</span> -->
-
-        <div class="flex flex-wrap gap-4 py-4 justify-evenly">
-            {% for collectible in collectibles %}
-                {% url 'memorabilia:collectible' collectible.collection.id collectible.collectible_type collectible.id as the_url %}
-                {% getmediaurl collectible.get_primary_image as image_url %}
-                {% include "memorabilia/collectible_card.html" with link=the_url label=collectible.title image=image_url %}
-            {% endfor %}
-        </div>    
+<!-- Full-bleed hero. Background photo lives at static/memorabilia/hero.webp;
+     if it's missing the section falls back to the slate→blue gradient.
+     Horizontal gradient keeps the left-aligned text legible while letting the
+     photo show through on the right. -->
+<section class="relative overflow-hidden bg-gray-900 bg-cover bg-center w-screen ml-[calc(50%-50vw)] -mt-6 flex items-center min-h-[26rem] lg:min-h-[32rem]"
+    style="background-image: linear-gradient(to right, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.6) 45%, rgba(30,58,138,0.4) 100%), url('{% static 'memorabilia/hero.webp' %}');">
+    <div class="w-full px-4 sm:px-6 mx-auto max-w-screen-xl">
+        <div class="max-w-2xl">
+            <h1 class="mb-4 text-4xl font-extrabold tracking-tight leading-none text-white md:text-5xl lg:text-6xl drop-shadow-sm">Game-worn. Well-loved.</h1>
+            <p class="mb-8 text-lg font-normal text-gray-200 lg:text-xl">My collection, and potentially a home for yours.</p>
+            {% with btn_base="inline-flex items-center justify-center text-base font-medium px-6 py-3 rounded-lg border focus:outline-none focus:ring-4" %}
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-start">
+                <a href="{% url 'memorabilia:list_collections' %}" class="{{ btn_base }} border-transparent text-gray-900 bg-white hover:bg-gray-100 focus:ring-white/40">Browse Collections</a>
+                {% if user.is_authenticated %}
+                <a href="{% url 'memorabilia:user_collections' user.username %}" class="{{ btn_base }} border-white/70 text-white hover:bg-white/10 focus:ring-white/30">My Collections</a>
+                {% else %}
+                {% url 'account_signup' as signup_url %}
+                {% if signup_url %}
+                <a href="{{ signup_url }}" class="{{ btn_base }} border-white/70 text-white hover:bg-white/10 focus:ring-white/30">Start your own</a>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% endwith %}
+        </div>
     </div>
 </section>
+
+<section class="bg-white dark:bg-gray-900">
+    <div class="py-8 px-4 mx-auto max-w-screen-xl text-center lg:py-12">
+        <h2 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 md:text-3xl dark:text-white">Recently added</h2>
+
+        <div id="recent-items" class="flex flex-wrap gap-4 py-4 justify-evenly">
+            <span role="status" class="sr-only">Loading recent items…</span>
+            {% for _ in "xxxxxx" %}
+            <div aria-hidden="true" class="mx-auto w-full md:w-2/5 xl:w-1/4 rounded-lg overflow-hidden bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex flex-col animate-pulse">
+                <div class="w-full aspect-square bg-gray-200 dark:bg-gray-700"></div>
+                <div class="flex-1 flex items-center justify-center px-3 py-3">
+                    <div class="h-6 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="{% url 'memorabilia:search_collectibles' %}" class="group inline-flex items-center gap-1.5 mt-2 text-base font-medium text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-500 dark:hover:text-blue-400">
+            Search all collections
+            <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
+            </svg>
+        </a>
+    </div>
+</section>
+
+<script nonce="{{ request.csp_nonce }}">
+    (function () {
+        var target = document.getElementById('recent-items');
+        function loadRecent(retries) {
+            fetch("{% url 'memorabilia:home_recent' %}")
+                .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+                .then(function (html) { target.innerHTML = html; })
+                .catch(function () {
+                    if (retries > 0) {
+                        setTimeout(function () { loadRecent(retries - 1); }, 4000);
+                    } else {
+                        target.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Recent items are taking a moment to load. Please refresh.</p>';
+                    }
+                });
+        }
+        loadRecent(8);
+    })();
+</script>
 
 {% endblock content %}

@@ -114,6 +114,12 @@ DATABASES = {
         "OPTIONS": {
             "driver": "ODBC Driver 18 for SQL Server",
             "extra_params": "Authentication=ActiveDirectoryMsi",
+            # Azure serverless SQL auto-pauses; first connect waits ~30-60s for
+            # the DB to resume. Give the login enough timeout + retries so the
+            # initial request doesn't 500 (transient error 40613) while it wakes.
+            "connection_timeout": 60,
+            "connection_retries": 6,
+            "connection_retry_backoff_time": 10,
         },
     }
 }
