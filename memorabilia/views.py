@@ -86,6 +86,14 @@ def home_recent(request):
     return render(request, 'memorabilia/_recent_items.html', {'collectibles': data})
 
 
+def privacy_policy(request):
+    return render(request, 'memorabilia/privacy_policy.html')
+
+
+def data_deletion(request):
+    return render(request, 'memorabilia/data_deletion.html')
+
+
 @login_required
 def profile(request):
     profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)

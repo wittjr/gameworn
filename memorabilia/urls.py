@@ -6,6 +6,8 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("recent-items", views.home_recent, name="home_recent"),
     path("search", views.search_collectibles, name="search_collectibles"),
+    path("privacy", views.privacy_policy, name="privacy_policy"),
+    path("data-deletion", views.data_deletion, name="data_deletion"),
     path('accounts/', include('allauth.urls')),
     path("collection/create", views.create_collection, name="create_collection"),
     path("collection/", views.IndexView.as_view(), name="list_collections"),

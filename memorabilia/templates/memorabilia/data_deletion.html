@@ -1,0 +1,48 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block head_title %}Data Deletion — {{ site_name }}{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% include 'memorabilia/breadcrumb.html' with label="Data Deletion" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="mb-2 text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Data Deletion Instructions</h1>
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Last updated: {% now "F j, Y" %}</p>
+
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        {{ site_name }} lets you sign in using third-party providers such as Facebook and Discord. If you
+        would like to remove the data associated with your {{ site_name }} account, follow the steps below.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Disconnect a Linked Account</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        To stop {{ site_name }} from accessing your Facebook or Discord profile, remove the connection from
+        your
+        {% url 'socialaccount_connections' as connections_url %}{% if connections_url %}<a href="{{ connections_url }}" class="text-blue-600 hover:underline dark:text-blue-400">connected accounts</a>{% else %}account settings{% endif %}
+        page. You can also remove {{ site_name }} from your Facebook account under
+        <em>Settings &amp; Privacy → Settings → Apps and Websites</em>.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Request Full Account Deletion</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        To permanently delete your {{ site_name }} account and all associated data — including your
+        collections, collectibles, images, and profile information — send a request to
+        <a href="mailto:heavyuse@pm.me?subject=Data%20Deletion%20Request" class="text-blue-600 hover:underline dark:text-blue-400">heavyuse@pm.me</a>
+        from the email address associated with your account, or include your account username.
+    </p>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        We will process your request and confirm deletion within 30 days. Once deleted, your data cannot
+        be recovered.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Questions</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        For any questions about data deletion or your privacy, see our
+        <a href="{% url 'memorabilia:privacy_policy' %}" class="text-blue-600 hover:underline dark:text-blue-400">Privacy Policy</a>
+        or contact us at
+        <a href="mailto:heavyuse@pm.me" class="text-blue-600 hover:underline dark:text-blue-400">heavyuse@pm.me</a>.
+    </p>
+</div>
+{% endblock content %}
