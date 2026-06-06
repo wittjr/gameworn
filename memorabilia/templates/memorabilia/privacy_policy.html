@@ -1,0 +1,79 @@
+{% extends 'memorabilia/base.html' %}
+
+{% block head_title %}Privacy Policy — {{ site_name }}{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% include 'memorabilia/breadcrumb.html' with label="Privacy Policy" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto prose prose-gray dark:prose-invert">
+    <h1 class="mb-2 text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">Privacy Policy</h1>
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Last updated: {% now "F j, Y" %}</p>
+
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        This Privacy Policy explains how {{ site_name }} ("we", "us", or "our") collects, uses,
+        and protects your information when you use our website and services. By using {{ site_name }},
+        you agree to the practices described below.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Information We Collect</h2>
+    <ul class="mb-4 list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+        <li><strong>Account information.</strong> When you sign in with a third-party provider such as
+            Facebook or Discord, we receive your name, email address, profile picture, and a provider
+            account identifier. We do not receive or store your provider password.</li>
+        <li><strong>Content you create.</strong> Collections, collectibles, images, want lists, and any
+            other details you choose to add to the service.</li>
+        <li><strong>Technical data.</strong> Standard server logs and cookies used to keep you signed in,
+            secure the service, and understand aggregate usage (for example via analytics).</li>
+    </ul>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">How We Use Your Information</h2>
+    <ul class="mb-4 list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+        <li>To create and maintain your account and authenticate you.</li>
+        <li>To provide, operate, and improve the features of the service.</li>
+        <li>To display your name and avatar within the application.</li>
+        <li>To protect the security and integrity of the service.</li>
+    </ul>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">How We Share Your Information</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        We do not sell your personal information. Collections and collectibles you mark as public may be
+        visible to other visitors. We may share information with service providers who host and operate
+        the platform on our behalf, or where required by law.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Data Retention &amp; Deletion</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        We retain your information for as long as your account is active. You may request deletion of your
+        account and associated data at any time. See our
+        <a href="{% url 'memorabilia:data_deletion' %}" class="text-blue-600 hover:underline dark:text-blue-400">Data Deletion Instructions</a>
+        for details.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Your Choices</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        You can disconnect a linked Facebook or Discord account at any time from your
+        {% url 'socialaccount_connections' as connections_url %}{% if connections_url %}<a href="{{ connections_url }}" class="text-blue-600 hover:underline dark:text-blue-400">connected accounts</a>{% else %}account settings{% endif %}
+        page. You may also request access to or deletion of your data using the contact details below.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Children's Privacy</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        {{ site_name }} is not directed to children under 13, and we do not knowingly collect personal
+        information from them.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Changes to This Policy</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        We may update this Privacy Policy from time to time. Material changes will be reflected by the
+        "Last updated" date above.
+    </p>
+
+    <h2 class="mt-8 mb-3 text-xl font-bold text-gray-900 dark:text-white">Contact Us</h2>
+    <p class="mb-4 text-gray-700 dark:text-gray-300">
+        If you have questions about this Privacy Policy or your data, contact us at
+        <a href="mailto:heavyuse@pm.me" class="text-blue-600 hover:underline dark:text-blue-400">heavyuse@pm.me</a>.
+    </p>
+</div>
+{% endblock content %}
