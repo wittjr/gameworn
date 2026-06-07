@@ -119,8 +119,12 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 LOGIN_REDIRECT_URL = '/'
 
 # Provider specific settings
-SOCIALACCOUNT_PROVIDERS = {
-    'discord': {
+SOCIALACCOUNT_PROVIDERS = {}
+
+# Only register the Discord provider when credentials are configured,
+# so the Discord login button is hidden if DISCORD_CLIENT is unset.
+if os.environ.get('DISCORD_CLIENT'):
+    SOCIALACCOUNT_PROVIDERS['discord'] = {
         # For each OAuth based provider, either add a ``SocialApp``
         # (``socialaccount`` app) containing the required client
         # credentials, or list them here:
@@ -130,8 +134,12 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': os.environ.get('DISCORD_KEY')
             # https://discord.com/oauth2/authorize?client_id=1281068554493628498&response_type=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2F&scope=identify+email+openid
         }
-    },
-    'facebook': {
+    }
+
+# Only register the Facebook provider when credentials are configured,
+# so the Facebook login button is hidden if FACEBOOK_CLIENT_ID is unset.
+if os.environ.get('FACEBOOK_CLIENT_ID'):
+    SOCIALACCOUNT_PROVIDERS['facebook'] = {
         'APP': {
             'client_id': os.environ.get('FACEBOOK_CLIENT_ID'),
             'secret': os.environ.get('FACEBOOK_SECRET'),
@@ -141,7 +149,6 @@ SOCIALACCOUNT_PROVIDERS = {
         'FIELDS': ['id', 'name', 'email', 'picture'],
         'VERSION': 'v21.0',
     }
-}
 
 WSGI_APPLICATION = 'gameworn.wsgi.application'
 
