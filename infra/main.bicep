@@ -79,7 +79,7 @@ var plainAppSettings = [
   { name: 'DISABLE_COLLECTSTATIC',         value: 'true' }
   { name: 'PRE_BUILD_COMMAND',             value: 'cat requirements-azure.txt >> requirements.txt' }
   { name: 'AZURE_SQL_SERVER',                value: sqlServer.properties.fullyQualifiedDomainName }
-  { name: 'AZURE_SQL_DATABASE',              value: sqlDbFreeOffer.name }
+  { name: 'AZURE_SQL_DATABASE',              value: sqlDbBasic.name }
   { name: 'AZURE_SQL_AUTHENTICATION',        value: 'ActiveDirectoryMsi' }
   { name: 'AZURE_STORAGE_ACCOUNT_NAME',      value: storageAccount.name }
   { name: 'DEVELOPER_IP',                    value: developerIp }
@@ -166,28 +166,24 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   }
 }
 
-// ─── SQL Database (Azure SQL Database Free Offer) ────────────────────────────
-// Perpetual free offer: 100,000 vCore-seconds/month + 32 GB storage.
-// One per subscription. Implemented as serverless General Purpose with useFreeLimit.
-// freeLimitExhaustionBehavior:
-//   'AutoPause'    — stops accepting connections when monthly limit is hit (safest)
-//   'BillOverUsage' — continues running and charges overages
-resource sqlDbFreeOffer 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
+// ─── SQL Database (Basic DTU tier) ───────────────────────────────────────────
+// Basic: 5 DTU, 2 GB max storage, flat ~$5/month, always-on.
+// Migrated off the serverless Free Offer (GP_S_Gen5_2): the workload is near-idle
+// (~1% CPU) but the 0.5 vCore active-time floor burned through the free
+// 100,000 vCore-seconds/month and triggered overages. Basic's flat rate is far
+// cheaper for this usage and removes serverless cold starts.
+// NOTE: the resource name stays '${appName}-db-free' so the existing database is
+// converted in place, preserving its data. Renaming would drop-and-recreate it.
+resource sqlDbBasic 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   parent: sqlServer
   name: '${appName}-db-free'
   location: location
   sku: {
-    name: 'GP_S_Gen5_2'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 2
+    name: 'Basic'
+    tier: 'Basic'
   }
   properties: {
-    useFreeLimit: true
-    freeLimitExhaustionBehavior: 'AutoPause'
-    autoPauseDelay: 60
-    minCapacity: json('0.5')
-    maxSizeBytes: 34359738368
+    maxSizeBytes: 2147483648 // 2 GB — Basic tier maximum
   }
 }
 
@@ -390,6 +386,6 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 output appUrl string = 'https://${app.properties.defaultHostName}'
 output appPrincipalId string = app.identity.principalId
 output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
-output sqlDatabaseName string = sqlDbFreeOffer.name
+output sqlDatabaseName string = sqlDbBasic.name
 output storageAccountName string = storageAccount.name
 output mediaUrl string = '${storageAccount.properties.primaryEndpoints.blob}media/'
