@@ -153,6 +153,8 @@
                {% block navigation %}
                {% url 'memorabilia:list_collections' as the_url %}
                {% include "memorabilia/navitem.html" with link=the_url label="Collections" %}
+               {% url 'memorabilia:marketplace' as the_url %}
+               {% include "memorabilia/navitem.html" with link=the_url label="Marketplace" %}
                {% url 'memorabilia:list_externalresources' as the_url %}
                {% include "memorabilia/navitem.html" with link=the_url label="Resources" %}
                {% url 'memorabilia:search_collectibles' as the_url %}

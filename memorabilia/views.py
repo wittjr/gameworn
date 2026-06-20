@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 
 from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import generic
 from .models import (
     Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType,
@@ -16,8 +17,12 @@ from .models import (
     HockeyJersey, UserProfile, MeiGrayTagEntry, MeiGrayPopulationReport,
     PlayerGearAuthentication, PlayerItemAuthentication, GeneralItemAuthentication,
     WantListProfile, WantList, WantListItem, WantListItemImage,
+    OwnerInquiry, InquiryMessage,
     _generate_want_list_slug,
 )
+from .relay import relay_message, ingest_inbound, extract_token, verify_mailgun_signature
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from .forms import (
     CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm,
     CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm,
@@ -27,7 +32,9 @@ from .forms import (
     PlayerGearAuthenticationFormSet, PlayerItemAuthenticationFormSet,
     GeneralItemAuthenticationFormSet,
     WantListProfileForm, WantListForm, WantListItemForm, WantListItemImageFormSet,
+    ContactOwnerForm,
 )
+from django.contrib import messages
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -68,6 +75,17 @@ def _has_image_q(rel):
     uploaded file or an external link — via the given reverse relation name
     ('images' or 'gear_images'). Mirrors what get_primary_image() renders."""
     return Q(**{f'{rel}__image__gt': ''}) | Q(**{f'{rel}__link__gt': ''})
+
+
+def _user_want_list_url(user):
+    """Return the public want-list URL for a user who has a profile with at
+    least one list, else None. Used to surface a 'for trade' shortcut."""
+    if not user or not user.is_authenticated:
+        return None
+    profile = WantListProfile.objects.filter(user=user).first()
+    if not profile or not WantList.objects.filter(profile=profile).exists():
+        return None
+    return reverse('memorabilia:want_list_public', kwargs={'slug': profile.slug})
 
 
 def home(request):
@@ -299,6 +317,131 @@ def search_collectibles(request):
     }
     return render(request, 'memorabilia/search.html', context)
 
+
+def marketplace(request):
+    """Public listing of every collectible flagged for sale and/or trade."""
+    show = request.GET.get('show')  # 'sale', 'trade', or None for both
+    if show == 'sale':
+        availability = Q(for_sale=True)
+    elif show == 'trade':
+        availability = Q(for_trade=True)
+    else:
+        show = 'all'
+        availability = Q(for_sale=True) | Q(for_trade=True)
+
+    gear = PlayerGear.objects.exclude(gear_type_id='JRS').filter(availability).select_related('collection').prefetch_related('gear_images')
+    jersey = HockeyJersey.objects.filter(availability).select_related('collection').prefetch_related('gear_images')
+    player = PlayerItem.objects.filter(availability).select_related('collection').prefetch_related('images')
+    other = GeneralItem.objects.filter(availability).select_related('collection').prefetch_related('images')
+
+    results = sorted(
+        chain(gear, jersey, player, other),
+        key=lambda x: x.last_updated,
+        reverse=True,
+    )
+    context = {
+        'title': 'Marketplace',
+        'results': results,
+        'show': show,
+    }
+    return render(request, 'memorabilia/marketplace.html', context)
+
+
+@login_required
+def contact_owner(request, collection_id, collectible_type, collectible_id):
+    """Form to message the owner of a for-sale/for-trade item. The message is
+    relayed by email (reply-to the sender) so the owner's address is never
+    exposed, and a record is kept. Requires login."""
+    collectible = _get_collectible(request, collectible_id=collectible_id, collectible_type=collectible_type)
+    if collectible.collection_id != collection_id:
+        raise Http404("Collectible not found")
+    # Only items the owner has actually listed can be contacted about.
+    if not (collectible.for_sale or collectible.for_trade):
+        raise Http404("Item is not listed for sale or trade")
+    owner = User.objects.filter(id=collectible.collection.owner_uid).first()
+    if not owner or not owner.email:
+        raise Http404("Owner cannot be contacted")
+
+    item_url = request.build_absolute_uri(reverse('memorabilia:collectible', kwargs={
+        'collection_id': collection_id,
+        'collectible_type': collectible_type,
+        'pk': collectible_id,
+    }))
+
+    if request.method == 'POST':
+        form = ContactOwnerForm(request.POST)
+        if form.is_valid():
+            # Honeypot tripped → act as if it succeeded, but do nothing.
+            if form.is_spam():
+                messages.success(request, 'Your message has been sent to the owner.')
+                return redirect('memorabilia:collectible', collection_id=collection_id,
+                                collectible_type=collectible_type, pk=collectible_id)
+
+            inquiry = form.save(commit=False)
+            inquiry.recipient = owner
+            inquiry.sender_user = request.user
+            inquiry.collection_id = collection_id
+            inquiry.collectible_type = collectible_type
+            inquiry.collectible_id = collectible_id
+            inquiry.item_title = collectible.title
+            inquiry.item_url = item_url
+            inquiry.save()
+
+            # The first message is from the requester; relay it to the owner.
+            first_message = InquiryMessage.objects.create(
+                inquiry=inquiry,
+                sender_role=InquiryMessage.REQUESTER,
+                body=form.cleaned_data['message'],
+            )
+            relay_message(first_message)
+
+            if first_message.email_sent:
+                messages.success(request, 'Your message has been sent to the owner.')
+            else:
+                messages.success(request, "Your message has been recorded and the owner will be notified.")
+            return redirect('memorabilia:collectible', collection_id=collection_id,
+                            collectible_type=collectible_type, pk=collectible_id)
+    else:
+        form = ContactOwnerForm(initial={
+            'sender_name': request.user.get_full_name() or request.user.username,
+            'sender_email': request.user.email,
+        })
+
+    return render(request, 'memorabilia/contact_owner.html', {
+        'form': form,
+        'collectible': collectible,
+        'item_url': item_url,
+        'title': f'Contact owner about {collectible.title}',
+    })
+
+
+@csrf_exempt
+@require_POST
+def mailgun_inbound(request):
+    """Webhook target for Mailgun inbound Routes. Mailgun POSTs a parsed reply
+    here; we verify its signature, pull the thread token from the subject and
+    the sender + body, and relay the message on to the other party."""
+    # Mailgun's signature triplet (note: its "token" is a signing nonce, NOT our
+    # inquiry token).
+    if not verify_mailgun_signature(
+        request.POST.get('timestamp', ''),
+        request.POST.get('token', ''),
+        request.POST.get('signature', ''),
+    ):
+        logger.warning('Rejected Mailgun inbound webhook: bad signature')
+        return HttpResponse('Invalid signature', status=403)
+
+    sender = request.POST.get('sender', '')
+    subject = request.POST.get('subject', '')
+    # Mailgun pre-strips quoted history into "stripped-text"; fall back to full body.
+    body = request.POST.get('stripped-text') or request.POST.get('body-plain', '')
+
+    thread_token = extract_token(subject)
+    ingest_inbound(thread_token, sender, body, subject=subject)
+    # Always 200 so Mailgun doesn't retry; unroutable mail is simply dropped.
+    return HttpResponse(status=200)
+
+
 class ExternalResourceListView(generic.ListView):
     model = ExternalResource
     ordering = ['title']
@@ -515,6 +658,13 @@ class CollectibleView(generic.DetailView):
             context['item_position'] = current_index + 1
             context['item_total'] = len(all_siblings)
 
+        # Link to the collection owner's want list, surfaced next to the
+        # "For Trade" indicator so prospective traders can see what they want.
+        owner = User.objects.filter(id=collection.owner_uid).first()
+        context['owner_want_list_url'] = _user_want_list_url(owner)
+        # The owner can be contacted only if we have an address to relay to.
+        context['owner_can_contact'] = bool(owner and owner.email)
+
         return context
 
 
@@ -686,6 +836,7 @@ def create_collectible(request, collection_id):
         'selected_collectible_type': collectible_type,
         'is_post_error': request.method == 'POST',
         'flickr_id': profile_obj.flickr_id,
+        'want_list_url': _user_want_list_url(request.user),
     })
 
 def _get_image_formset_class(ctype):
@@ -927,6 +1078,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'type_display_label': _type_labels.get(selected_collectible_type, selected_collectible_type),
         'convertible_types': [(k, v) for k, v in _type_labels.items() if k != selected_collectible_type],
         'flickr_id': profile_obj.flickr_id,
+        'want_list_url': _user_want_list_url(request.user),
     })
 
 

@@ -15,6 +15,7 @@ from .models import (
     SeasonSet, HockeyJersey, UserProfile,
     WantListProfile, WantList, WantListItem, WantListItemImage,
     WANT_LIST_VISIBILITY_CHOICES,
+    OwnerInquiry,
 )
 from django.conf import settings
 from django.core.files import File
@@ -194,7 +195,7 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'collectible_type', 'flickr_url']
+        exclude = ['looking_for', 'images', 'collectible_type', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
@@ -282,12 +283,15 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = GeneralItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
+        exclude = ['looking_for', 'images', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
             "how_obtained": flowbite_widgets.FlowbiteTextInput(),
+            "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
+            "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
+            "asking_price": flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -346,7 +350,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url']
+        exclude = ['looking_for', 'images', 'season_set', 'home_away', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -358,6 +362,9 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
             "how_obtained": flowbite_widgets.FlowbiteTextInput(),
+            "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
+            "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
+            "asking_price": flowbite_widgets.FlowbiteTextInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -405,7 +412,7 @@ class HockeyJerseyForm(PlayerGearForm):
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
+        exclude = ['looking_for', 'images', 'flickr_url']
         widgets = PlayerGearForm.Meta.widgets
 
 
@@ -1028,3 +1035,42 @@ WantListItemImageFormSet = inlineformset_factory(
     max_num=3,
     validate_max=True,
 )
+
+class ContactOwnerForm(ModelForm):
+    """Lets an interested party open a message thread with the owner of a
+    for-sale/for-trade item. `message` is the first message in the thread (stored
+    as an InquiryMessage, not on the inquiry). `website` is a honeypot — real
+    users never see or fill it."""
+    message = forms.CharField(
+        label='Message',
+        max_length=2000,
+        widget=flowbite_widgets.FlowbiteTextarea(),
+    )
+    website = forms.CharField(
+        required=False,
+        label='Website',
+        widget=forms.TextInput(attrs={
+            'tabindex': '-1',
+            'autocomplete': 'off',
+            'class': 'hidden',
+            'aria-hidden': 'true',
+        }),
+    )
+
+    field_order = ['sender_name', 'sender_email', 'message']
+
+    class Meta:
+        model = OwnerInquiry
+        fields = ['sender_name', 'sender_email']
+        labels = {
+            'sender_name': 'Your name',
+            'sender_email': 'Your email',
+        }
+        widgets = {
+            'sender_name': flowbite_widgets.FlowbiteTextInput(),
+            'sender_email': flowbite_widgets.FlowbiteTextInput(attrs={'type': 'email'}),
+        }
+
+    def is_spam(self):
+        """True when the honeypot was filled — silently drop these."""
+        return bool(self.cleaned_data.get('website'))

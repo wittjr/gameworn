@@ -1,0 +1,39 @@
+{% extends 'memorabilia/base.html' %}
+{% load static %}
+{% load memorabilia_extras %}
+
+{% block head_title %}
+{{ title }}
+{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% include 'memorabilia/breadcrumb.html' with url=request.path label=title %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">{{ title }}</h1>
+<p class="text-gray-500 dark:text-gray-400 mb-6">Items collectors have flagged as available for sale or trade.</p>
+
+<div class="flex flex-wrap gap-2 mb-6">
+    <a href="{% url 'memorabilia:marketplace' %}" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'all' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">All</a>
+    <a href="{% url 'memorabilia:marketplace' %}?show=sale" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'sale' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">For Sale</a>
+    <a href="{% url 'memorabilia:marketplace' %}?show=trade" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'trade' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">For Trade</a>
+</div>
+
+{% if results %}
+  <div class="flex flex-wrap gap-4 py-4 justify-evenly">
+    {% for c in results %}
+      {% url 'memorabilia:collectible' collection_id=c.collection.id collectible_type=c.collectible_type pk=c.id as detail_url %}
+      {% getmediaurl c.get_primary_image as image_url %}
+      {% include "memorabilia/collectible_card.html" with link=detail_url label=c.title image=image_url for_sale=c.for_sale for_trade=c.for_trade asking_price=c.asking_price %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center py-16 text-gray-500">
+    <p class="text-lg font-medium">Nothing listed yet</p>
+    <p class="text-sm mt-1">No items are currently marked for sale or trade. Mark an item available when adding or editing it.</p>
+  </div>
+{% endif %}
+{% endblock content %}

@@ -1,0 +1,42 @@
+{% comment %}
+Sale / trade availability rows for collectible detail pages.
+Expects `object` (the collectible) and, optionally, `owner_want_list_url`
+and `owner_can_contact`.
+{% endcomment %}
+{% if object.for_sale or object.for_trade %}
+    {% url 'memorabilia:contact_owner' collection_id=object.collection_id collectible_type=object.collectible_type collectible_id=object.id as contact_url %}
+{% endif %}
+{% if object.for_sale %}
+<tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700">
+    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">For Sale</th>
+    <td class="px-6 py-4">
+        {% if object.asking_price %}${{ object.asking_price }}{% else %}Yes{% endif %}
+        {% if owner_can_contact %}
+            {% if user.is_authenticated %}
+            <a href="{{ contact_url }}" class="ml-2 font-medium text-blue-600 hover:underline">Contact owner</a>
+            {% else %}
+            <a href="{% url 'account_login' %}?next={{ contact_url|urlencode }}" class="ml-2 font-medium text-blue-600 hover:underline">Login to contact owner</a>
+            {% endif %}
+        {% endif %}
+    </td>
+</tr>
+{% endif %}
+{% if object.for_trade %}
+<tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700">
+    <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">For Trade</th>
+    <td class="px-6 py-4">
+        {% if owner_want_list_url %}
+        <a href="{{ owner_want_list_url }}" class="font-medium text-blue-600 hover:underline">View want list</a>
+        {% else %}
+        Open to offers
+        {% endif %}
+        {% if owner_can_contact %}
+            {% if user.is_authenticated %}
+            <a href="{{ contact_url }}" class="ml-2 font-medium text-blue-600 hover:underline">Contact owner</a>
+            {% else %}
+            <a href="{% url 'account_login' %}?next={{ contact_url|urlencode }}" class="ml-2 font-medium text-blue-600 hover:underline">Login to contact owner</a>
+            {% endif %}
+        {% endif %}
+    </td>
+</tr>
+{% endif %}

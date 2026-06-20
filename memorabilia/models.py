@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rules.contrib.models import RulesModel
 from django.contrib.auth.models import User
 import rules
+import secrets
 import uuid
 from uuid6 import uuid7
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
@@ -723,3 +724,62 @@ class WantListItemImage(models.Model):
 
     def __str__(self):
         return f'Image for {self.item}'
+
+
+def _generate_inquiry_token():
+    return secrets.token_hex(8)
+
+
+class OwnerInquiry(models.Model):
+    """A conversation thread between an interested party (the requester) and the
+    owner of a for-sale/for-trade item. All messages are relayed by email so
+    neither party's address is exposed to the other; the system is the only
+    party that knows both addresses."""
+    recipient = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='received_inquiries',
+    )
+    sender_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sent_inquiries',
+    )
+    collection_id = models.IntegerField()
+    collectible_type = models.CharField(max_length=15)
+    collectible_id = models.IntegerField()
+    item_title = models.CharField(max_length=100, blank=True)
+    item_url = models.CharField(max_length=255, blank=True)
+    sender_name = models.CharField(max_length=100)
+    sender_email = models.EmailField()
+    # Opaque routing token embedded in relayed email subjects ("[ref:<token>]")
+    # so inbound replies can be matched back to this thread.
+    token = models.CharField(max_length=32, unique=True, default=_generate_inquiry_token, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Owner inquiries'
+
+    def __str__(self):
+        return f'Inquiry from {self.sender_email} re: {self.item_title or self.collectible_id}'
+
+
+class InquiryMessage(models.Model):
+    """A single message within an OwnerInquiry thread, from either party."""
+    REQUESTER = 'requester'
+    OWNER = 'owner'
+    ROLE_CHOICES = [(REQUESTER, 'Requester'), (OWNER, 'Owner')]
+
+    inquiry = models.ForeignKey(OwnerInquiry, on_delete=models.CASCADE, related_name='messages')
+    sender_role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    body = models.TextField(max_length=2000)
+    # True when this message arrived as an inbound email reply (vs. the web form).
+    inbound = models.BooleanField(default=False)
+    # True once we successfully relayed it on to the other party.
+    email_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.get_sender_role_display()} message on inquiry {self.inquiry_id}'
