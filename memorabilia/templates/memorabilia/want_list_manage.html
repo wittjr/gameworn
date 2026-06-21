@@ -19,8 +19,6 @@
     <div class="flex gap-2">
         {% url 'memorabilia:want_list_profile_edit' as settings_url %}
         <a href="{{ settings_url }}" class="btn-primary-white">Settings</a>
-        {% url 'memorabilia:want_list_public' profile.slug as public_url %}
-        <a href="{{ public_url }}" class="btn-primary-white" target="_blank">View Public Page</a>
         {% url 'memorabilia:want_list_export' as export_url %}
         <a href="{{ export_url }}" class="btn-primary-white">Export</a>
         {% url 'memorabilia:want_list_import' as import_url %}
@@ -36,7 +34,7 @@
 
 <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
     Visibility: <span class="font-medium text-gray-700 dark:text-gray-200">{{ profile.get_visibility_display }}</span>
-    &middot; Public URL: <a href="{{ public_url }}" class="text-blue-600 hover:underline">/wants/{{ profile.slug }}/</a>
+    &middot; URL: <a href="{% url 'memorabilia:want_list_public' profile.slug %}" class="text-blue-600 hover:underline" target="_blank">/wants/{{ profile.slug }}/</a>
 </div>
 
 {% if want_lists %}
@@ -50,8 +48,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
                     </svg>
                 </button>
-                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">{{ wl.title }}</h2>
-                <span class="text-xs text-gray-400">{{ wl.items.count }} item{{ wl.items.count|pluralize }}</span>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">{{ wl.title }}
+                        <span class="text-xs font-normal text-gray-400">{{ wl.items.count }} item{{ wl.items.count|pluralize }}</span>
+                    </h2>
+                    <a href="{% url 'memorabilia:want_list_public_single' profile.slug wl.slug %}" class="text-xs text-blue-600 hover:underline" target="_blank">/wants/{{ profile.slug }}/{{ wl.slug }}/</a>
+                </div>
             </div>
             <div class="flex items-center gap-2">
                 {% url 'memorabilia:want_list_item_create' wl.pk as add_item_url %}

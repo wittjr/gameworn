@@ -1,0 +1,112 @@
+{% extends 'memorabilia/base.html' %}
+{% load static %}
+{% load memorabilia_extras %}
+
+{% block head_title %}
+{{ title }}
+{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% include 'memorabilia/breadcrumb.html' with url=request.path label=title %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">{{ title }}</h1>
+<p class="text-gray-500 dark:text-gray-400 mb-6">Items open to a new home.</p>
+
+<form method="get" class="bg-white rounded-lg shadow p-4 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.query.label }}</label>
+      {{ form.query }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.league.label }}</label>
+      {{ form.league }}
+      <datalist id="league-list">
+        {% for cl in custom_leagues %}
+          <option value="{{ cl }}"></option>
+        {% endfor %}
+        {% for l in leagues %}
+          <option value="{{ l.key }}" label="{{ l.name }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.team.label }}</label>
+      {{ form.team }}
+      <datalist id="team-list"></datalist>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.game_type.label }}</label>
+      {{ form.game_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.usage_type.label }}</label>
+      {{ form.usage_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.item_type.label }}</label>
+      {{ form.item_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.home_away.label }}</label>
+      {{ form.home_away }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.show.label }}</label>
+      {{ form.show }}
+    </div>
+  </div>
+
+  <div class="flex justify-end mt-4 space-x-2">
+    <a href="{{ request.path }}" class="px-4 py-2 border border-gray-300 rounded-md text-sm">Clear</a>
+    <button type="submit" class="btn-primary">Filter</button>
+  </div>
+</form>
+
+<script nonce="{{ request.csp_nonce }}">
+  (function() {
+    function populateTeams(leagueVal) {
+      const list = document.getElementById('team-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!leagueVal) return;
+      fetch(`{% url 'memorabilia:get_teams' %}?league=${encodeURIComponent(leagueVal)}`)
+        .then(r => r.json())
+        .then(data => {
+          (data.teams || []).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            list.appendChild(opt);
+          });
+        })
+        .catch(() => {});
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      const leagueInput = document.querySelector('[name="league"]');
+      if (leagueInput) {
+        populateTeams(leagueInput.value);
+        leagueInput.addEventListener('input', e => populateTeams(e.target.value));
+      }
+    });
+  })();
+</script>
+
+{% if results %}
+  <div class="flex flex-wrap gap-4 py-4 justify-evenly">
+    {% for c in results %}
+      {% url 'memorabilia:collectible' collection_id=c.collection.id collectible_type=c.collectible_type pk=c.id as detail_url %}
+      {% getmediaurl c.get_primary_image as image_url %}
+      {% include "memorabilia/collectible_card.html" with link=detail_url label=c.title image=image_url for_sale=c.for_sale for_trade=c.for_trade price_display=c.price_display %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center py-16 text-gray-500">
+    <p class="text-lg font-medium">Nothing listed yet</p>
+    <p class="text-sm mt-1">No items are currently marked for sale or trade. Mark an item available when adding or editing it.</p>
+  </div>
+{% endif %}
+{% endblock content %}

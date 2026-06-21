@@ -11,7 +11,8 @@ MIDDLEWARE = [
     *MIDDLEWARE,
 ]
 
-# EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+# In development, print emails to the console instead of sending over SMTP.
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
 # EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
@@ -31,6 +32,10 @@ DATABASES = {
 INTERNAL_IPS = [
     '127.0.0.1',
 ]
+
+# Accept requests from localhost and from a cloudflared quick tunnel
+# (make relay-tunnel) so Mailgun inbound webhooks reach the local server.
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.trycloudflare.com']
 
 TAILWIND_APP_NAME = 'theme'
 

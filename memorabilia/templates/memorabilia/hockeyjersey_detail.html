@@ -72,12 +72,7 @@
                 {% include 'memorabilia/tablerow.html' with label='Authentication' value=auth %}
                 {% endfor %}
                 {% include 'memorabilia/tablerow.html' with label='Obtained' value=object.how_obtained %}
-                {% if object.for_sale %}
-                    {% include 'memorabilia/tablerow.html' with label='Asking Price' value=object.asking_price %}
-                {% endif %}
-                {% if object.for_trade %}
-                    {% include 'memorabilia/tablerow.html' with label='Looking for' value=object.looking_for %}
-                {% endif %}
+                {% include 'memorabilia/_for_sale_trade_rows.html' %}
             </tbody>
         </table>
     </div>

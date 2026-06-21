@@ -91,10 +91,15 @@ var plainAppSettings = [
   { name: 'HOSTNAME',                        value: hostname }
 ]
 
+// Only provision secrets that actually have a value. Unset secrets default to ''
+// in main.bicepparam; skipping them avoids re-adding empty app settings (e.g. an
+// unset FACEBOOK_CLIENT_ID) that would otherwise register an unconfigured provider.
+var nonEmptySecrets = filter(items(appSecrets), item => !empty(item.value))
+
 // Each key in appSecrets becomes an env var whose value is a Key Vault reference.
 // KV secret name = key lowercased with underscores replaced by hyphens.
 var kvBaseUri = 'https://${appName}-kv${environment().suffixes.keyvaultDns}/secrets/'
-var secretAppSettings = [for item in items(appSecrets): {
+var secretAppSettings = [for item in nonEmptySecrets: {
   name: item.key
   value: '@Microsoft.KeyVault(SecretUri=${kvBaseUri}${toLower(replace(item.key, '_', '-'))}/)'
 }]
@@ -297,7 +302,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource kvSecrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = [for item in items(appSecrets): {
+resource kvSecrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = [for item in nonEmptySecrets: {
   parent: keyVault
   name: toLower(replace(item.key, '_', '-'))
   properties: {

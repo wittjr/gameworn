@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 
 from django.http import HttpResponseRedirect, JsonResponse, Http404, HttpResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import generic
 from .models import (
     Collection, PhotoMatch, League, GameType, GearType, UsageType, CoaType,
@@ -16,18 +17,24 @@ from .models import (
     HockeyJersey, UserProfile, MeiGrayTagEntry, MeiGrayPopulationReport,
     PlayerGearAuthentication, PlayerItemAuthentication, GeneralItemAuthentication,
     WantListProfile, WantList, WantListItem, WantListItemImage,
+    OwnerInquiry, InquiryMessage,
     _generate_want_list_slug,
 )
+from .relay import relay_message, ingest_inbound, extract_token, verify_mailgun_signature
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from .forms import (
     CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm,
-    CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm,
+    CollectibleSearchForm, MarketplaceFilterForm, BulkCollectibleForm, BulkPlayerGearForm,
     BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class,
     GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet,
     HockeyJerseyForm, UserProfileForm,
     PlayerGearAuthenticationFormSet, PlayerItemAuthenticationFormSet,
     GeneralItemAuthenticationFormSet,
     WantListProfileForm, WantListForm, WantListItemForm, WantListItemImageFormSet,
+    ContactOwnerForm,
 )
+from django.contrib import messages
 from django.forms import inlineformset_factory, modelformset_factory
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -68,6 +75,28 @@ def _has_image_q(rel):
     uploaded file or an external link — via the given reverse relation name
     ('images' or 'gear_images'). Mirrors what get_primary_image() renders."""
     return Q(**{f'{rel}__image__gt': ''}) | Q(**{f'{rel}__link__gt': ''})
+
+
+def _user_want_list_url(user):
+    """Return the public want-list URL for a user who has a profile with at
+    least one list, else None. Used to surface a 'for trade' shortcut."""
+    if not user or not user.is_authenticated:
+        return None
+    profile = WantListProfile.objects.filter(user=user).first()
+    if not profile or not WantList.objects.filter(profile=profile).exists():
+        return None
+    return reverse('memorabilia:want_list_public', kwargs={'slug': profile.slug})
+
+
+def _collectible_trade_url(collectible, owner):
+    """Want-list URL for a collectible's "For Trade" link: the specific list it
+    points at if one is set (and still belongs to the owner), otherwise the
+    owner's whole want-list profile."""
+    wl = getattr(collectible, 'trade_want_list', None)
+    if wl is not None and wl.profile.user_id == getattr(owner, 'id', None):
+        return reverse('memorabilia:want_list_public_single',
+                       kwargs={'slug': wl.profile.slug, 'list_slug': wl.slug})
+    return _user_want_list_url(owner)
 
 
 def home(request):
@@ -299,6 +328,198 @@ def search_collectibles(request):
     }
     return render(request, 'memorabilia/search.html', context)
 
+
+def marketplace(request):
+    """Public listing of collectibles for sale/trade, with Search-style filters."""
+    form = MarketplaceFilterForm(request.GET or None)
+
+    show = request.GET.get('show', '')  # 'sale', 'trade', or '' for either
+    if show == 'sale':
+        availability = Q(for_sale=True)
+    elif show == 'trade':
+        availability = Q(for_trade=True)
+    else:
+        show = ''
+        availability = Q(for_sale=True) | Q(for_trade=True)
+
+    gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS').filter(availability)
+    hockey_qs = HockeyJersey.objects.filter(availability)
+    player_qs = PlayerItem.objects.filter(availability)
+    other_qs = GeneralItem.objects.filter(availability)
+
+    if form.is_valid():
+        data = form.cleaned_data
+
+        # Narrow to the chosen item type (keeping the availability filter).
+        item_type = data.get('item_type')
+        if item_type == 'playergear':
+            hockey_qs = HockeyJersey.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'hockeyjersey':
+            gear_qs = PlayerGear.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'playeritem':
+            gear_qs = PlayerGear.objects.none(); hockey_qs = HockeyJersey.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'generalitem':
+            gear_qs = PlayerGear.objects.none(); hockey_qs = HockeyJersey.objects.none(); player_qs = PlayerItem.objects.none()
+
+        gear_qs = _apply_collectible_filters(gear_qs, data)
+        hockey_qs = _apply_collectible_filters(hockey_qs, data)
+        # PlayerItem/GeneralItem lack gear-only fields; GeneralItem also lacks
+        # player fields — drop those keys so the filter helper doesn't touch them.
+        player_data = {k: v for k, v in data.items() if k not in ('game_type', 'usage_type')}
+        player_qs = _apply_collectible_filters(player_qs, player_data)
+        other_data = {k: v for k, v in data.items() if k not in ('game_type', 'usage_type', 'league', 'team')}
+        other_qs = _apply_collectible_filters(other_qs, other_data)
+
+        # Exclude types that can't carry the filtered fields.
+        if data.get('home_away'):
+            gear_qs = PlayerGear.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif data.get('game_type') or data.get('usage_type'):
+            player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif data.get('league') or data.get('team'):
+            other_qs = GeneralItem.objects.none()
+
+    results = sorted(
+        list(gear_qs.select_related('collection').prefetch_related('gear_images')) +
+        list(hockey_qs.select_related('collection').prefetch_related('gear_images')) +
+        list(player_qs.select_related('collection').prefetch_related('images')) +
+        list(other_qs.select_related('collection').prefetch_related('images')),
+        key=lambda x: x.last_updated,
+        reverse=True,
+    )
+
+    # Free-text league suggestions (datalist), matching the search page.
+    league_keys = set(League.objects.values_list('key', flat=True))
+    distinct_values = PlayerItem.objects.values_list('league', flat=True).distinct()
+    custom_leagues = [v for v in distinct_values if v and v not in league_keys]
+
+    context = {
+        'title': 'Marketplace',
+        'form': form,
+        'results': results,
+        'show': show,
+        'leagues': League.objects.all(),
+        'custom_leagues': custom_leagues,
+    }
+    return render(request, 'memorabilia/marketplace.html', context)
+
+
+def _resolve_interest(collectible, raw):
+    """Normalize the requester's 'interest' (which listing they responded to) to
+    'sale'/'trade', validated against what the item is actually listed as. Falls
+    back to the only listing when there's just one."""
+    raw = (raw or '').strip().lower()
+    if raw == 'sale' and collectible.for_sale:
+        return 'sale'
+    if raw == 'trade' and collectible.for_trade:
+        return 'trade'
+    if collectible.for_sale and not collectible.for_trade:
+        return 'sale'
+    if collectible.for_trade and not collectible.for_sale:
+        return 'trade'
+    return ''
+
+
+@login_required
+def contact_owner(request, collection_id, collectible_type, collectible_id):
+    """Form to message the owner of a for-sale/for-trade item. The message is
+    relayed by email (reply-to the sender) so the owner's address is never
+    exposed, and a record is kept. Requires login."""
+    collectible = _get_collectible(request, collectible_id=collectible_id, collectible_type=collectible_type)
+    if collectible.collection_id != collection_id:
+        raise Http404("Collectible not found")
+    # Only items the owner has actually listed can be contacted about.
+    if not (collectible.for_sale or collectible.for_trade):
+        raise Http404("Item is not listed for sale or trade")
+    owner = User.objects.filter(id=collectible.collection.owner_uid).first()
+    if not owner or not owner.email:
+        raise Http404("Owner cannot be contacted")
+
+    item_url = request.build_absolute_uri(reverse('memorabilia:collectible', kwargs={
+        'collection_id': collection_id,
+        'collectible_type': collectible_type,
+        'pk': collectible_id,
+    }))
+
+    if request.method == 'POST':
+        form = ContactOwnerForm(request.POST)
+        if form.is_valid():
+            # Honeypot tripped → act as if it succeeded, but do nothing.
+            if form.is_spam():
+                messages.success(request, 'Your message has been sent to the owner.')
+                return redirect('memorabilia:collectible', collection_id=collection_id,
+                                collectible_type=collectible_type, pk=collectible_id)
+
+            inquiry = form.save(commit=False)
+            inquiry.recipient = owner
+            inquiry.sender_user = request.user
+            inquiry.collection_id = collection_id
+            inquiry.collectible_type = collectible_type
+            inquiry.collectible_id = collectible_id
+            inquiry.item_title = collectible.title
+            inquiry.item_url = item_url
+            interest = _resolve_interest(collectible, request.POST.get('interest'))
+            inquiry.interest = interest
+            if interest == 'sale':
+                inquiry.item_price = collectible.asking_price
+                inquiry.item_currency = collectible.currency
+            inquiry.save()
+
+            # The first message is from the requester; relay it to the owner.
+            first_message = InquiryMessage.objects.create(
+                inquiry=inquiry,
+                sender_role=InquiryMessage.REQUESTER,
+                body=form.cleaned_data['message'],
+            )
+            relay_message(first_message)
+
+            if first_message.email_sent:
+                messages.success(request, 'Your message has been sent to the owner.')
+            else:
+                messages.success(request, "Your message has been recorded and the owner will be notified.")
+            return redirect('memorabilia:collectible', collection_id=collection_id,
+                            collectible_type=collectible_type, pk=collectible_id)
+    else:
+        form = ContactOwnerForm(initial={
+            'sender_name': request.user.get_full_name() or request.user.username,
+            'sender_email': request.user.email,
+        })
+
+    return render(request, 'memorabilia/contact_owner.html', {
+        'form': form,
+        'collectible': collectible,
+        'item_url': item_url,
+        'interest': _resolve_interest(collectible, request.GET.get('interest')),
+        'title': f'Contact owner about {collectible.title}',
+    })
+
+
+@csrf_exempt
+@require_POST
+def mailgun_inbound(request):
+    """Webhook target for Mailgun inbound Routes. Mailgun POSTs a parsed reply
+    here; we verify its signature, pull the thread token from the subject and
+    the sender + body, and relay the message on to the other party."""
+    # Mailgun's signature triplet (note: its "token" is a signing nonce, NOT our
+    # inquiry token).
+    if not verify_mailgun_signature(
+        request.POST.get('timestamp', ''),
+        request.POST.get('token', ''),
+        request.POST.get('signature', ''),
+    ):
+        logger.warning('Rejected Mailgun inbound webhook: bad signature')
+        return HttpResponse('Invalid signature', status=403)
+
+    sender = request.POST.get('sender', '')
+    subject = request.POST.get('subject', '')
+    # Mailgun pre-strips quoted history into "stripped-text"; fall back to full body.
+    body = request.POST.get('stripped-text') or request.POST.get('body-plain', '')
+
+    thread_token = extract_token(subject)
+    ingest_inbound(thread_token, sender, body, subject=subject)
+    # Always 200 so Mailgun doesn't retry; unroutable mail is simply dropped.
+    return HttpResponse(status=200)
+
+
 class ExternalResourceListView(generic.ListView):
     model = ExternalResource
     ordering = ['title']
@@ -515,6 +736,13 @@ class CollectibleView(generic.DetailView):
             context['item_position'] = current_index + 1
             context['item_total'] = len(all_siblings)
 
+        # Link to the collection owner's want list, surfaced next to the
+        # "For Trade" indicator so prospective traders can see what they want.
+        owner = User.objects.filter(id=collection.owner_uid).first()
+        context['owner_want_list_url'] = _collectible_trade_url(collectible, owner)
+        # The owner can be contacted only if we have an address to relay to.
+        context['owner_can_contact'] = bool(owner and owner.email)
+
         return context
 
 
@@ -686,6 +914,7 @@ def create_collectible(request, collection_id):
         'selected_collectible_type': collectible_type,
         'is_post_error': request.method == 'POST',
         'flickr_id': profile_obj.flickr_id,
+        'want_list_url': _user_want_list_url(request.user),
     })
 
 def _get_image_formset_class(ctype):
@@ -894,9 +1123,9 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'collection': collectible.collection_id,
             'for_sale': collectible.for_sale,
             'for_trade': collectible.for_trade,
-            'asking_price': collectible.asking_price,
+            'asking_price': f'{collectible.asking_price:.2f}' if collectible.asking_price is not None else None,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'allow_featured']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'allow_featured', 'currency', 'trade_want_list']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)
@@ -927,6 +1156,7 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
         'type_display_label': _type_labels.get(selected_collectible_type, selected_collectible_type),
         'convertible_types': [(k, v) for k, v in _type_labels.items() if k != selected_collectible_type],
         'flickr_id': profile_obj.flickr_id,
+        'want_list_url': _user_want_list_url(request.user),
     })
 
 
@@ -1650,11 +1880,16 @@ def _check_want_list_visibility(request, profile):
     return None
 
 
-def want_list_public(request, slug):
+def want_list_public(request, slug, list_slug=None):
     profile = get_object_or_404(WantListProfile, slug=slug)
     redirect_response = _check_want_list_visibility(request, profile)
     if redirect_response:
         return redirect_response
+
+    # When a list_slug is given we show only that one list.
+    single_list = None
+    if list_slug is not None:
+        single_list = get_object_or_404(WantList, profile=profile, slug=list_slug)
 
     filter_type = request.GET.get('type', '').strip()
     filter_league = request.GET.get('league', '').strip()
@@ -1662,6 +1897,8 @@ def want_list_public(request, slug):
     filter_team = request.GET.get('team', '').strip()
 
     base_qs = WantListItem.objects.filter(want_list__profile=profile)
+    if single_list is not None:
+        base_qs = base_qs.filter(want_list=single_list)
 
     used_type_keys = set(base_qs.values_list('collectible_type', flat=True).distinct())
     available_types = [
@@ -1693,6 +1930,8 @@ def want_list_public(request, slug):
         items_qs = items_qs.filter(team=filter_team)
 
     want_lists = WantList.objects.filter(profile=profile).order_by('order', 'id')
+    if single_list is not None:
+        want_lists = want_lists.filter(pk=single_list.pk)
     items_by_list = {}
     for item in items_qs:
         items_by_list.setdefault(item.want_list_id, []).append(item)
@@ -1716,6 +1955,7 @@ def want_list_public(request, slug):
         'available_players': available_players,
         'available_teams': available_teams,
         'is_owner': request.user.is_authenticated and request.user == profile.user,
+        'single_list': single_list,
     })
 
 

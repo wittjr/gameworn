@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'rules',
     'theme',
     'django_gravatar',
+    'anymail',
 ]
 
 MIDDLEWARE = [
@@ -94,12 +95,37 @@ TEMPLATES = [
     },
 ]
 
-# EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+# Email backend is chosen per-environment via env. Default is SMTP (e.g. a local
+# aiosmtpd catcher in dev); production sets it to the Anymail/Mailgun API backend:
+#   EMAIL_BACKEND=anymail.backends.mailgun.EmailBackend
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
-# EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', '').upper() == 'TRUE'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+# Envelope sender for system-generated mail (e.g. relayed owner inquiries).
+# In production this must be an address on your verified Mailgun domain.
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'no-reply@heavyuse.us')
+
+# Reply-to mailbox for relayed inquiry threads. Replies to this address must be
+# caught by a Mailgun inbound Route that forwards to /relay/mailgun/inbound. It
+# must live on a domain that can RECEIVE mail (a verified custom domain, not the
+# send-only sandbox). Falls back to DEFAULT_FROM_EMAIL if unset.
+INQUIRY_RELAY_EMAIL = os.environ.get('INQUIRY_RELAY_EMAIL', '')
+
+# Mailgun (via django-anymail). Reused/required keys come from the environment.
+# MAILGUN_WEBHOOK_SIGNING_KEY authenticates inbound reply webhooks; without it
+# the inbound endpoint rejects everything (fail closed).
+ANYMAIL = {
+    'MAILGUN_API_KEY': os.environ.get('MAILGUN_KEY', ''),
+    'MAILGUN_SENDER_DOMAIN': os.environ.get('MAILGUN_SENDER_DOMAIN', ''),
+    'MAILGUN_WEBHOOK_SIGNING_KEY': os.environ.get('MAILGUN_WEBHOOK_SIGNING_KEY', ''),
+}
+# Optional: set MAILGUN_API_URL for the EU region (https://api.eu.mailgun.net/v3).
+_mailgun_api_url = os.environ.get('MAILGUN_API_URL')
+if _mailgun_api_url:
+    ANYMAIL['MAILGUN_API_URL'] = _mailgun_api_url
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',

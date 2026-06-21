@@ -31,15 +31,27 @@
 </div>
 {% endif %}
 
+{% if single_list %}
+<a href="{% url 'memorabilia:want_list_public' slug=profile.slug %}" class="inline-flex items-center text-sm font-medium text-blue-600 hover:underline mb-2">&larr; All {{ profile.user.get_full_name|default:profile.user.username }}'s want lists</a>
+<h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">
+    {{ single_list.title }}
+</h1>
+<p class="text-sm text-gray-500 mb-4">From {{ profile.user.get_full_name|default:profile.user.username }}'s want list</p>
+{% else %}
 <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">
     {{ profile.user.get_full_name|default:profile.user.username }}'s Want List
 </h1>
+{% endif %}
 {% if profile.visibility == 'logged_in' %}
 <p class="text-sm text-gray-500 mb-4">Visible to logged-in users only.</p>
 {% endif %}
 
-<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
-    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+<details class="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6"{% if filter_type or filter_league or filter_player or filter_team %} open{% endif %}>
+    <summary class="flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+        <span>Filters{% if filter_type or filter_league or filter_player or filter_team %} <span class="ml-1 text-xs font-normal text-blue-600 dark:text-blue-400">&bull; active</span>{% endif %}</span>
+        <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </summary>
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-4 pb-4">
         <div>
             <label class="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">Type</label>
             <select name="type" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
@@ -81,7 +93,7 @@
             <button type="submit" class="btn-primary text-sm px-4 py-2">Filter</button>
         </div>
     </form>
-</div>
+</details>
 
 {% if lists_with_items %}
     {% for want_list, items in lists_with_items %}

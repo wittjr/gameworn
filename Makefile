@@ -23,7 +23,7 @@ VENV_CMD = $(if $(VENV),source $(VENV) &&,)
 DB_FILE ?= db.sqlite3
 BACKUP_DIR ?= backups
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data
+.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data relay-tunnel
 
 test:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia
@@ -45,6 +45,12 @@ run:
 
 shell:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py shell
+
+# Expose the local dev server to Mailgun so inbound email replies relay locally.
+# Starts a cloudflared tunnel + a temporary dev Mailgun route. Run `make run`
+# in another terminal. Ctrl-C tears the route and tunnel back down.
+relay-tunnel:
+	bash scripts/relay_dev_tunnel.sh
 
 check:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py check memorabilia
