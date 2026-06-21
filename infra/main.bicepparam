@@ -18,12 +18,22 @@ param sqlAdminLogin = 'heavyuse-admin'
 //   export DISCORD_CLIENT='...'
 //   export DISCORD_SECRET='...'
 //   export DISCORD_KEY='...'
+//   export MAILGUN_KEY='...'
+//   export MAILGUN_WEBHOOK_SIGNING_KEY='...'
+//   export EMAIL_BACKEND='anymail.backends.mailgun.EmailBackend'
+//   export MAILGUN_SENDER_DOMAIN='...'
+//   export DEFAULT_FROM_EMAIL='...'
+//   export INQUIRY_RELAY_EMAIL='...'
 param sqlAdminPassword = readEnvironmentVariable('SQL_ADMIN_PASSWORD', '')
 param developerIp = readEnvironmentVariable('DEVELOPER_IP', '')
 param aadAdminLogin = readEnvironmentVariable('AAD_ADMIN_LOGIN', '')
 param aadAdminObjectId = readEnvironmentVariable('AAD_OBJECT_ID', '')
 param googleTagId = readEnvironmentVariable('GOOGLE_TAG_ID', '')
 param hostname = 'heavyuse.us'
+param emailBackend = readEnvironmentVariable('EMAIL_BACKEND', '')
+param mailgunSenderDomain = readEnvironmentVariable('MAILGUN_SENDER_DOMAIN', '')
+param defaultFromEmail = readEnvironmentVariable('DEFAULT_FROM_EMAIL', '')
+param inquiryRelayEmail = readEnvironmentVariable('INQUIRY_RELAY_EMAIL', '')
 
 param appSecrets = {
   DJANGO_SECRET_KEY: readEnvironmentVariable('DJANGO_SECRET_KEY', '')
@@ -35,4 +45,6 @@ param appSecrets = {
   DISCORD_CLIENT: readEnvironmentVariable('DISCORD_CLIENT', '')
   DISCORD_SECRET: readEnvironmentVariable('DISCORD_SECRET', '')
   DISCORD_KEY: readEnvironmentVariable('DISCORD_KEY', '')
+  MAILGUN_KEY: readEnvironmentVariable('MAILGUN_KEY', '')
+  MAILGUN_WEBHOOK_SIGNING_KEY: readEnvironmentVariable('MAILGUN_WEBHOOK_SIGNING_KEY', '')
 }

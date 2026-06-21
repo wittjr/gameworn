@@ -30,6 +30,18 @@ param googleTagId string = ''
 @description('Custom domain for the app (e.g. heavyuse.us). Sets ALLOWED_HOSTS in Django.')
 param hostname string
 
+@description('Django email backend. Use anymail.backends.mailgun.EmailBackend in production.')
+param emailBackend string = ''
+
+@description('Mailgun verified sender domain (e.g. heavyuse.us). Not a secret.')
+param mailgunSenderDomain string = ''
+
+@description('Envelope sender for system-generated mail (e.g. no-reply@heavyuse.us). Not a secret.')
+param defaultFromEmail string = ''
+
+@description('Reply-to mailbox for relayed inquiry threads (e.g. replies@heavyuse.us). Not a secret.')
+param inquiryRelayEmail string = ''
+
 // ─── Cloudflare IP Ranges ─────────────────────────────────────────────────────
 // Source: https://www.cloudflare.com/ips/  — update if Cloudflare publishes new ranges
 var cloudflareRanges = [
@@ -89,6 +101,10 @@ var plainAppSettings = [
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
   { name: 'GOOGLE_TAG_ID',                   value: googleTagId }
   { name: 'HOSTNAME',                        value: hostname }
+  { name: 'EMAIL_BACKEND',                   value: emailBackend }
+  { name: 'MAILGUN_SENDER_DOMAIN',           value: mailgunSenderDomain }
+  { name: 'DEFAULT_FROM_EMAIL',              value: defaultFromEmail }
+  { name: 'INQUIRY_RELAY_EMAIL',             value: inquiryRelayEmail }
 ]
 
 // Only provision secrets that actually have a value. Unset secrets default to ''
