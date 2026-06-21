@@ -178,6 +178,21 @@ class HowObtainedValidationMixin:
         return value.strip()
 
 
+def _configure_trade_want_list_field(form, current_user):
+    """Restrict the optional 'trade want list' choice to the current user's own
+    lists and default it to 'Entire want list' (i.e. link the whole profile)."""
+    field = form.fields.get('trade_want_list')
+    if field is None:
+        return
+    field.required = False
+    field.widget = flowbite_widgets.FlowbiteSelectInput()
+    field.empty_label = 'Entire want list'
+    field.queryset = (
+        WantList.objects.filter(profile__user=current_user)
+        if current_user is not None else WantList.objects.none()
+    )
+
+
 class CollectibleForm(HowObtainedValidationMixin, ModelForm):
     league = forms.CharField(
         required=False,
@@ -215,6 +230,7 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
         # Enable browser suggestions for league via datalist rendered in the template
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
@@ -298,6 +314,7 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
         self.fields['how_obtained'].widget.attrs.update({
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
@@ -371,6 +388,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
             'placeholder': 'e.g., NHL, AHL, NCAA, custom...'

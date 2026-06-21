@@ -259,10 +259,10 @@
     <div class="info-row"><div class="info-label">Obtained</div><div class="info-value">{{ collectible.how_obtained }}</div></div>
     {% endif %}
     {% if collectible.for_sale %}
-    <div class="info-row"><div class="info-label">For Sale</div><div class="info-value">Yes{% if collectible.asking_price %} &mdash; ${{ collectible.asking_price }}{% endif %}</div></div>
+    <div class="info-row"><div class="info-label">For Sale</div><div class="info-value">Yes{% if collectible.asking_price %} &mdash; ${{ collectible.asking_price|floatformat:2 }}{% endif %}</div></div>
     {% endif %}
     {% if collectible.for_trade %}
-    <div class="info-row"><div class="info-label">For Trade</div><div class="info-value">Yes</div></div>
+    <div class="info-row"><div class="info-label">For Trade</div><div class="info-value">Yes{% if collectible.trade_want_list %} &mdash; {{ collectible.trade_want_list.title }}{% endif %}</div></div>
     {% endif %}
   </div>
 </div>

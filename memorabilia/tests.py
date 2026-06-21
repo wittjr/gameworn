@@ -4222,6 +4222,85 @@ class WantListShortcutTests(BaseTestCase):
         self.assertContains(response, 'View your want list')
 
 
+class WantListSlugTests(WantListBaseTestCase):
+    """WantList slugs are auto-generated from the title, unique per profile, and
+    stable across later title edits."""
+
+    def test_slug_generated_from_title(self):
+        wl = WantList.objects.create(profile=self.profile, title='Favorite Players')
+        self.assertEqual(wl.slug, 'favorite-players')
+
+    def test_slug_unique_within_profile(self):
+        a = WantList.objects.create(profile=self.profile, title='Goalie Masks')
+        b = WantList.objects.create(profile=self.profile, title='Goalie Masks')
+        self.assertEqual(a.slug, 'goalie-masks')
+        self.assertEqual(b.slug, 'goalie-masks-1')
+
+    def test_same_slug_allowed_across_profiles(self):
+        other_profile = WantListProfile.objects.create(
+            user=self.other_user, slug='other-wants', visibility='public')
+        a = WantList.objects.create(profile=self.profile, title='Goalie Masks')
+        b = WantList.objects.create(profile=other_profile, title='Goalie Masks')
+        self.assertEqual(a.slug, b.slug)
+
+    def test_slug_stable_after_title_edit(self):
+        wl = WantList.objects.create(profile=self.profile, title='Favorite Players')
+        wl.title = 'My Favorite Players'
+        wl.save()
+        wl.refresh_from_db()
+        self.assertEqual(wl.slug, 'favorite-players')
+
+
+class WantListSingleListViewTests(WantListBaseTestCase):
+    """The /wants/<handle>/<list-slug>/ page shows just one list."""
+
+    def setUp(self):
+        self.second_list = WantList.objects.create(profile=self.profile, title='Backups', order=1)
+        WantListItem.objects.create(
+            want_list=self.second_list, collectible_type='generalitem', title='A backup item')
+
+    def _single_url(self, list_slug):
+        return reverse('memorabilia:want_list_public_single',
+                       kwargs={'slug': self.profile.slug, 'list_slug': list_slug})
+
+    def test_single_list_shows_only_that_list(self):
+        response = self.client.get(self._single_url(self.want_list.slug))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['single_list'], self.want_list)
+        titles = [wl.title for wl, _ in response.context['lists_with_items']]
+        self.assertEqual(titles, ['Priority Wants'])
+        self.assertNotContains(response, 'A backup item')
+
+    def test_unknown_list_slug_404(self):
+        response = self.client.get(self._single_url('does-not-exist'))
+        self.assertEqual(response.status_code, 404)
+
+    def test_single_list_respects_private_visibility(self):
+        self.profile.visibility = 'private'
+        self.profile.save()
+        response = self.client.get(self._single_url(self.want_list.slug))
+        self.assertNotEqual(response.status_code, 200)
+
+
+class TradeWantListFormTests(BaseTestCase):
+    """The collectible form's trade_want_list choice is limited to the editing
+    user's own lists."""
+
+    def test_queryset_limited_to_current_user_lists(self):
+        from .forms import CollectibleForm
+        mine = WantList.objects.create(
+            profile=WantListProfile.objects.create(user=self.owner, slug='owner-wants'),
+            title='Mine')
+        theirs = WantList.objects.create(
+            profile=WantListProfile.objects.create(user=self.other_user, slug='other-wants'),
+            title='Theirs')
+        form = CollectibleForm(current_user=self.owner)
+        qs = form.fields['trade_want_list'].queryset
+        self.assertIn(mine, qs)
+        self.assertNotIn(theirs, qs)
+        self.assertEqual(form.fields['trade_want_list'].empty_label, 'Entire want list')
+
+
 class CollectibleDetailSaleTradeTests(BaseTestCase):
     """The detail page shows For Sale / For Trade indicators, and the For Trade
     row links to the collection owner's want list when one exists."""
@@ -4266,6 +4345,19 @@ class CollectibleDetailSaleTradeTests(BaseTestCase):
         response = self.client.get(self._detail_url(self.player_item))
         self.assertIsNone(response.context['owner_want_list_url'])
         self.assertNotContains(response, 'View want list')
+
+    def test_for_trade_links_to_specific_want_list(self):
+        profile = WantListProfile.objects.create(user=self.owner, slug='owner-wants', visibility='public')
+        WantList.objects.create(profile=profile, title='My Wants')
+        favorites = WantList.objects.create(profile=profile, title='Favorite Players')
+        self.player_item.for_trade = True
+        self.player_item.trade_want_list = favorites
+        self.player_item.save()
+        response = self.client.get(self._detail_url(self.player_item))
+        specific_url = reverse('memorabilia:want_list_public_single',
+                               kwargs={'slug': 'owner-wants', 'list_slug': 'favorite-players'})
+        self.assertEqual(response.context['owner_want_list_url'], specific_url)
+        self.assertContains(response, specific_url)
 
 
 class ContactOwnerTests(BaseTestCase):
@@ -4347,6 +4439,34 @@ class ContactOwnerTests(BaseTestCase):
         self.assertNotIn('jane@example.com', sent.body)
         self.assertIn('Is this still available?', sent.body)
         self.assertIn(f'[ref:{inquiry.token}]', sent.subject)
+
+    def test_sale_interest_recorded_with_price(self):
+        self._login_buyer()
+        self.client.post(self._contact_url(self.player_item), self._post_data(interest='sale'))
+        inquiry = OwnerInquiry.objects.get(sender_email='jane@example.com')
+        self.assertEqual(inquiry.interest, 'sale')
+        self.assertEqual(inquiry.item_price, 100)
+        self.assertIn('For sale', mail.outbox[0].body)
+        self.assertIn('$100', mail.outbox[0].body)
+
+    def test_trade_interest_recorded_without_price(self):
+        self.player_item.for_sale = False
+        self.player_item.for_trade = True
+        self.player_item.save()
+        self._login_buyer()
+        self.client.post(self._contact_url(self.player_item), self._post_data(interest='trade'))
+        inquiry = OwnerInquiry.objects.get(sender_email='jane@example.com')
+        self.assertEqual(inquiry.interest, 'trade')
+        self.assertIsNone(inquiry.item_price)
+        self.assertIn('For trade', mail.outbox[0].body)
+        self.assertNotIn('$', mail.outbox[0].body)
+
+    def test_interest_defaults_to_sole_listing(self):
+        # Item is only for sale; no interest param supplied -> inferred as sale.
+        self._login_buyer()
+        self.client.post(self._contact_url(self.player_item), self._post_data())
+        inquiry = OwnerInquiry.objects.get(sender_email='jane@example.com')
+        self.assertEqual(inquiry.interest, 'sale')
 
     def _make_inquiry(self):
         self._login_buyer()

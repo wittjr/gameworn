@@ -88,6 +88,17 @@ def _user_want_list_url(user):
     return reverse('memorabilia:want_list_public', kwargs={'slug': profile.slug})
 
 
+def _collectible_trade_url(collectible, owner):
+    """Want-list URL for a collectible's "For Trade" link: the specific list it
+    points at if one is set (and still belongs to the owner), otherwise the
+    owner's whole want-list profile."""
+    wl = getattr(collectible, 'trade_want_list', None)
+    if wl is not None and wl.profile.user_id == getattr(owner, 'id', None):
+        return reverse('memorabilia:want_list_public_single',
+                       kwargs={'slug': wl.profile.slug, 'list_slug': wl.slug})
+    return _user_want_list_url(owner)
+
+
 def home(request):
     # No DB access here so the page shell returns instantly even when the
     # Azure serverless DB is asleep. The recent-items grid is lazy-loaded
@@ -347,6 +358,22 @@ def marketplace(request):
     return render(request, 'memorabilia/marketplace.html', context)
 
 
+def _resolve_interest(collectible, raw):
+    """Normalize the requester's 'interest' (which listing they responded to) to
+    'sale'/'trade', validated against what the item is actually listed as. Falls
+    back to the only listing when there's just one."""
+    raw = (raw or '').strip().lower()
+    if raw == 'sale' and collectible.for_sale:
+        return 'sale'
+    if raw == 'trade' and collectible.for_trade:
+        return 'trade'
+    if collectible.for_sale and not collectible.for_trade:
+        return 'sale'
+    if collectible.for_trade and not collectible.for_sale:
+        return 'trade'
+    return ''
+
+
 @login_required
 def contact_owner(request, collection_id, collectible_type, collectible_id):
     """Form to message the owner of a for-sale/for-trade item. The message is
@@ -385,6 +412,10 @@ def contact_owner(request, collection_id, collectible_type, collectible_id):
             inquiry.collectible_id = collectible_id
             inquiry.item_title = collectible.title
             inquiry.item_url = item_url
+            interest = _resolve_interest(collectible, request.POST.get('interest'))
+            inquiry.interest = interest
+            if interest == 'sale':
+                inquiry.item_price = collectible.asking_price
             inquiry.save()
 
             # The first message is from the requester; relay it to the owner.
@@ -411,6 +442,7 @@ def contact_owner(request, collection_id, collectible_type, collectible_id):
         'form': form,
         'collectible': collectible,
         'item_url': item_url,
+        'interest': _resolve_interest(collectible, request.GET.get('interest')),
         'title': f'Contact owner about {collectible.title}',
     })
 
@@ -661,7 +693,7 @@ class CollectibleView(generic.DetailView):
         # Link to the collection owner's want list, surfaced next to the
         # "For Trade" indicator so prospective traders can see what they want.
         owner = User.objects.filter(id=collection.owner_uid).first()
-        context['owner_want_list_url'] = _user_want_list_url(owner)
+        context['owner_want_list_url'] = _collectible_trade_url(collectible, owner)
         # The owner can be contacted only if we have an address to relay to.
         context['owner_can_contact'] = bool(owner and owner.email)
 
@@ -1802,11 +1834,16 @@ def _check_want_list_visibility(request, profile):
     return None
 
 
-def want_list_public(request, slug):
+def want_list_public(request, slug, list_slug=None):
     profile = get_object_or_404(WantListProfile, slug=slug)
     redirect_response = _check_want_list_visibility(request, profile)
     if redirect_response:
         return redirect_response
+
+    # When a list_slug is given we show only that one list.
+    single_list = None
+    if list_slug is not None:
+        single_list = get_object_or_404(WantList, profile=profile, slug=list_slug)
 
     filter_type = request.GET.get('type', '').strip()
     filter_league = request.GET.get('league', '').strip()
@@ -1814,6 +1851,8 @@ def want_list_public(request, slug):
     filter_team = request.GET.get('team', '').strip()
 
     base_qs = WantListItem.objects.filter(want_list__profile=profile)
+    if single_list is not None:
+        base_qs = base_qs.filter(want_list=single_list)
 
     used_type_keys = set(base_qs.values_list('collectible_type', flat=True).distinct())
     available_types = [
@@ -1845,6 +1884,8 @@ def want_list_public(request, slug):
         items_qs = items_qs.filter(team=filter_team)
 
     want_lists = WantList.objects.filter(profile=profile).order_by('order', 'id')
+    if single_list is not None:
+        want_lists = want_lists.filter(pk=single_list.pk)
     items_by_list = {}
     for item in items_qs:
         items_by_list.setdefault(item.want_list_id, []).append(item)
@@ -1868,6 +1909,7 @@ def want_list_public(request, slug):
         'available_players': available_players,
         'available_teams': available_teams,
         'is_owner': request.user.is_authenticated and request.user == profile.user,
+        'single_list': single_list,
     })
 
 

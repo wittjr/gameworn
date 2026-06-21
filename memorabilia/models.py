@@ -299,6 +299,11 @@ class Collectible(RulesModel):
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
     for_sale = models.BooleanField(blank=True, null=True)
     for_trade = models.BooleanField(blank=True, null=True)
+    # Optional: point a "for trade" item at one specific want list. Null links
+    # to the owner's whole want-list profile (the default / original behavior).
+    trade_want_list = models.ForeignKey(
+        'WantList', on_delete=models.SET_NULL, blank=True, null=True, related_name='+'
+    )
     asking_price = models.FloatField(blank=True, null=True)
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
     how_obtained = models.CharField(max_length=255, blank=True, null=True)
@@ -634,6 +639,18 @@ def _generate_want_list_slug(user):
     return slug
 
 
+def _unique_want_list_slug(profile, title):
+    """A URL slug for a WantList, unique among the lists of one profile."""
+    from django.utils.text import slugify
+    base = slugify(title) or 'list'
+    slug = base
+    n = 1
+    while WantList.objects.filter(profile=profile, slug=slug).exists():
+        slug = f'{base}-{n}'
+        n += 1
+    return slug
+
+
 class WantListProfile(RulesModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='want_list_profile')
     slug = models.SlugField(max_length=50, unique=True)
@@ -660,14 +677,25 @@ class WantListProfile(RulesModel):
 class WantList(RulesModel):
     profile = models.ForeignKey(WantListProfile, on_delete=models.CASCADE, related_name='want_lists')
     title = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=60, blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['order', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['profile', 'slug'], name='uniq_wantlist_slug_per_profile'),
+        ]
         rules_permissions = {
             'update': rules.is_authenticated & is_want_list_owner,
             'delete': rules.is_authenticated & is_want_list_owner,
         }
+
+    def save(self, *args, **kwargs):
+        # Generate the slug once, on creation, and keep it stable across later
+        # title edits so existing /wants/<handle>/<slug>/ links don't break.
+        if not self.slug:
+            self.slug = _unique_want_list_slug(self.profile, self.title)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -748,6 +776,12 @@ class OwnerInquiry(models.Model):
     collectible_id = models.IntegerField()
     item_title = models.CharField(max_length=100, blank=True)
     item_url = models.CharField(max_length=255, blank=True)
+    # What the requester was responding to ("sale"/"trade") and, for sale, the
+    # asking price at the time of the inquiry (snapshotted so it stays accurate
+    # even if the listing changes later).
+    INTEREST_CHOICES = [('sale', 'For sale'), ('trade', 'For trade')]
+    interest = models.CharField(max_length=5, choices=INTEREST_CHOICES, blank=True)
+    item_price = models.FloatField(blank=True, null=True)
     sender_name = models.CharField(max_length=100)
     sender_email = models.EmailField()
     # Opaque routing token embedded in relayed email subjects ("[ref:<token>]")
@@ -758,6 +792,17 @@ class OwnerInquiry(models.Model):
     class Meta:
         ordering = ['-created_at']
         verbose_name_plural = 'Owner inquiries'
+
+    def listing_summary(self):
+        """One-line description of what the requester was interested in, for the
+        relayed email (e.g. 'For sale — $100' or 'For trade'). Empty if unknown."""
+        if self.interest == 'sale':
+            if self.item_price is not None:
+                return f'For sale — ${self.item_price:.2f}'
+            return 'For sale'
+        if self.interest == 'trade':
+            return 'For trade'
+        return ''
 
     def __str__(self):
         return f'Inquiry from {self.sender_email} re: {self.item_title or self.collectible_id}'

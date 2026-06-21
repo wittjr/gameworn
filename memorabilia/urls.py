@@ -63,4 +63,5 @@ urlpatterns = [
     path("wants/manage/export/", views.want_list_export, name="want_list_export"),
     path("wants/manage/import/", views.want_list_import, name="want_list_import"),
     path("wants/<slug:slug>/", views.want_list_public, name="want_list_public"),
+    path("wants/<slug:slug>/<slug:list_slug>/", views.want_list_public, name="want_list_public_single"),
 ]

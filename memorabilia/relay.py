@@ -138,6 +138,9 @@ def relay_message(message, reply_subject=None):
     body_lines = [
         f'{author} sent a message about "{inquiry.item_title}".',
     ]
+    listing = inquiry.listing_summary()
+    if listing:
+        body_lines.append(f'Listing: {listing}')
     if inquiry.item_url:
         body_lines.append(f'Item: {inquiry.item_url}')
     body_lines += [
