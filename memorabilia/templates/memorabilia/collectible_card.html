@@ -13,7 +13,7 @@
     <div class="flex flex-wrap items-center justify-center gap-2 px-3 pb-3">
         {% if for_sale %}
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-            For Sale{% if asking_price %} · ${{ asking_price|floatformat:2 }}{% endif %}
+            For Sale{% if price_display %} · {{ price_display }}{% endif %}
         </span>
         {% endif %}
         {% if for_trade %}

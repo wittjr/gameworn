@@ -292,6 +292,36 @@ class HowObtainedOption(models.Model):
         return self.name
 
 
+# Curated set of currencies for sale listings (a small, scrollable subset of
+# ISO 4217 covering where collectors are concentrated). Extend as needed.
+CURRENCY_CHOICES = [
+    ('USD', 'USD – US Dollar'),
+    ('CAD', 'CAD – Canadian Dollar'),
+    ('EUR', 'EUR – Euro'),
+    ('GBP', 'GBP – British Pound'),
+    ('AUD', 'AUD – Australian Dollar'),
+    ('NZD', 'NZD – New Zealand Dollar'),
+    ('MXN', 'MXN – Mexican Peso'),
+]
+
+# Display symbols per currency. Several use "$", so prices are shown as
+# "<symbol><amount> <code>" (e.g. "$100.00 CAD") to stay unambiguous.
+CURRENCY_SYMBOLS = {
+    'USD': '$', 'CAD': '$', 'AUD': '$', 'NZD': '$', 'MXN': '$',
+    'EUR': '€', 'GBP': '£',
+}
+
+
+def format_price(amount, currency):
+    """Render a price as '<symbol><amount> <code>' (e.g. '$100.00 USD'), or '' if
+    there's no amount."""
+    if amount is None:
+        return ''
+    symbol = CURRENCY_SYMBOLS.get(currency, '')
+    code = f' {currency}' if currency else ''
+    return f'{symbol}{amount:.2f}{code}'
+
+
 class Collectible(RulesModel):
     export_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=100)
@@ -305,6 +335,7 @@ class Collectible(RulesModel):
         'WantList', on_delete=models.SET_NULL, blank=True, null=True, related_name='+'
     )
     asking_price = models.FloatField(blank=True, null=True)
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
     how_obtained = models.CharField(max_length=255, blank=True, null=True)
     flickr_url = models.CharField(max_length=255, blank=True, default='')
@@ -318,6 +349,10 @@ class Collectible(RulesModel):
             'update': rules.is_authenticated & is_collectible_owner,
             'delete': rules.is_authenticated & is_collectible_owner
         }
+
+    def price_display(self):
+        """Asking price with currency symbol + code (e.g. '$100.00 USD'), or ''."""
+        return format_price(self.asking_price, self.currency)
 
     def get_primary_image(self):
         images = list(self.images.all())
@@ -782,6 +817,7 @@ class OwnerInquiry(models.Model):
     INTEREST_CHOICES = [('sale', 'For sale'), ('trade', 'For trade')]
     interest = models.CharField(max_length=5, choices=INTEREST_CHOICES, blank=True)
     item_price = models.FloatField(blank=True, null=True)
+    item_currency = models.CharField(max_length=3, blank=True)
     sender_name = models.CharField(max_length=100)
     sender_email = models.EmailField()
     # Opaque routing token embedded in relayed email subjects ("[ref:<token>]")
@@ -795,10 +831,11 @@ class OwnerInquiry(models.Model):
 
     def listing_summary(self):
         """One-line description of what the requester was interested in, for the
-        relayed email (e.g. 'For sale — $100' or 'For trade'). Empty if unknown."""
+        relayed email (e.g. 'For sale — $100.00 USD' or 'For trade'). Empty if
+        unknown."""
         if self.interest == 'sale':
             if self.item_price is not None:
-                return f'For sale — ${self.item_price:.2f}'
+                return f'For sale — {format_price(self.item_price, self.item_currency)}'
             return 'For sale'
         if self.interest == 'trade':
             return 'For trade'

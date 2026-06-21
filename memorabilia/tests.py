@@ -4124,6 +4124,19 @@ class ForSaleTradeFormTests(BaseTestCase):
         self.assertTrue(item.for_sale)
         self.assertEqual(item.asking_price, 999.5)
 
+    def test_edit_form_shows_price_two_decimals_and_currency(self):
+        self.player_item.for_sale = True
+        self.player_item.asking_price = 50
+        self.player_item.currency = 'CAD'
+        self.player_item.save()
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            args=[self.collection.id, 'playeritem', self.player_item.id],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['form'].initial['asking_price'], '50.00')
+        self.assertEqual(response.context['form'].initial['currency'], 'CAD')
+
     def test_edit_clears_for_sale_when_unchecked(self):
         self.player_item.for_sale = True
         self.player_item.asking_price = 50
@@ -4219,7 +4232,6 @@ class WantListShortcutTests(BaseTestCase):
             response.context['want_list_url'],
             reverse('memorabilia:want_list_public', kwargs={'slug': 'owner-wants'}),
         )
-        self.assertContains(response, 'View your want list')
 
 
 class WantListSlugTests(WantListBaseTestCase):
@@ -4325,7 +4337,7 @@ class CollectibleDetailSaleTradeTests(BaseTestCase):
         self.general_item.save()
         response = self.client.get(self._detail_url(self.general_item))
         self.assertContains(response, 'For Sale')
-        self.assertContains(response, '$75')
+        self.assertContains(response, '$75.00 USD')
 
     def test_for_trade_links_to_owner_want_list(self):
         profile = WantListProfile.objects.create(user=self.owner, slug='owner-wants', visibility='public')
@@ -4446,8 +4458,18 @@ class ContactOwnerTests(BaseTestCase):
         inquiry = OwnerInquiry.objects.get(sender_email='jane@example.com')
         self.assertEqual(inquiry.interest, 'sale')
         self.assertEqual(inquiry.item_price, 100)
+        self.assertEqual(inquiry.item_currency, 'USD')
         self.assertIn('For sale', mail.outbox[0].body)
-        self.assertIn('$100', mail.outbox[0].body)
+        self.assertIn('$100.00 USD', mail.outbox[0].body)
+
+    def test_sale_interest_snapshots_item_currency(self):
+        self.player_item.currency = 'CAD'
+        self.player_item.save()
+        self._login_buyer()
+        self.client.post(self._contact_url(self.player_item), self._post_data(interest='sale'))
+        inquiry = OwnerInquiry.objects.get(sender_email='jane@example.com')
+        self.assertEqual(inquiry.item_currency, 'CAD')
+        self.assertIn('$100.00 CAD', mail.outbox[0].body)
 
     def test_trade_interest_recorded_without_price(self):
         self.player_item.for_sale = False

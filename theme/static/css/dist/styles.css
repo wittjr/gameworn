@@ -2578,6 +2578,10 @@ tr.field-row.field-error input,
   width: 14rem;
 }
 
+.w-44 {
+  width: 11rem;
+}
+
 .min-w-0 {
   min-width: 0px;
 }

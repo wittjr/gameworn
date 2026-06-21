@@ -10,10 +10,10 @@ and `owner_can_contact`.
 <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-t border-b dark:border-gray-700">
     <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">For Sale</th>
     <td class="px-6 py-4">
-        {% if object.asking_price %}${{ object.asking_price|floatformat:2 }}{% else %}Yes{% endif %}
+        {% if object.asking_price %}{{ object.price_display }}<span class="ml-2"></span>{% endif %}
         {% if owner_can_contact %}
             {% if user.is_authenticated %}
-            <a href="{{ contact_url }}?interest=sale" class="ml-2 font-medium text-blue-600 hover:underline">Contact owner</a>
+            <a href="{{ contact_url }}?interest=sale" class="font-medium text-blue-600 hover:underline">Contact owner</a>
             {% else %}
             <a href="{% url 'account_login' %}?next={{ contact_url|add:'?interest=sale'|urlencode }}" class="ml-2 font-medium text-blue-600 hover:underline">Login to contact owner</a>
             {% endif %}

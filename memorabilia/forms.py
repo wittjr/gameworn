@@ -178,6 +178,20 @@ class HowObtainedValidationMixin:
         return value.strip()
 
 
+class CurrencyDefaultMixin:
+    """Currency is optional on the form (the model default covers it); an empty
+    submission falls back to USD rather than storing a blank code."""
+    def clean_currency(self):
+        return self.cleaned_data.get('currency') or 'USD'
+
+
+def _format_asking_price_initial(form):
+    """Show the asking price with 2 decimals in the edit form (e.g. 100.00)."""
+    inst = getattr(form, 'instance', None)
+    if inst is not None and inst.pk and inst.asking_price is not None:
+        form.initial['asking_price'] = f'{inst.asking_price:.2f}'
+
+
 def _configure_trade_want_list_field(form, current_user):
     """Restrict the optional 'trade want list' choice to the current user's own
     lists and default it to 'Entire want list' (i.e. link the whole profile)."""
@@ -193,7 +207,7 @@ def _configure_trade_want_list_field(form, current_user):
     )
 
 
-class CollectibleForm(HowObtainedValidationMixin, ModelForm):
+class CollectibleForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     league = forms.CharField(
         required=False,
         widget=flowbite_widgets.FlowbiteTextInput(),
@@ -216,6 +230,7 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
             "player": flowbite_widgets.FlowbiteTextInput(),
             "team": flowbite_widgets.FlowbiteTextInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
             "number": flowbite_widgets.FlowbiteNumberInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "looking_for": flowbite_widgets.FlowbiteSelectInput(),
@@ -231,6 +246,8 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
         _configure_trade_want_list_field(self, self.current_user)
+        self.fields['currency'].required = False
+        _format_asking_price_initial(self)
         # Enable browser suggestions for league via datalist rendered in the template
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
@@ -286,7 +303,7 @@ class GeneralItemImageForm(ImageSizeValidationMixin, ModelForm):
         }
 
 
-class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
+class GeneralItemForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     """Form for GeneralItem - contains only base Collectible fields"""
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
@@ -308,6 +325,7 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
             "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
             "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -315,6 +333,8 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
         _configure_trade_want_list_field(self, self.current_user)
+        self.fields['currency'].required = False
+        _format_asking_price_initial(self)
         self.fields['how_obtained'].widget.attrs.update({
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
@@ -336,7 +356,7 @@ class PlayerGearImageForm(ImageSizeValidationMixin, ModelForm):
         }
 
 
-class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
+class PlayerGearForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     """Form for PlayerGear - includes all PlayerItem fields plus gear-specific fields"""
     league = forms.CharField(
         required=True,
@@ -382,6 +402,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
             "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
             "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -389,6 +410,8 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
         _configure_trade_want_list_field(self, self.current_user)
+        self.fields['currency'].required = False
+        _format_asking_price_initial(self)
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
             'placeholder': 'e.g., NHL, AHL, NCAA, custom...'

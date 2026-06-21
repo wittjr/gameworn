@@ -416,6 +416,7 @@ def contact_owner(request, collection_id, collectible_type, collectible_id):
             inquiry.interest = interest
             if interest == 'sale':
                 inquiry.item_price = collectible.asking_price
+                inquiry.item_currency = collectible.currency
             inquiry.save()
 
             # The first message is from the requester; relay it to the owner.
@@ -1077,9 +1078,9 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             'collection': collectible.collection_id,
             'for_sale': collectible.for_sale,
             'for_trade': collectible.for_trade,
-            'asking_price': collectible.asking_price,
+            'asking_price': f'{collectible.asking_price:.2f}' if collectible.asking_price is not None else None,
         }
-        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'allow_featured']:
+        for field in ['league', 'player', 'team', 'number', 'brand', 'size', 'season', 'game_type', 'usage_type', 'gear_type', 'season_set', 'home_away', 'how_obtained', 'allow_featured', 'currency', 'trade_want_list']:
             if hasattr(collectible, field):
                 initial[field] = getattr(collectible, field)
         form = HockeyJerseyForm(initial=initial, current_user=request.user)
