@@ -15,6 +15,7 @@ from .models import (
     SeasonSet, HockeyJersey, UserProfile,
     WantListProfile, WantList, WantListItem, WantListItemImage,
     WANT_LIST_VISIBILITY_CHOICES,
+    OwnerInquiry,
 )
 from django.conf import settings
 from django.core.files import File
@@ -177,7 +178,46 @@ class HowObtainedValidationMixin:
         return value.strip()
 
 
-class CollectibleForm(HowObtainedValidationMixin, ModelForm):
+class CurrencyDefaultMixin:
+    """Currency is optional on the form (the model default covers it); an empty
+    submission falls back to USD rather than storing a blank code."""
+    def clean_currency(self):
+        return self.cleaned_data.get('currency') or 'USD'
+
+
+def _format_asking_price_initial(form):
+    """Show the asking price with 2 decimals in the edit form (e.g. 100.00)."""
+    inst = getattr(form, 'instance', None)
+    if inst is not None and inst.pk and inst.asking_price is not None:
+        form.initial['asking_price'] = f'{inst.asking_price:.2f}'
+
+
+def _configure_currency_field(form):
+    """Currency is optional (model default covers it) and the select shows just
+    the 3-letter code; the full names stay in the model choices for display."""
+    field = form.fields.get('currency')
+    if field is None:
+        return
+    field.required = False
+    field.choices = [(code, code) for code, _ in field.choices if code]
+
+
+def _configure_trade_want_list_field(form, current_user):
+    """Restrict the optional 'trade want list' choice to the current user's own
+    lists and default it to 'Entire want list' (i.e. link the whole profile)."""
+    field = form.fields.get('trade_want_list')
+    if field is None:
+        return
+    field.required = False
+    field.widget = flowbite_widgets.FlowbiteSelectInput()
+    field.empty_label = 'Entire want list'
+    field.queryset = (
+        WantList.objects.filter(profile__user=current_user)
+        if current_user is not None else WantList.objects.none()
+    )
+
+
+class CollectibleForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     league = forms.CharField(
         required=False,
         widget=flowbite_widgets.FlowbiteTextInput(),
@@ -194,12 +234,13 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'collectible_type', 'flickr_url']
+        exclude = ['looking_for', 'images', 'collectible_type', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "player": flowbite_widgets.FlowbiteTextInput(),
             "team": flowbite_widgets.FlowbiteTextInput(),
             "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
             "number": flowbite_widgets.FlowbiteNumberInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "looking_for": flowbite_widgets.FlowbiteSelectInput(),
@@ -214,6 +255,9 @@ class CollectibleForm(HowObtainedValidationMixin, ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
+        _configure_currency_field(self)
+        _format_asking_price_initial(self)
         # Enable browser suggestions for league via datalist rendered in the template
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
@@ -269,7 +313,7 @@ class GeneralItemImageForm(ImageSizeValidationMixin, ModelForm):
         }
 
 
-class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
+class GeneralItemForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     """Form for GeneralItem - contains only base Collectible fields"""
     allow_featured = forms.TypedChoiceField(
         label='Allow to be featured',
@@ -282,18 +326,25 @@ class GeneralItemForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = GeneralItem
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
+        exclude = ['looking_for', 'images', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
             "how_obtained": flowbite_widgets.FlowbiteTextInput(),
+            "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
+            "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
+            "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
+        _configure_currency_field(self)
+        _format_asking_price_initial(self)
         self.fields['how_obtained'].widget.attrs.update({
             'list': 'how-obtained-list',
             'placeholder': 'Select or type how this was obtained...'
@@ -315,7 +366,7 @@ class PlayerGearImageForm(ImageSizeValidationMixin, ModelForm):
         }
 
 
-class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
+class PlayerGearForm(CurrencyDefaultMixin, HowObtainedValidationMixin, ModelForm):
     """Form for PlayerGear - includes all PlayerItem fields plus gear-specific fields"""
     league = forms.CharField(
         required=True,
@@ -346,7 +397,7 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
     class Meta:
         model = PlayerGear
         fields = "__all__"
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'season_set', 'home_away', 'flickr_url']
+        exclude = ['looking_for', 'images', 'season_set', 'home_away', 'flickr_url']
         widgets = {
             "title": flowbite_widgets.FlowbiteTextInput(),
             "brand": flowbite_widgets.FlowbiteTextInput(),
@@ -358,12 +409,19 @@ class PlayerGearForm(HowObtainedValidationMixin, ModelForm):
             "collection": flowbite_widgets.FlowbiteSelectInput(),
             "description": flowbite_widgets.FlowbiteTextarea(),
             "how_obtained": flowbite_widgets.FlowbiteTextInput(),
+            "for_sale": flowbite_widgets.FlowbiteCheckboxInput(),
+            "for_trade": flowbite_widgets.FlowbiteCheckboxInput(),
+            "asking_price": flowbite_widgets.FlowbiteTextInput(),
+            "currency": flowbite_widgets.FlowbiteSelectInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         self.fields['collection'].queryset = Collection.objects.filter(owner_uid=self.current_user.id)
+        _configure_trade_want_list_field(self, self.current_user)
+        _configure_currency_field(self)
+        _format_asking_price_initial(self)
         self.fields['league'].widget.attrs.update({
             'list': 'league-list',
             'placeholder': 'e.g., NHL, AHL, NCAA, custom...'
@@ -405,7 +463,7 @@ class HockeyJerseyForm(PlayerGearForm):
 
     class Meta(PlayerGearForm.Meta):
         model = HockeyJersey
-        exclude = ['for_sale', 'for_trade', 'looking_for', 'asking_price', 'images', 'flickr_url']
+        exclude = ['looking_for', 'images', 'flickr_url']
         widgets = PlayerGearForm.Meta.widgets
 
 
@@ -642,6 +700,53 @@ class CollectibleSearchForm(forms.Form):
         self.fields['season_set'].choices = [('', '')] + [(s.key, s.name) for s in SeasonSet.objects.all()]
         self.fields['gear_type'].choices = [('', '')] + [(g.key, g.name) for g in GearType.objects.all()]
         self.fields['auth_issuer'].choices = [('', 'Any')] + [(a.key, a.name) for a in AuthSource.objects.all()]
+
+
+class MarketplaceFilterForm(forms.Form):
+    """Search-style filters for the public marketplace. ``show`` selects the
+    availability (for sale, for trade, or either)."""
+    query = forms.CharField(required=False, label="Text", widget=flowbite_widgets.FlowbiteTextInput())
+    league = forms.CharField(required=False, label="League", widget=flowbite_widgets.FlowbiteTextInput())
+    team = forms.CharField(required=False, label="Team", widget=flowbite_widgets.FlowbiteTextInput())
+    game_type = forms.ChoiceField(required=False, label="Game Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    usage_type = forms.ChoiceField(required=False, label="Usage Type", choices=[], widget=flowbite_widgets.FlowbiteSelectInput)
+    item_type = forms.ChoiceField(
+        required=False,
+        label="Item Type",
+        choices=[
+            ('', 'Any'),
+            ('generalitem', 'General Item'),
+            ('hockeyjersey', 'Hockey Jersey'),
+            ('playergear', 'Player Gear'),
+            ('playeritem', 'Player Item'),
+        ],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    home_away = forms.ChoiceField(
+        required=False,
+        label="Home/Away",
+        choices=[('', 'Any'), ('H', 'Home'), ('A', 'Away')],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+    show = forms.ChoiceField(
+        required=False,
+        label="Availability",
+        choices=[('', 'For Sale or Trade'), ('sale', 'For Sale'), ('trade', 'For Trade')],
+        widget=flowbite_widgets.FlowbiteSelectInput,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['league'].widget.attrs.update({
+            'list': 'league-list',
+            'placeholder': 'e.g., NHL, AHL, NCAA, custom...',
+        })
+        self.fields['team'].widget.attrs.update({
+            'list': 'team-list',
+            'placeholder': 'Start typing a team...',
+        })
+        self.fields['game_type'].choices = [('', '')] + [(g.key, g.name) for g in GameType.objects.all()]
+        self.fields['usage_type'].choices = [('', '')] + [(u.key, u.name) for u in UsageType.objects.all()]
 
 
 class BulkCollectibleForm(ModelForm):
@@ -1028,3 +1133,42 @@ WantListItemImageFormSet = inlineformset_factory(
     max_num=3,
     validate_max=True,
 )
+
+class ContactOwnerForm(ModelForm):
+    """Lets an interested party open a message thread with the owner of a
+    for-sale/for-trade item. `message` is the first message in the thread (stored
+    as an InquiryMessage, not on the inquiry). `website` is a honeypot — real
+    users never see or fill it."""
+    message = forms.CharField(
+        label='Message',
+        max_length=2000,
+        widget=flowbite_widgets.FlowbiteTextarea(),
+    )
+    website = forms.CharField(
+        required=False,
+        label='Website',
+        widget=forms.TextInput(attrs={
+            'tabindex': '-1',
+            'autocomplete': 'off',
+            'class': 'hidden',
+            'aria-hidden': 'true',
+        }),
+    )
+
+    field_order = ['sender_name', 'sender_email', 'message']
+
+    class Meta:
+        model = OwnerInquiry
+        fields = ['sender_name', 'sender_email']
+        labels = {
+            'sender_name': 'Your name',
+            'sender_email': 'Your email',
+        }
+        widgets = {
+            'sender_name': flowbite_widgets.FlowbiteTextInput(),
+            'sender_email': flowbite_widgets.FlowbiteTextInput(attrs={'type': 'email'}),
+        }
+
+    def is_spam(self):
+        """True when the honeypot was filled — silently drop these."""
+        return bool(self.cleaned_data.get('website'))

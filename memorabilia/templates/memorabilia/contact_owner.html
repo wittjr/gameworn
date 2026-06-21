@@ -1,0 +1,75 @@
+{% extends 'memorabilia/base.html' %}
+{% load static %}
+
+{% block head_title %}{{ title }}{% endblock head_title %}
+
+{% block breadcrumb %}
+    {% url 'memorabilia:list_collections' as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label="Collections" %}
+    {% url 'memorabilia:collection' collectible.collection.id as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.collection.title %}
+    {% url 'memorabilia:collectible' collection_id=collectible.collection.id collectible_type=collectible.collectible_type pk=collectible.id as the_url %}
+    {% include 'memorabilia/breadcrumb.html' with url=the_url label=collectible.title %}
+    {% include 'memorabilia/breadcrumb.html' with url=request.path label="Contact owner" %}
+{% endblock breadcrumb %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold tracking-tight mb-2">Contact the owner</h1>
+    <p class="text-gray-500 dark:text-gray-400 mb-6">
+        Send a message about
+        <a href="{{ item_url }}" class="font-medium text-blue-600 hover:underline">{{ collectible.title }}</a>.
+        Your message is emailed to the owner &mdash; their contact details stay private, and they can reply to you directly.
+    </p>
+
+    <form method="post" novalidate class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        {% csrf_token %}
+        <input type="hidden" name="interest" value="{{ interest }}">
+
+        {% if form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                {% for error in form.non_field_errors %}
+                    <p class="text-red-700" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Read-only reference to the item — included automatically in the email. #}
+        <div class="mb-4">
+            <span class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Item title</span>
+            <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm">
+                {{ collectible.title }}
+            </div>
+        </div>
+        <div class="mb-4">
+            <span class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Item link</span>
+            <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm">
+                <a href="{{ item_url }}" class="text-blue-600 hover:underline break-all">{{ item_url }}</a>
+            </div>
+        </div>
+
+        {% for field in form.visible_fields %}
+            {% if field.name != 'website' %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}
+                    <p class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert"><span class="font-semibold">Error:</span> {{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endfor %}
+
+        {# Honeypot: hidden from real users, catches bots. #}
+        <div class="hidden" aria-hidden="true">
+            {{ form.website.label_tag }}
+            {{ form.website }}
+        </div>
+
+        <div class="flex justify-end gap-4 mt-6">
+            <a href="{{ item_url }}" class="btn-primary-white">Cancel</a>
+            <button type="submit" class="btn-primary">Send message</button>
+        </div>
+    </form>
+</div>
+{% endblock content %}

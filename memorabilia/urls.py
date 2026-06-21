@@ -6,6 +6,8 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("recent-items", views.home_recent, name="home_recent"),
     path("search", views.search_collectibles, name="search_collectibles"),
+    path("marketplace", views.marketplace, name="marketplace"),
+    path("relay/mailgun/inbound", views.mailgun_inbound, name="mailgun_inbound"),
     path("privacy", views.privacy_policy, name="privacy_policy"),
     path("data-deletion", views.data_deletion, name="data_deletion"),
     path('accounts/', include('allauth.urls')),
@@ -19,6 +21,7 @@ urlpatterns = [
     path("collection/<int:collection_id>/collectible/create", views.create_collectible, name="create_collectible"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:pk>", views.CollectibleView.as_view(), name="collectible"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:pk>/pdf", views.collectible_pdf, name="collectible_pdf"),
+    path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/contact", views.contact_owner, name="contact_owner"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/edit", views.edit_collectible, name="edit_collectible"),
     path("collection/<int:collection_id>/collectible/<str:collectible_type>/<int:collectible_id>/delete", views.delete_collectible, name="delete_collectible"),
     path("collection/<int:collection_id>/bulk-edit", views.bulk_edit_collectibles, name="bulk_edit_collectibles"),
@@ -60,4 +63,5 @@ urlpatterns = [
     path("wants/manage/export/", views.want_list_export, name="want_list_export"),
     path("wants/manage/import/", views.want_list_import, name="want_list_import"),
     path("wants/<slug:slug>/", views.want_list_public, name="want_list_public"),
+    path("wants/<slug:slug>/<slug:list_slug>/", views.want_list_public, name="want_list_public_single"),
 ]

@@ -9,6 +9,20 @@
     <a href="{{ link }}" class="flex-1 flex items-center justify-center px-3 py-3">
         <div class="text-2xl font-medium text-center text-gray-800 dark:text-white">{{ label }}</div>
     </a>
+    {% if for_sale or for_trade %}
+    <div class="flex flex-wrap items-center justify-center gap-2 px-3 pb-3">
+        {% if for_sale %}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+            For Sale{% if price_display %} · {{ price_display }}{% endif %}
+        </span>
+        {% endif %}
+        {% if for_trade %}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+            For Trade
+        </span>
+        {% endif %}
+    </div>
+    {% endif %}
     {% if edit_url or delete_url %}
     <div class="flex items-center justify-end gap-3 px-3 pb-3 min-h-[44px]">
         {% if edit_url %}

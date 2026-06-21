@@ -5,7 +5,7 @@ from .models import (
     PlayerItem, PlayerItemImage,
     PlayerGear, PlayerGearImage,
     HockeyJersey,
-    Collection, PhotoMatch, WantedItem, ExternalResource,
+    Collection, PhotoMatch, WantedItem, ExternalResource, OwnerInquiry, InquiryMessage,
     Team, League, GameType, GearType, UsageType, CoaType, AuthSource, HowObtainedOption, SeasonSet,
     MeiGrayPopulationReport, MeiGrayTagEntry, MeiGrayScheduleEntry,
     MeiGrayScheduleGameEntry, MeiGrayScheduleSetEntry,
@@ -70,6 +70,32 @@ admin.site.register(UsageType)
 admin.site.register(CoaType)
 admin.site.register(AuthSource)
 admin.site.register(HowObtainedOption)
+
+
+class InquiryMessageInline(admin.TabularInline):
+    model = InquiryMessage
+    extra = 0
+    can_delete = False
+    readonly_fields = ('sender_role', 'body', 'inbound', 'email_sent', 'created_at')
+    fields = ('created_at', 'sender_role', 'inbound', 'email_sent', 'body')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(OwnerInquiry)
+class OwnerInquiryAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'item_title', 'sender_user', 'sender_name', 'sender_email', 'recipient')
+    list_filter = ('collectible_type', 'created_at')
+    search_fields = ('item_title', 'sender_name', 'sender_email', 'token', 'sender_user__username')
+    readonly_fields = (
+        'recipient', 'sender_user', 'collection_id', 'collectible_type', 'collectible_id',
+        'item_title', 'item_url', 'sender_name', 'sender_email', 'token', 'created_at',
+    )
+    inlines = [InquiryMessageInline]
+
+    def has_add_permission(self, request):
+        return False
 
 @admin.register(MeiGrayPopulationReport)
 class MeiGrayPopulationReportAdmin(admin.ModelAdmin):

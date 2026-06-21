@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from rules.contrib.models import RulesModel
 from django.contrib.auth.models import User
 import rules
+import secrets
 import uuid
 from uuid6 import uuid7
 from django_flowbite_widgets.flowbite_fields import FlowbiteImageDropzoneModelField
@@ -291,6 +292,36 @@ class HowObtainedOption(models.Model):
         return self.name
 
 
+# Curated set of currencies for sale listings (a small, scrollable subset of
+# ISO 4217 covering where collectors are concentrated). Extend as needed.
+CURRENCY_CHOICES = [
+    ('USD', 'USD – US Dollar'),
+    ('CAD', 'CAD – Canadian Dollar'),
+    ('EUR', 'EUR – Euro'),
+    ('GBP', 'GBP – British Pound'),
+    ('AUD', 'AUD – Australian Dollar'),
+    ('NZD', 'NZD – New Zealand Dollar'),
+    ('MXN', 'MXN – Mexican Peso'),
+]
+
+# Display symbols per currency. Several use "$", so prices are shown as
+# "<symbol><amount> <code>" (e.g. "$100.00 CAD") to stay unambiguous.
+CURRENCY_SYMBOLS = {
+    'USD': '$', 'CAD': '$', 'AUD': '$', 'NZD': '$', 'MXN': '$',
+    'EUR': '€', 'GBP': '£',
+}
+
+
+def format_price(amount, currency):
+    """Render a price as '<symbol><amount> <code>' (e.g. '$100.00 USD'), or '' if
+    there's no amount."""
+    if amount is None:
+        return ''
+    symbol = CURRENCY_SYMBOLS.get(currency, '')
+    code = f' {currency}' if currency else ''
+    return f'{symbol}{amount:.2f}{code}'
+
+
 class Collectible(RulesModel):
     export_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     title = models.CharField(max_length=100)
@@ -298,7 +329,13 @@ class Collectible(RulesModel):
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
     for_sale = models.BooleanField(blank=True, null=True)
     for_trade = models.BooleanField(blank=True, null=True)
+    # Optional: point a "for trade" item at one specific want list. Null links
+    # to the owner's whole want-list profile (the default / original behavior).
+    trade_want_list = models.ForeignKey(
+        'WantList', on_delete=models.SET_NULL, blank=True, null=True, related_name='+'
+    )
     asking_price = models.FloatField(blank=True, null=True)
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
     looking_for = models.ForeignKey(WantedItem, on_delete=models.CASCADE, blank=True, null=True)
     how_obtained = models.CharField(max_length=255, blank=True, null=True)
     flickr_url = models.CharField(max_length=255, blank=True, default='')
@@ -312,6 +349,10 @@ class Collectible(RulesModel):
             'update': rules.is_authenticated & is_collectible_owner,
             'delete': rules.is_authenticated & is_collectible_owner
         }
+
+    def price_display(self):
+        """Asking price with currency symbol + code (e.g. '$100.00 USD'), or ''."""
+        return format_price(self.asking_price, self.currency)
 
     def get_primary_image(self):
         images = list(self.images.all())
@@ -633,6 +674,18 @@ def _generate_want_list_slug(user):
     return slug
 
 
+def _unique_want_list_slug(profile, title):
+    """A URL slug for a WantList, unique among the lists of one profile."""
+    from django.utils.text import slugify
+    base = slugify(title) or 'list'
+    slug = base
+    n = 1
+    while WantList.objects.filter(profile=profile, slug=slug).exists():
+        slug = f'{base}-{n}'
+        n += 1
+    return slug
+
+
 class WantListProfile(RulesModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='want_list_profile')
     slug = models.SlugField(max_length=50, unique=True)
@@ -659,14 +712,25 @@ class WantListProfile(RulesModel):
 class WantList(RulesModel):
     profile = models.ForeignKey(WantListProfile, on_delete=models.CASCADE, related_name='want_lists')
     title = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=60, blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['order', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['profile', 'slug'], name='uniq_wantlist_slug_per_profile'),
+        ]
         rules_permissions = {
             'update': rules.is_authenticated & is_want_list_owner,
             'delete': rules.is_authenticated & is_want_list_owner,
         }
+
+    def save(self, *args, **kwargs):
+        # Generate the slug once, on creation, and keep it stable across later
+        # title edits so existing /wants/<handle>/<slug>/ links don't break.
+        if not self.slug:
+            self.slug = _unique_want_list_slug(self.profile, self.title)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -723,3 +787,81 @@ class WantListItemImage(models.Model):
 
     def __str__(self):
         return f'Image for {self.item}'
+
+
+def _generate_inquiry_token():
+    return secrets.token_hex(8)
+
+
+class OwnerInquiry(models.Model):
+    """A conversation thread between an interested party (the requester) and the
+    owner of a for-sale/for-trade item. All messages are relayed by email so
+    neither party's address is exposed to the other; the system is the only
+    party that knows both addresses."""
+    recipient = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='received_inquiries',
+    )
+    sender_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sent_inquiries',
+    )
+    collection_id = models.IntegerField()
+    collectible_type = models.CharField(max_length=15)
+    collectible_id = models.IntegerField()
+    item_title = models.CharField(max_length=100, blank=True)
+    item_url = models.CharField(max_length=255, blank=True)
+    # What the requester was responding to ("sale"/"trade") and, for sale, the
+    # asking price at the time of the inquiry (snapshotted so it stays accurate
+    # even if the listing changes later).
+    INTEREST_CHOICES = [('sale', 'For sale'), ('trade', 'For trade')]
+    interest = models.CharField(max_length=5, choices=INTEREST_CHOICES, blank=True)
+    item_price = models.FloatField(blank=True, null=True)
+    item_currency = models.CharField(max_length=3, blank=True)
+    sender_name = models.CharField(max_length=100)
+    sender_email = models.EmailField()
+    # Opaque routing token embedded in relayed email subjects ("[ref:<token>]")
+    # so inbound replies can be matched back to this thread.
+    token = models.CharField(max_length=32, unique=True, default=_generate_inquiry_token, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Owner inquiries'
+
+    def listing_summary(self):
+        """One-line description of what the requester was interested in, for the
+        relayed email (e.g. 'For sale — $100.00 USD' or 'For trade'). Empty if
+        unknown."""
+        if self.interest == 'sale':
+            if self.item_price is not None:
+                return f'For sale — {format_price(self.item_price, self.item_currency)}'
+            return 'For sale'
+        if self.interest == 'trade':
+            return 'For trade'
+        return ''
+
+    def __str__(self):
+        return f'Inquiry from {self.sender_email} re: {self.item_title or self.collectible_id}'
+
+
+class InquiryMessage(models.Model):
+    """A single message within an OwnerInquiry thread, from either party."""
+    REQUESTER = 'requester'
+    OWNER = 'owner'
+    ROLE_CHOICES = [(REQUESTER, 'Requester'), (OWNER, 'Owner')]
+
+    inquiry = models.ForeignKey(OwnerInquiry, on_delete=models.CASCADE, related_name='messages')
+    sender_role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    body = models.TextField(max_length=2000)
+    # True when this message arrived as an inbound email reply (vs. the web form).
+    inbound = models.BooleanField(default=False)
+    # True once we successfully relayed it on to the other party.
+    email_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.get_sender_role_display()} message on inquiry {self.inquiry_id}'
