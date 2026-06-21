@@ -4201,6 +4201,46 @@ class MarketplaceViewTests(BaseTestCase):
         response = self.client.get(reverse('memorabilia:marketplace'))
         self.assertEqual(response.status_code, 200)
 
+    def test_marketplace_text_filter(self):
+        self.player_item.for_sale = True
+        self.player_item.save()
+        self.general_item.for_sale = True
+        self.general_item.save()
+        response = self.client.get(reverse('memorabilia:marketplace'), {'query': 'Puck'})
+        titles = [c.title for c in response.context['results']]
+        self.assertIn(self.general_item.title, titles)
+        self.assertNotIn(self.player_item.title, titles)
+
+    def test_marketplace_item_type_filter(self):
+        self.player_item.for_sale = True
+        self.player_item.save()
+        self.player_gear.for_sale = True
+        self.player_gear.save()
+        response = self.client.get(reverse('memorabilia:marketplace'), {'item_type': 'playeritem'})
+        titles = [c.title for c in response.context['results']]
+        self.assertIn(self.player_item.title, titles)
+        self.assertNotIn(self.player_gear.title, titles)
+
+    def test_marketplace_game_type_filter_excludes_non_gear(self):
+        self.player_gear.for_sale = True
+        self.player_gear.save()
+        self.general_item.for_sale = True
+        self.general_item.save()
+        response = self.client.get(reverse('memorabilia:marketplace'), {'game_type': self.game_type.key})
+        titles = [c.title for c in response.context['results']]
+        self.assertIn(self.player_gear.title, titles)
+        self.assertNotIn(self.general_item.title, titles)
+
+    def test_marketplace_league_filter_excludes_general_items(self):
+        self.player_item.for_sale = True
+        self.player_item.save()
+        self.general_item.for_sale = True
+        self.general_item.save()
+        response = self.client.get(reverse('memorabilia:marketplace'), {'league': 'NHL'})
+        titles = [c.title for c in response.context['results']]
+        self.assertIn(self.player_item.title, titles)
+        self.assertNotIn(self.general_item.title, titles)
+
 
 class WantListShortcutTests(BaseTestCase):
     """The collectible form surfaces a link to the owner's want list (for the

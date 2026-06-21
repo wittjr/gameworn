@@ -14,13 +14,86 @@
 
 {% block content %}
 <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-2">{{ title }}</h1>
-<p class="text-gray-500 dark:text-gray-400 mb-6">Items collectors have flagged as available for sale or trade.</p>
+<p class="text-gray-500 dark:text-gray-400 mb-6">Items open to a new home.</p>
 
-<div class="flex flex-wrap gap-2 mb-6">
-    <a href="{% url 'memorabilia:marketplace' %}" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'all' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">All</a>
-    <a href="{% url 'memorabilia:marketplace' %}?show=sale" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'sale' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">For Sale</a>
-    <a href="{% url 'memorabilia:marketplace' %}?show=trade" class="px-4 py-2 rounded-full text-sm font-medium {% if show == 'trade' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200{% endif %}">For Trade</a>
-</div>
+<form method="get" class="bg-white rounded-lg shadow p-4 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.query.label }}</label>
+      {{ form.query }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.league.label }}</label>
+      {{ form.league }}
+      <datalist id="league-list">
+        {% for cl in custom_leagues %}
+          <option value="{{ cl }}"></option>
+        {% endfor %}
+        {% for l in leagues %}
+          <option value="{{ l.key }}" label="{{ l.name }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.team.label }}</label>
+      {{ form.team }}
+      <datalist id="team-list"></datalist>
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.game_type.label }}</label>
+      {{ form.game_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.usage_type.label }}</label>
+      {{ form.usage_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.item_type.label }}</label>
+      {{ form.item_type }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.home_away.label }}</label>
+      {{ form.home_away }}
+    </div>
+    <div>
+      <label class="block mb-1 text-sm font-medium text-gray-700">{{ form.show.label }}</label>
+      {{ form.show }}
+    </div>
+  </div>
+
+  <div class="flex justify-end mt-4 space-x-2">
+    <a href="{{ request.path }}" class="px-4 py-2 border border-gray-300 rounded-md text-sm">Clear</a>
+    <button type="submit" class="btn-primary">Filter</button>
+  </div>
+</form>
+
+<script nonce="{{ request.csp_nonce }}">
+  (function() {
+    function populateTeams(leagueVal) {
+      const list = document.getElementById('team-list');
+      if (!list) return;
+      list.innerHTML = '';
+      if (!leagueVal) return;
+      fetch(`{% url 'memorabilia:get_teams' %}?league=${encodeURIComponent(leagueVal)}`)
+        .then(r => r.json())
+        .then(data => {
+          (data.teams || []).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            list.appendChild(opt);
+          });
+        })
+        .catch(() => {});
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      const leagueInput = document.querySelector('[name="league"]');
+      if (leagueInput) {
+        populateTeams(leagueInput.value);
+        leagueInput.addEventListener('input', e => populateTeams(e.target.value));
+      }
+    });
+  })();
+</script>
 
 {% if results %}
   <div class="flex flex-wrap gap-4 py-4 justify-evenly">

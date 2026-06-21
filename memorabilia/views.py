@@ -25,7 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .forms import (
     CollectibleForm, CollectibleImageFormSet, CollectionForm, PhotoMatchForm,
-    CollectibleSearchForm, BulkCollectibleForm, BulkPlayerGearForm,
+    CollectibleSearchForm, MarketplaceFilterForm, BulkCollectibleForm, BulkPlayerGearForm,
     BulkGeneralItemForm, BulkHockeyJerseyForm, get_collectible_form_class,
     GeneralItemForm, GeneralItemImageForm, PlayerGearForm, PlayerGearImageFormSet,
     HockeyJerseyForm, UserProfileForm,
@@ -330,30 +330,75 @@ def search_collectibles(request):
 
 
 def marketplace(request):
-    """Public listing of every collectible flagged for sale and/or trade."""
-    show = request.GET.get('show')  # 'sale', 'trade', or None for both
+    """Public listing of collectibles for sale/trade, with Search-style filters."""
+    form = MarketplaceFilterForm(request.GET or None)
+
+    show = request.GET.get('show', '')  # 'sale', 'trade', or '' for either
     if show == 'sale':
         availability = Q(for_sale=True)
     elif show == 'trade':
         availability = Q(for_trade=True)
     else:
-        show = 'all'
+        show = ''
         availability = Q(for_sale=True) | Q(for_trade=True)
 
-    gear = PlayerGear.objects.exclude(gear_type_id='JRS').filter(availability).select_related('collection').prefetch_related('gear_images')
-    jersey = HockeyJersey.objects.filter(availability).select_related('collection').prefetch_related('gear_images')
-    player = PlayerItem.objects.filter(availability).select_related('collection').prefetch_related('images')
-    other = GeneralItem.objects.filter(availability).select_related('collection').prefetch_related('images')
+    gear_qs = PlayerGear.objects.exclude(gear_type_id='JRS').filter(availability)
+    hockey_qs = HockeyJersey.objects.filter(availability)
+    player_qs = PlayerItem.objects.filter(availability)
+    other_qs = GeneralItem.objects.filter(availability)
+
+    if form.is_valid():
+        data = form.cleaned_data
+
+        # Narrow to the chosen item type (keeping the availability filter).
+        item_type = data.get('item_type')
+        if item_type == 'playergear':
+            hockey_qs = HockeyJersey.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'hockeyjersey':
+            gear_qs = PlayerGear.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'playeritem':
+            gear_qs = PlayerGear.objects.none(); hockey_qs = HockeyJersey.objects.none(); other_qs = GeneralItem.objects.none()
+        elif item_type == 'generalitem':
+            gear_qs = PlayerGear.objects.none(); hockey_qs = HockeyJersey.objects.none(); player_qs = PlayerItem.objects.none()
+
+        gear_qs = _apply_collectible_filters(gear_qs, data)
+        hockey_qs = _apply_collectible_filters(hockey_qs, data)
+        # PlayerItem/GeneralItem lack gear-only fields; GeneralItem also lacks
+        # player fields — drop those keys so the filter helper doesn't touch them.
+        player_data = {k: v for k, v in data.items() if k not in ('game_type', 'usage_type')}
+        player_qs = _apply_collectible_filters(player_qs, player_data)
+        other_data = {k: v for k, v in data.items() if k not in ('game_type', 'usage_type', 'league', 'team')}
+        other_qs = _apply_collectible_filters(other_qs, other_data)
+
+        # Exclude types that can't carry the filtered fields.
+        if data.get('home_away'):
+            gear_qs = PlayerGear.objects.none(); player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif data.get('game_type') or data.get('usage_type'):
+            player_qs = PlayerItem.objects.none(); other_qs = GeneralItem.objects.none()
+        elif data.get('league') or data.get('team'):
+            other_qs = GeneralItem.objects.none()
 
     results = sorted(
-        chain(gear, jersey, player, other),
+        list(gear_qs.select_related('collection').prefetch_related('gear_images')) +
+        list(hockey_qs.select_related('collection').prefetch_related('gear_images')) +
+        list(player_qs.select_related('collection').prefetch_related('images')) +
+        list(other_qs.select_related('collection').prefetch_related('images')),
         key=lambda x: x.last_updated,
         reverse=True,
     )
+
+    # Free-text league suggestions (datalist), matching the search page.
+    league_keys = set(League.objects.values_list('key', flat=True))
+    distinct_values = PlayerItem.objects.values_list('league', flat=True).distinct()
+    custom_leagues = [v for v in distinct_values if v and v not in league_keys]
+
     context = {
         'title': 'Marketplace',
+        'form': form,
         'results': results,
         'show': show,
+        'leagues': League.objects.all(),
+        'custom_leagues': custom_leagues,
     }
     return render(request, 'memorabilia/marketplace.html', context)
 
