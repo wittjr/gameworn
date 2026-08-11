@@ -24,7 +24,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-dist/
 build/
 *.o
 *.so

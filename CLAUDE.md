@@ -84,6 +84,7 @@ Two-tier convention:
 | Command | Role | Use |
 |---------|------|-----|
 | `/architect` | Principal Architect | System design, ADRs |
+| `/program-manager` | Technical Program Manager | Plan/PRD → tracked GitHub issues with acceptance criteria |
 | `/builder` | Software Engineer | Implementation, debugging, testing |
 | `/qa-engineer` | QA Engineer | Test strategy, E2E, accessibility |
 | `/security-auditor` | Security Auditor | Threat modeling, audits |
