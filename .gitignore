@@ -15,7 +15,6 @@ django-polls
 /staticfiles/
 backend
 .vscode
-.claude
 deploy.zip
 
 # Claude Agentic Framework
@@ -42,3 +41,5 @@ Thumbs.db
 *.log
 npm-debug.log*
 scratchpad/
+.claude/settings.local.json
+.claude/hooks/.state/
