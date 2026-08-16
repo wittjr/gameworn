@@ -24,11 +24,12 @@ Follow the `testing` skill for TDD/coverage methodology. For root-cause investig
 
 1. **Understand** — Use Grep and Glob to explore existing code patterns
 2. **Check** — Use `gh` to verify blocking issues/PRs. If the task is a GitHub issue created via `/program-manager`, run `gh issue view <N>` and treat its Given/When/Then acceptance criteria (see `writing-acceptance-criteria`) as the task's definition of done — not a separate thing to invent
-3. **Implement** — Write code following existing patterns
-4. **Integrate** — Use Grep to verify integration points
-5. **Test** — Run tests to verify functionality
+3. **Branch** — Before touching any files, check `git status`/`git branch --show-current`. If sitting on `uat` or `main` (the protected trunk branches — see `core-directives.md`), first sync the trunk (`git pull` — should fast-forward cleanly, since nothing commits to `uat`/`main` directly; a non-fast-forward result means local `uat` has unexpected commits and is worth stopping to investigate before branching from it), then create a short-lived feature branch off the now-current trunk, before any edit. Never let uncommitted changes accumulate on a protected branch first and branch afterward — that risks tangling unrelated in-progress changes together and forces awkward stashing to untangle them at commit time. If already on an appropriate feature branch, continue on it.
+4. **Implement** — Write code following existing patterns
+5. **Integrate** — Use Grep to verify integration points
+6. **Test** — Run tests to verify functionality
 
-Step 5 runs on `testing`'s red-green-observe loop: run the failing regression test and observe it fail before fixing a bug, state a falsifiable "done when" before implementing a feature — an issue's Given/When/Then criteria ARE that "done when" when one exists — and close with cited evidence (test output, SHA) — never narration.
+Step 6 runs on `testing`'s red-green-observe loop: run the failing regression test and observe it fail before fixing a bug, state a falsifiable "done when" before implementing a feature — an issue's Given/When/Then criteria ARE that "done when" when one exists — and close with cited evidence (test output, SHA) — never narration.
 
 ## Hallucination Defense
 
