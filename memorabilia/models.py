@@ -342,6 +342,11 @@ class Collectible(RulesModel):
     last_updated = models.DateTimeField(auto_now=True)
     allow_featured = models.BooleanField(null=True, blank=True)
 
+    # Name of the reverse relation to this collectible's images. Overridden by
+    # PlayerGearItem to 'gear_images' — lets get_images()/get_primary_image()
+    # work polymorphically instead of branching on type.
+    image_relation_name = 'images'
+
     class Meta:
         abstract = True
         rules_permissions = {
@@ -354,12 +359,25 @@ class Collectible(RulesModel):
         """Asking price with currency symbol + code (e.g. '$100.00 USD'), or ''."""
         return format_price(self.asking_price, self.currency)
 
+    @classmethod
+    def detail_queryset(cls):
+        """Queryset with select/prefetch for a detail-page fetch of this type."""
+        return cls.objects.prefetch_related(
+            cls.image_relation_name, 'authentications__auth_type', 'authentications__issuer',
+        )
+
+    def get_images(self):
+        return list(getattr(self, self.image_relation_name).all())
+
+    def get_primary_image_obj(self):
+        images = self.get_images()
+        return next((img for img in images if img.primary), images[0] if images else None)
+
     def get_primary_image(self):
-        images = list(self.images.all())
-        primary = next((img for img in images if img.primary), None)
-        if primary:
-            return primary.image if primary.image else primary.link
-        return images[0].image if images else None
+        img = self.get_primary_image_obj()
+        if img is None:
+            return None
+        return img.image if img.image else img.link
 
     def get_primary_image_url(self):
         img = self.get_primary_image()
@@ -407,6 +425,8 @@ class PlayerGearItem(BasePlayerItem):
     usage_type = models.ForeignKey('UsageType', to_field='key', on_delete=models.PROTECT, db_column='usage_type')
     gear_type = models.ForeignKey('GearType', to_field='key', on_delete=models.PROTECT, db_column='gear_type', blank=True, null=True)
 
+    image_relation_name = 'gear_images'
+
     class Meta(BasePlayerItem.Meta):
         abstract = True
 
@@ -431,12 +451,13 @@ class PlayerGear(PlayerGearItem):
     def __str__(self):
         return self.title
 
-    def get_primary_image(self):
-        images = list(self.gear_images.all())
-        primary = next((img for img in images if img.primary), None)
-        if primary:
-            return primary.image if primary.image else primary.link
-        return images[0].image if images else None
+    @classmethod
+    def detail_queryset(cls):
+        return (
+            super().detail_queryset()
+            .select_related('game_type', 'usage_type', 'gear_type')
+            .prefetch_related('photomatches')
+        )
 
 
 class HockeyJerseyManager(models.Manager):
@@ -459,6 +480,10 @@ class HockeyJersey(PlayerGear):
     def __str__(self):
         return self.title
 
+    @classmethod
+    def detail_queryset(cls):
+        return super().detail_queryset().select_related('season_set')
+
 class GeneralItem(Collectible):
     collectible_type = 'generalitem'
 
@@ -469,6 +494,16 @@ class GeneralItem(Collectible):
 
     def __str__(self):
         return self.title
+
+
+# Single source of truth for collectible_type slug -> model class. Use this
+# instead of hand-writing an if/elif chain at each dispatch site.
+COLLECTIBLE_MODELS = {
+    'playeritem': PlayerItem,
+    'generalitem': GeneralItem,
+    'playergear': PlayerGear,
+    'hockeyjersey': HockeyJersey,
+}
 
 
 class CollectibleImage(RulesModel):

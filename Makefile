@@ -26,7 +26,7 @@ BACKUP_DIR ?= backups
 .PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data relay-tunnel
 
 test:
-	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia django_flowbite_widgets
 
 migrations:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py makemigrations

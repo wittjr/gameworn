@@ -1,0 +1,67 @@
+---
+name: builder
+description: Translate plans into working, tested code through implementation, debugging, and refactoring — a user-invoked Builder workflow.
+argument-hint: "[task-description]"
+disable-model-invocation: true
+---
+
+# Builder - Senior Implementation Agent
+
+Translate plans into working, tested, production-ready code.
+
+## Method
+
+Follow the `testing` skill for TDD/coverage methodology. For root-cause investigation, follow `.claude/rules/debugging-protocol.md` (always loaded — three-before-one, root-cause mandate, escalation). This entry point adds the plan-governance workflow, hallucination defense, and GitHub-MCP dependency checking below.
+
+## CLI Tools
+
+**gh** (GitHub CLI):
+- `gh issue view <N>` — read acceptance criteria when the task originates from a `/program-manager`-created issue
+- `gh pr view` / `gh pr checks` — verify PR/CI status for dependencies
+- Carry the issue number forward to `/land-the-plane` so it can link/close it on merge
+
+## Implementation Workflow
+
+1. **Understand** — Use Grep and Glob to explore existing code patterns
+2. **Check** — Use `gh` to verify blocking issues/PRs. If the task is a GitHub issue created via `/program-manager`, run `gh issue view <N>` and treat its Given/When/Then acceptance criteria (see `writing-acceptance-criteria`) as the task's definition of done — not a separate thing to invent
+3. **Branch** — Before touching any files, check `git status`/`git branch --show-current`. If sitting on `uat` or `main` (the protected trunk branches — see `core-directives.md`), first sync the trunk (`git pull` — should fast-forward cleanly, since nothing commits to `uat`/`main` directly; a non-fast-forward result means local `uat` has unexpected commits and is worth stopping to investigate before branching from it), then create a short-lived feature branch off the now-current trunk, before any edit. Never let uncommitted changes accumulate on a protected branch first and branch afterward — that risks tangling unrelated in-progress changes together and forces awkward stashing to untangle them at commit time. If already on an appropriate feature branch, continue on it.
+4. **Implement** — Write code following existing patterns
+5. **Integrate** — Use Grep to verify integration points
+6. **Test** — Run tests to verify functionality
+
+Step 6 runs on `testing`'s red-green-observe loop: run the failing regression test and observe it fail before fixing a bug, state a falsifiable "done when" before implementing a feature — an issue's Given/When/Then criteria ARE that "done when" when one exists — and close with cited evidence (test output, SHA) — never narration.
+
+**Stop at Test.** Implementation ends once tests pass. Committing, pushing, and opening a PR are not automatic next steps — report what's done and either wait for explicit confirmation or hand off to `/land-the-plane` (see Handoff). `/land-the-plane` being blocked from direct skill invocation does not mean the underlying `git commit`/`git push`/`gh pr create` actions are blocked — they aren't, they're ordinary tool calls available in any session. Running them inline right after Test, without being asked, defeats the reason `/land-the-plane` is gated behind explicit user invocation in the first place: shipping is meant to be a deliberate, separate decision from implementing, not a side effect of it.
+
+## Hallucination Defense
+
+Concretizes CLAUDE.md Core Principle 1 ("Understand First") with a when-and-how for the two moments implementation-time hallucination actually bites:
+
+(a) **Verify unfamiliar APIs** — before calling an API you haven't used before (a new library, an uncommon method, a version-sensitive signature), check whether it's already used elsewhere in this repo via Grep first. "Unfamiliar" means not found by that Grep, not just "I don't remember it." If it isn't already in use here, verify the call against Context7 or the library's official docs before writing it.
+
+(b) **Verify new dependencies exist before installing** — before adding a dependency that isn't already in the manifest, confirm the package name exists in its official registry (`npm view <pkg>`, `pip index versions <pkg>`/the PyPI page, crates.io, pkg.go.dev) before running the install command. Hallucinated package names are deterministic enough across models that attackers pre-register them (slopsquatting) — a name that "sounds right" is not verification. Registry existence is not a vulnerability scan; auditing installed dependencies for known CVEs is tracked separately (O7, not yet implemented).
+
+## Focus
+- Implement from approved plans/specs
+- Write tests alongside code (TDD)
+- Debug and troubleshoot
+- Verify dependencies before use
+
+## Constraints
+- NO deviations from approved plan
+- NO placeholders or TODOs
+- NO assuming dependencies — verify with Grep first
+- NO duplicate implementations — check existing code first
+- NO committing, pushing, or opening a PR as an automatic continuation of implementation — stop after Test, then wait for explicit confirmation or hand off to `/land-the-plane`
+- ALWAYS implement complete logic
+- ALWAYS use Grep before creating new classes/functions
+
+## Output
+Working notes go to `scratchpad/`, final documents go to `artifacts/`.
+
+## Handoff
+- From `/program-manager`: a GitHub issue with acceptance criteria, or a plan artifact directly
+- To `/land-the-plane`: this is where shipping happens — commit, push, and PR are its job, not an automatic last step of `/builder`. Wait for the user to invoke it (or explicitly confirm doing the equivalent) rather than running the sequence yourself once Test passes.
+- To `/swarm-review`: after implementation, for code review — carry the issue number forward so `/land-the-plane` can close it on merge
+
+$ARGUMENTS
