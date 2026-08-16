@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch, AuthSource, WantListProfile, WantList, WantListItem, WantListItemImage, OwnerInquiry, InquiryMessage
+from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch, AuthSource, WantListProfile, WantList, WantListItem, WantListItemImage, OwnerInquiry, InquiryMessage, GeneralItemAuthentication
 from .relay import ingest_inbound, extract_token, strip_quoted_reply
 
 
@@ -1013,6 +1013,136 @@ class Collectible404Tests(BaseTestCase):
         ))
         self.assertEqual(response.status_code, 404)
 
+    def test_hockeyjersey_wrong_pk(self):
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'hockeyjersey', 'pk': 999999},
+        ))
+        self.assertEqual(response.status_code, 404)
+
+    def test_hockeyjersey_wrong_collection(self):
+        other_collection = Collection.objects.create(owner_uid=self.owner.id, title='Other')
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={'collection_id': other_collection.id, 'collectible_type': 'hockeyjersey', 'pk': self.hockey_jersey.id},
+        ))
+        self.assertEqual(response.status_code, 404)
+
+    def test_unrecognized_collectible_type_404(self):
+        """CollectibleView.get_object() falls through to Http404 for a type
+        it doesn't recognize — unlike edit/delete_collectible, which default
+        to PlayerItem (see CollectibleDispatchFallbackTests). Both behaviors
+        are pre-existing; this locks in the CollectibleView side before the
+        collectible_type -> model dispatch is consolidated onto a registry."""
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'bogus', 'pk': self.player_item.id},
+        ))
+        self.assertEqual(response.status_code, 404)
+
+
+class CollectiblePdfTests(BaseTestCase):
+    """collectible_pdf had no prior test coverage. Added ahead of the
+    collectible_type -> model dispatch consolidation (SOLID #1) so a
+    regression in the refactored fetch/prefetch logic fails loudly."""
+
+    def _pdf_url(self, collectible_type, pk):
+        return reverse('memorabilia:collectible_pdf', kwargs={
+            'collection_id': self.collection.id, 'collectible_type': collectible_type, 'pk': pk,
+        })
+
+    def test_playeritem_pdf_owner_200(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('playeritem', self.player_item.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_playergear_pdf_owner_200(self):
+        PlayerGearImage.objects.create(collectible=self.player_gear, link='https://example.com/g.jpg', primary=True)
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('playergear', self.player_gear.id))
+        self.assertEqual(response.status_code, 200)
+
+    def test_hockeyjersey_pdf_owner_200(self):
+        PlayerGearImage.objects.create(collectible=self.hockey_jersey, link='https://example.com/j.jpg', primary=True)
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('hockeyjersey', self.hockey_jersey.id))
+        self.assertEqual(response.status_code, 200)
+
+    def test_generalitem_pdf_owner_200(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('generalitem', self.general_item.id))
+        self.assertEqual(response.status_code, 200)
+
+    def test_wrong_pk_404(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('playeritem', 999999))
+        self.assertEqual(response.status_code, 404)
+
+    def test_unrecognized_collectible_type_404(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._pdf_url('bogus', self.player_item.id))
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_owner_forbidden(self):
+        self.client.force_login(self.other_user)
+        response = self.client.get(self._pdf_url('playeritem', self.player_item.id))
+        self.assertEqual(response.status_code, 403)
+
+    def test_requires_login(self):
+        response = self.client.get(self._pdf_url('playeritem', self.player_item.id))
+        self.assertEqual(response.status_code, 302)
+
+
+class CollectibleDispatchFallbackTests(BaseTestCase):
+    """delete_collectible and edit_collectible both default an unrecognized
+    collectible_type to PlayerItem rather than 404ing (unlike CollectibleView/
+    collectible_pdf). This is pre-existing, inconsistent-but-real behavior for
+    the collectible-fetch dispatch — locked in here so it doesn't silently
+    change.
+
+    edit_collectible used to 500 for an unrecognized type: its collectible-
+    fetch dispatch defaults to PlayerItem, but _get_auth_formset_class()
+    defaulted unrecognized types to GeneralItemAuthenticationFormSet —
+    building that formset against the PlayerItem instance raised
+    ValueError('Cannot query ...: Must be "GeneralItem" instance.'). Fixed by
+    giving _get_auth_formset_class() an explicit 'generalitem' branch (it
+    previously relied on the catch-all for that, same as the bug case) and
+    making its catch-all default PlayerItem, matching _get_image_formset_class
+    and the COLLECTIBLE_MODELS registry."""
+
+    def test_delete_collectible_unrecognized_type_falls_back_to_playeritem(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(reverse(
+            'memorabilia:delete_collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'bogus', 'collectible_id': self.player_item.id},
+        ))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(PlayerItem.objects.filter(pk=self.player_item.id).exists())
+
+    def test_edit_collectible_unrecognized_type_falls_back_to_playeritem_without_crashing(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'bogus', 'collectible_id': self.player_item.id},
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['collectible'], self.player_item)
+
+    def test_edit_collectible_generalitem_still_uses_generalitem_auth_formset(self):
+        """Regression guard: generalitem previously reached
+        GeneralItemAuthenticationFormSet only via _get_auth_formset_class's
+        catch-all branch. Fixing the catch-all to default to PlayerItem must
+        not break this — generalitem needs its own explicit branch."""
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse(
+            'memorabilia:edit_collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'generalitem', 'collectible_id': self.general_item.id},
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['collectible'], self.general_item)
+        self.assertEqual(response.context['auth_formset'].model, GeneralItemAuthentication)
+
 
 class CollectibleFormValidationTests(BaseTestCase):
     def setUp(self):
@@ -1067,6 +1197,81 @@ class CollectibleFormValidationTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.general_item.refresh_from_db()
         self.assertNotEqual(self.general_item.title, '')
+
+
+class CollectiblePrimaryImageTests(BaseTestCase):
+    """Regression tests for Collectible.get_images()/get_primary_image_obj()/get_primary_image()
+    and per-type detail_queryset() — covers the DRY fix that unified the
+    previously-duplicated 'primary image, else first' logic across PlayerItem,
+    PlayerGear, HockeyJersey (proxy of PlayerGear), and GeneralItem."""
+
+    # --- get_primary_image() / get_images() ---
+
+    def test_no_images_returns_none_for_every_type(self):
+        self.assertIsNone(self.player_item.get_primary_image())
+        self.assertIsNone(self.player_gear.get_primary_image())
+        self.assertIsNone(self.hockey_jersey.get_primary_image())
+        self.assertIsNone(self.general_item.get_primary_image())
+
+    def test_single_image_with_no_primary_flag_is_returned(self):
+        PlayerItemImage.objects.create(collectible=self.player_item, link='https://example.com/a.jpg')
+        self.assertEqual(self.player_item.get_primary_image(), 'https://example.com/a.jpg')
+
+    def test_flagged_primary_image_preferred_over_first(self):
+        PlayerGearImage.objects.create(collectible=self.player_gear, link='https://example.com/first.jpg')
+        PlayerGearImage.objects.create(collectible=self.player_gear, link='https://example.com/primary.jpg', primary=True)
+        self.assertEqual(self.player_gear.get_primary_image(), 'https://example.com/primary.jpg')
+
+    def test_hockey_jersey_reads_gear_images_via_proxy_inheritance(self):
+        """HockeyJersey is a proxy model of PlayerGear — it must resolve images
+        through the inherited gear_images relation, not the base 'images' relation."""
+        PlayerGearImage.objects.create(collectible=self.hockey_jersey, link='https://example.com/jersey.jpg', primary=True)
+        self.assertEqual(self.hockey_jersey.get_primary_image(), 'https://example.com/jersey.jpg')
+        self.assertEqual(list(self.hockey_jersey.get_images()), list(self.hockey_jersey.gear_images.all()))
+
+    def test_get_images_uses_images_relation_for_general_item(self):
+        GeneralItemImage.objects.create(collectible=self.general_item, link='https://example.com/g.jpg')
+        self.assertEqual(list(self.general_item.get_images()), list(self.general_item.images.all()))
+
+    def test_get_primary_image_obj_returns_the_image_instance_not_its_value(self):
+        img = PlayerItemImage.objects.create(collectible=self.player_item, link='https://example.com/a.jpg', primary=True)
+        self.assertEqual(self.player_item.get_primary_image_obj(), img)
+
+    # --- detail_queryset() ---
+
+    def test_detail_queryset_fetches_the_right_instance_per_type(self):
+        self.assertEqual(PlayerItem.detail_queryset().get(pk=self.player_item.pk), self.player_item)
+        self.assertEqual(PlayerGear.detail_queryset().get(pk=self.player_gear.pk), self.player_gear)
+        self.assertEqual(HockeyJersey.detail_queryset().get(pk=self.hockey_jersey.pk), self.hockey_jersey)
+        self.assertEqual(GeneralItem.detail_queryset().get(pk=self.general_item.pk), self.general_item)
+
+    def test_detail_queryset_prefetches_avoid_extra_queries_on_touch(self):
+        """Touching the relations detail_queryset() is supposed to prefetch must not
+        issue additional queries beyond the initial fetch + one per prefetched
+        relation group (gear_images, authentications, photomatches) — regression
+        guard against silently dropping a prefetch_related()/select_related() call
+        in a future edit. select_related fields (game_type/usage_type/gear_type/
+        season_set) are joined into the first query, so they add no extra queries."""
+        PlayerGearImage.objects.create(collectible=self.player_gear, link='https://example.com/g.jpg')
+        with self.assertNumQueries(4):
+            obj = PlayerGear.detail_queryset().get(pk=self.player_gear.pk)
+            list(obj.gear_images.all())
+            list(obj.authentications.all())
+            list(obj.photomatches.all())
+            obj.game_type
+            obj.usage_type
+            obj.gear_type
+
+        PlayerGearImage.objects.create(collectible=self.hockey_jersey, link='https://example.com/j.jpg')
+        with self.assertNumQueries(4):
+            obj = HockeyJersey.detail_queryset().get(pk=self.hockey_jersey.pk)
+            list(obj.gear_images.all())
+            list(obj.authentications.all())
+            list(obj.photomatches.all())
+            obj.game_type
+            obj.usage_type
+            obj.gear_type
+            obj.season_set
 
 
 class CollectionModelTests(BaseTestCase):

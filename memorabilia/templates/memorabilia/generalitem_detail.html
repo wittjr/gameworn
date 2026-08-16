@@ -66,19 +66,8 @@
     </div>
 </div>
 
-{% if object.photomatches.all.count > 0 %}
-<h2 class="mb-6 text-2xl text-center font-extrabold tracking-tight leading-none md:text-3xl lg:text-4xl">Photo matches</h2>
-<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-    {% for image in object.photomatches.all %}
-        {% getmediaurl image as image_url %}
-        {% include 'memorabilia/photomatch_card.html' with image_url=image_url %}
-    {% endfor %}
-</div>
-{% endif %}
-
 {% include "memorabilia/elements/collectible_nav_prev_next.html" %}
 {% include "memorabilia/elements/gallery_lightbox.html" %}
-{% include "memorabilia/elements/gallery_lightbox.html" with gallery_id="photomatch" thumb_class="photomatch-thumb" %}
 {% url 'memorabilia:export_collectible' object.collection.id object.collectible_type object.id as zip_base_url %}
 {% include "memorabilia/elements/zip_export_modal.html" with export_url=zip_base_url %}
 {% include "memorabilia/elements/collectible_detail_tooltips.html" %}
