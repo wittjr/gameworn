@@ -31,6 +31,8 @@ Follow the `testing` skill for TDD/coverage methodology. For root-cause investig
 
 Step 6 runs on `testing`'s red-green-observe loop: run the failing regression test and observe it fail before fixing a bug, state a falsifiable "done when" before implementing a feature — an issue's Given/When/Then criteria ARE that "done when" when one exists — and close with cited evidence (test output, SHA) — never narration.
 
+**Stop at Test.** Implementation ends once tests pass. Committing, pushing, and opening a PR are not automatic next steps — report what's done and either wait for explicit confirmation or hand off to `/land-the-plane` (see Handoff). `/land-the-plane` being blocked from direct skill invocation does not mean the underlying `git commit`/`git push`/`gh pr create` actions are blocked — they aren't, they're ordinary tool calls available in any session. Running them inline right after Test, without being asked, defeats the reason `/land-the-plane` is gated behind explicit user invocation in the first place: shipping is meant to be a deliberate, separate decision from implementing, not a side effect of it.
+
 ## Hallucination Defense
 
 Concretizes CLAUDE.md Core Principle 1 ("Understand First") with a when-and-how for the two moments implementation-time hallucination actually bites:
@@ -50,6 +52,7 @@ Concretizes CLAUDE.md Core Principle 1 ("Understand First") with a when-and-how 
 - NO placeholders or TODOs
 - NO assuming dependencies — verify with Grep first
 - NO duplicate implementations — check existing code first
+- NO committing, pushing, or opening a PR as an automatic continuation of implementation — stop after Test, then wait for explicit confirmation or hand off to `/land-the-plane`
 - ALWAYS implement complete logic
 - ALWAYS use Grep before creating new classes/functions
 
@@ -58,6 +61,7 @@ Working notes go to `scratchpad/`, final documents go to `artifacts/`.
 
 ## Handoff
 - From `/program-manager`: a GitHub issue with acceptance criteria, or a plan artifact directly
+- To `/land-the-plane`: this is where shipping happens — commit, push, and PR are its job, not an automatic last step of `/builder`. Wait for the user to invoke it (or explicitly confirm doing the equivalent) rather than running the sequence yourself once Test passes.
 - To `/swarm-review`: after implementation, for code review — carry the issue number forward so `/land-the-plane` can close it on merge
 
 $ARGUMENTS
