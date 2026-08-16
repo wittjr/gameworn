@@ -1088,7 +1088,13 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
             # Type changed — convert collectible
             NewFormClass = get_collectible_form_class(submitted_type_raw)
             form = NewFormClass(request.POST, request.FILES, current_user=request.user)
-            if form.is_valid():
+            ImageFormSet = _get_image_formset_class(collectible_type)
+            image_formset = ImageFormSet(request.POST, request.FILES, instance=collectible, prefix='images')
+            if form.is_valid() and image_formset.is_valid():
+                # Apply image edits (new uploads, cover photo choice, deletions) to the
+                # existing collectible first, so _copy_images carries the up-to-date set
+                # of images over to the converted instance.
+                image_formset.save()
                 new_instance = form.save(commit=False)
                 flickr_url = request.POST.get('flickrAlbum', '').strip()
                 if flickr_url:
@@ -1108,9 +1114,6 @@ def edit_collectible(request, collection_id, collectible_type, collectible_id):
                     display_form = HockeyJerseyForm(request.POST, request.FILES, current_user=request.user)
                     display_form._errors = form.errors
                     form = display_form
-            # Show existing images on type-change failure
-            ImageFormSet = _get_image_formset_class(collectible_type)
-            image_formset = ImageFormSet(instance=collectible, prefix='images')
             auth_formset = AuthFormSet(instance=collectible, prefix='authentications')
 
         selected_collectible_type = submitted_type_raw
