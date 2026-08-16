@@ -9,7 +9,7 @@ from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import Collection, PlayerItem, PlayerGear, HockeyJersey, GeneralItem, League, GameType, UsageType, GearType, SeasonSet, UserProfile, PlayerItemImage, PlayerGearImage, GeneralItemImage, PhotoMatch, AuthSource, WantListProfile, WantList, WantListItem, WantListItemImage, OwnerInquiry, InquiryMessage, GeneralItemAuthentication
-from .relay import ingest_inbound, extract_token, strip_quoted_reply
+from .relay import ingest_inbound, extract_token, strip_quoted_reply, relay_message, relay_address
 
 
 class BaseTestCase(TestCase):
@@ -4860,6 +4860,86 @@ class ContactOwnerTests(BaseTestCase):
     def test_detail_shows_login_link_when_anonymous(self):
         response = self.client.get(self._detail_url(self.player_item))
         self.assertContains(response, 'Login to contact owner')
+
+
+class RelayModuleTests(BaseTestCase):
+    """Direct unit tests for memorabilia.relay's own functions, called without
+    going through the contact_owner view or the ingest_inbound webhook path.
+    ContactOwnerTests and MailgunInboundWebhookTests already cover this
+    behavior at the integration level; these isolate the module logic itself,
+    including branches (like relay_message's no-destination-address path)
+    that the view layer guards against and so never reaches in practice."""
+
+    def setUp(self):
+        self.owner.email = 'owner@example.com'
+        self.owner.save()
+        self.inquiry = OwnerInquiry.objects.create(
+            recipient=self.owner,
+            sender_user=self.other_user,
+            collection_id=self.collection.id,
+            collectible_type=self.player_item.collectible_type,
+            collectible_id=self.player_item.id,
+            item_title=self.player_item.title,
+            item_url='https://example.com/item',
+            sender_name='Jane Buyer',
+            sender_email='jane@example.com',
+        )
+
+    def test_extract_token_malformed_or_truncated(self):
+        # Truncated: no closing bracket.
+        self.assertIsNone(extract_token('Re: interest in "X" [ref:abc123'))
+        # Invalid character breaks the alnum-only token match.
+        self.assertIsNone(extract_token('Re: interest in "X" [ref:abc-123]'))
+        # Empty token.
+        self.assertIsNone(extract_token('Re: interest in "X" [ref:]'))
+
+    def test_relay_message_requester_to_owner(self):
+        message = InquiryMessage.objects.create(
+            inquiry=self.inquiry,
+            sender_role=InquiryMessage.REQUESTER,
+            body='Is this still available?',
+        )
+        sent = relay_message(message)
+        self.assertTrue(sent)
+        self.assertTrue(message.email_sent)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['owner@example.com'])
+        self.assertEqual(email.reply_to, [relay_address()])
+        self.assertIn('Jane Buyer', email.from_email)
+        self.assertNotIn('jane@example.com', email.from_email)
+
+    def test_relay_message_owner_to_requester(self):
+        message = InquiryMessage.objects.create(
+            inquiry=self.inquiry,
+            sender_role=InquiryMessage.OWNER,
+            body='Yes, still available.',
+        )
+        sent = relay_message(message)
+        self.assertTrue(sent)
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.to, ['jane@example.com'])
+        self.assertEqual(email.reply_to, [relay_address()])
+        self.assertNotIn('owner@example.com', email.from_email)
+
+    def test_relay_message_no_destination_address_fails_closed(self):
+        # Requester -> owner has nowhere to go when the owner has no email on
+        # file. The contact_owner view guards against this case (404s before
+        # a message can be created), so this branch is only reachable by
+        # calling relay_message directly.
+        self.owner.email = ''
+        self.owner.save()
+        message = InquiryMessage.objects.create(
+            inquiry=self.inquiry,
+            sender_role=InquiryMessage.REQUESTER,
+            body='Is this still available?',
+        )
+        sent = relay_message(message)
+        self.assertFalse(sent)
+        message.refresh_from_db()
+        self.assertFalse(message.email_sent)
+        self.assertEqual(len(mail.outbox), 0)
 
 
 @override_settings(ANYMAIL={'MAILGUN_WEBHOOK_SIGNING_KEY': 'test-signing-key'})
