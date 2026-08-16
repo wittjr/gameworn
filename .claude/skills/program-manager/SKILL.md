@@ -25,7 +25,7 @@ Follow the `writing-acceptance-criteria` skill for Given/When/Then authoring con
 ## Workflow
 
 1. **Read** — Read the full source plan/PRD artifact under `./artifacts/`. Do not decompose from a summary or from conversation memory; the artifact is the source of truth.
-2. **Decompose** — Break the artifact into right-sized units. Reuse `swarm-plan`'s existing sizing rule (roughly 200-400 changed LOC or 15-45 minutes of focused work each, independently mergeable to `main`) — don't invent a new one.
+2. **Decompose** — Break the artifact into right-sized units. Reuse `swarm-plan`'s existing sizing rule (roughly 200-400 changed LOC or 15-45 minutes of focused work each, independently mergeable to `uat`) — don't invent a new one.
 3. **Label** — Derive a slug from the artifact filename (strip the `plan_`/`prd_` prefix and `.md` suffix, underscores to hyphens — e.g. `plan_collectible_dispatch_refactor.md` → `collectible-dispatch-refactor`). Check `gh label list --search "plan:<slug>"`; if the `plan:<slug>` label doesn't exist, create it (`gh label create "plan:<slug>" --description "Tracks artifacts/<file>.md"`). If the plan is organized into numbered phases (`### Phase N` headers), also ensure a `phase:N` label exists per phase referenced.
 4. **Create issues** — One `gh issue create` per decomposed unit:
    - Title: a clear, plain task title (no bracket prefix — the label carries the plan grouping)

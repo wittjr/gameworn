@@ -60,7 +60,7 @@ git status   # MUST show "up to date with origin"
 
 ## 5. Handoff — Leave a Clean Trail
 
-- Open a PR targeting `main` (trunk-based: every PR merges to `main`
+- Open a PR targeting `uat` (trunk-based: every PR merges to `uat`
   independently — never stack on another unit's branch); pass the body via
   a file (heredoc or temp file), never as an inline string — avoids
   quoting and escaping failures.
