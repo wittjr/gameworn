@@ -10,8 +10,15 @@ register = template.Library()
 
 @register.simple_tag
 def get_user_avatar_url(email):
+    users = User.objects.filter(email=email)
+    if not users.exists():
+        # Return a Gravatar URL using the raw email as a safe fallback,
+        # matching the same pattern used for matched users. This avoids
+        # an IndexError when the email has no corresponding User record
+        # (e.g. a stale cached email or a deleted account).
+        return get_gravatar_url(email, size=32)
 
-    user = User.objects.filter(email=email)[0]
+    user = users[0]
 
     # social_info = SocialAccount.objects.filter(user_id=uid, provider='discord')
     # if len(social_info) > 0:
