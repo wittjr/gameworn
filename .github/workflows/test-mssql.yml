@@ -1,0 +1,68 @@
+name: Test (MSSQL)
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly against uat, so backend-specific breakage surfaces before it
+    # ever reaches a uat -> main promotion PR. ~7am UTC.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-mssql:
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: GamewornTestCI!1
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --health-start-period=30s
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Scheduled runs check nightly against uat; PR/manual runs use
+          # whatever ref triggered the workflow.
+          ref: ${{ github.event_name == 'schedule' && 'uat' || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install msodbcsql18 and pyodbc build dependencies
+        run: |
+          curl -sSL -O https://packages.microsoft.com/config/ubuntu/$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2)/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18 unixodbc-dev
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-azure.txt
+
+      - name: Create test database
+        run: |
+          /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" \
+            -Q "IF DB_ID('gameworn_test') IS NULL CREATE DATABASE gameworn_test"
+        env:
+          MSSQL_SA_PASSWORD: GamewornTestCI!1
+
+      - name: Apply migrations against MSSQL
+        run: python manage.py migrate
+        env:
+          DJANGO_SETTINGS_MODULE: gameworn.test_mssql_settings
+
+      - name: Run tests against MSSQL
+        run: python manage.py test memorabilia django_flowbite_widgets
+        env:
+          DJANGO_SETTINGS_MODULE: gameworn.test_mssql_settings
