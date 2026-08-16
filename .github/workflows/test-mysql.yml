@@ -1,0 +1,50 @@
+name: Test (MySQL)
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly against uat, so backend-specific breakage surfaces before it
+    # ever reaches a uat -> main promotion PR. ~7am UTC.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: gameworn_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Scheduled runs check nightly against uat; PR/manual runs use
+          # whatever ref triggered the workflow.
+          ref: ${{ github.event_name == 'schedule' && 'uat' || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install MySQL client build dependencies
+        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-pa.txt
+
+      - name: Run tests against MySQL
+        run: python manage.py test memorabilia django_flowbite_widgets
+        env:
+          DJANGO_SETTINGS_MODULE: gameworn.test_mysql_settings
