@@ -8,7 +8,7 @@ These directives translate the Core Principles into concrete, day-to-day operati
 
 ## Constraints
 
-- Trunk-based development: `main` is the only long-lived branch. Branch short-lived units off `main`, and every PR targets `main` and must be **independently mergeable** — no stacked PR chains, and no integration branches that accumulate work for a later bulk merge. Sequence dependent work by merge order (land the prerequisite to `main`, then branch the dependent unit from `main`), never by basing one unit's branch on another's. Never commit directly to `main`.
+- Trunk-based development: `uat` is the integration branch. Branch short-lived units off `uat`, and every PR targets `uat` and must be **independently mergeable** — no stacked PR chains, and no integration branches that accumulate work for a later bulk merge. Sequence dependent work by merge order (land the prerequisite to `uat`, then branch the dependent unit from `uat`), never by basing one unit's branch on another's. Never commit directly to `uat` or `main`. `uat` is the only branch that merges to `main`.
 - Verify artifacts exist before proceeding to the next phase in the planning flow
 - Consult `tech-strategy.md` for all technology choices — do not deviate without explicit instruction
 - Ship It: work is not complete until pushed to remote — mechanical protocol lives in AGENTS.md "Landing the Plane" (canonical detail-level home)
