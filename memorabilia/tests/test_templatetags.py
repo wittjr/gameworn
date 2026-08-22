@@ -123,3 +123,7 @@ class MemorabiliaExtrasTagTests(BaseTestCase):
         self.assertTrue(other_url.startswith('https://secure.gravatar.com/avatar/'))
         # Different emails hash to different gravatar URLs.
         self.assertNotEqual(owner_url, other_url)
+
+    def test_get_user_avatar_url_for_email_with_no_matching_user(self):
+        url = get_user_avatar_url('nobody@example.com')
+        self.assertTrue(url.startswith('https://secure.gravatar.com/avatar/'))
