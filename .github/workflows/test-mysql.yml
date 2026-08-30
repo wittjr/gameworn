@@ -2,7 +2,7 @@ name: Test (MySQL)
 
 on:
   pull_request:
-    branches: [main]
+    branches: [uat]
   schedule:
     # Nightly against uat, so backend-specific breakage surfaces before it
     # ever reaches a uat -> main promotion PR. ~7am UTC.
