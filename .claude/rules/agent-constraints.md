@@ -10,3 +10,4 @@ Rules that apply to all agent workflows.
 - NO unbounded workers — bound runtime with `maxTurns` in agent frontmatter rather than wall-clock limits
 - NO premium models for mechanical tasks — model tiering is pinned in each agent's frontmatter, which is the single source of truth for model assignments
 - NO skipping git push — work is NOT complete until pushed
+- NO editing before checking the branch — verify `git status` / `git branch --show-current` matches the task before the first file edit, every time, even on changes that feel too small or routine to bother. "Not on uat/main" is not sufficient — an unrelated existing branch is just as wrong a place to edit as the trunk

@@ -15,27 +15,30 @@ make check                  # Django system checks
 
 ## Core Principles
 
-These seven principles distill every rule, skill, and standard in this framework. Follow them and everything else follows.
+These eight principles distill every rule, skill, and standard in this framework. Follow them and everything else follows.
 
 ### 1. Understand First
-Read before writing; grep before creating; verify APIs via docs before assuming training data is current.
+Read before writing; grep before creating; verify APIs via docs before assuming training data is current. Don't assume — if something is unclear, surface the confusion and tradeoffs instead of guessing.
 
 ### 2. Prove It Works
-Write tests first, run quality gates (tests, linter, types, build) before every commit, and add a regression test for every bug fix.
+Define success criteria before starting, then loop until verified. Write tests first, run quality gates (tests, linter, types, build) before every commit, and add a regression test for every bug fix.
 
 ### 3. Keep It Safe
 No secrets in code, validate all input, use parameterized queries, apply least privilege, and flag vulnerabilities immediately.
 
 ### 4. Keep It Simple
-Single responsibility, no premature abstraction, delete dead code, avoid `any` types, fix warnings before committing.
+Minimum code that solves the problem — nothing speculative. Single responsibility, no premature abstraction, delete dead code, avoid `any` types, fix warnings before committing.
 
-### 5. Don't Repeat Yourself
+### 5. Minimal Footprint
+Touch only what you must; clean up only your own mess. Leave code you didn't need to change exactly as you found it.
+
+### 6. Don't Repeat Yourself
 Check `.claude/skills/` before generating ad-hoc solutions; maintain a single source of truth for business logic.
 
-### 6. Ship It
+### 7. Ship It
 Work on a branch, commit iteratively, and push to remote — work isn't done until `git push` succeeds.
 
-### 7. Leave a Trail
+### 8. Leave a Trail
 Artifacts in `./artifacts/`, track work with the native task list and issues, document decisions in ADRs, name things clearly.
 
 Full details in `.claude/rules/` (auto-loaded).
