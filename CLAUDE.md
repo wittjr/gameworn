@@ -7,6 +7,7 @@ Drop-in framework for optimized Claude Code workflows with specialized commands 
 ```bash
 make run                    # dev server
 make test SETTINGS=test     # test suite (SQLite in-memory)
+make test-e2e SETTINGS=test # browser E2E tests (Playwright, separate from make test)
 make migrations             # generate migrations
 make migrate                # apply migrations
 make shell                  # Django shell
