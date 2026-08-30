@@ -23,10 +23,21 @@ VENV_CMD = $(if $(VENV),source $(VENV) &&,)
 DB_FILE ?= db.sqlite3
 BACKUP_DIR ?= backups
 
-.PHONY: test migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data relay-tunnel
+.PHONY: test test-e2e migrations migrate loadfixtures collectstatic run shell check tailwind backup restore deploy import_population_report export_population_report_data relay-tunnel
 
 test:
-	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia django_flowbite_widgets
+	$(VENV_CMD) $(DJANGO_ENV) python manage.py test memorabilia django_flowbite_widgets --exclude-tag=e2e
+
+# Browser-driven regression tests (Playwright). Separate from `test` because
+# they need browser binaries and a live server, not just SQLite - see
+# requirements-e2e.txt. Run `pip install -r requirements-e2e.txt && python -m
+# playwright install chromium` once before the first run.
+# DJANGO_ALLOW_ASYNC_UNSAFE: Playwright's sync API drives its browser
+# connection through a greenlet-switched asyncio loop on the main thread,
+# which otherwise trips Django's ORM sync-safety check even though nothing
+# here is actually running the ORM from async code.
+test-e2e:
+	$(VENV_CMD) DJANGO_ALLOW_ASYNC_UNSAFE=true $(DJANGO_ENV) python manage.py test memorabilia --tag=e2e
 
 migrations:
 	$(VENV_CMD) $(DJANGO_ENV) python manage.py makemigrations
