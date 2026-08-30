@@ -21,7 +21,7 @@ Golden paths are defined and enforced in `.claude/rules/tech-strategy.md` — se
 
 ### 2. Check Skills First
 
-See Core Principle 5 ("Don't Repeat Yourself") in CLAUDE.md — search `.claude/skills/` before generating ad-hoc solutions.
+See Core Principle 6 ("Don't Repeat Yourself") in CLAUDE.md — search `.claude/skills/` before generating ad-hoc solutions.
 
 ### 3. Write Tests
 
