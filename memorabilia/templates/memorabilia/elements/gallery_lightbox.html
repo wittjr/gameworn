@@ -33,8 +33,10 @@
   const prevBtn     = document.getElementById('{{ pfx }}-prev');
   const nextBtn     = document.getElementById('{{ pfx }}-next');
   const thumbClass  = '{{ thumb_cls }}';
+  const closeBtn    = document.getElementById('{{ pfx }}-close');
   let items  = [];   // [{src, embed}]
   let current = 0;
+  let deactivateTrap = null;
 
   function show(index) {
     current = ((index % items.length) + items.length) % items.length;
@@ -66,6 +68,7 @@
     lightbox.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
     show(index);
+    deactivateTrap = GWFocusTrap.activate(lightbox, { initialFocus: closeBtn });
   }
 
   function close() {
@@ -75,6 +78,7 @@
     document.body.style.overflow = '';
     embedFrame.src = 'about:blank';
     embedFrame.removeAttribute('srcdoc');
+    if (deactivateTrap) { deactivateTrap(); deactivateTrap = null; }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
