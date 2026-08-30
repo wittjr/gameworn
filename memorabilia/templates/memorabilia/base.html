@@ -21,7 +21,8 @@
    <link rel="icon" type="image/svg+xml" href="{% static 'memorabilia/favicon.svg' %}">
    <link rel="icon" type="image/png" href="{% static 'memorabilia/favicon.png' %}">
    <link rel="shortcut icon" type="image/x-icon" href="{% static 'memorabilia/favicon.ico' %}">
-   <link rel="mask-icon" type="image/png"  href="{% static 'memorabilia/favicon.png' %}"> 
+   <link rel="mask-icon" type="image/png"  href="{% static 'memorabilia/favicon.png' %}">
+   <script src="{% static 'memorabilia/focus_trap.js' %}" nonce="{{ request.csp_nonce }}"></script>
    {% block extrahead %}
    {{ form.media }}
    {% endblock extrahead %}
@@ -288,17 +289,20 @@
        const cancel  = document.getElementById('delete-modal-cancel');
        const close   = document.getElementById('delete-modal-close');
        const message = document.getElementById('delete-modal-message');
+       let deactivateTrap = null;
 
        function showModal(href, label) {
            message.textContent = 'Are you sure you want to delete this item? This cannot be undone.';
            confirm.href = href;
            modal.classList.remove('hidden');
            modal.classList.add('flex');
+           deactivateTrap = GWFocusTrap.activate(modal, { initialFocus: close });
        }
 
        function hideModal() {
            modal.classList.add('hidden');
            modal.classList.remove('flex');
+           if (deactivateTrap) { deactivateTrap(); deactivateTrap = null; }
        }
 
        document.addEventListener('click', function(e) {
