@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.core import serializers
+from django.http import HttpResponse
 from django.utils.html import format_html
 from .models import (
     GeneralItem, GeneralItemImage,
@@ -10,6 +12,19 @@ from .models import (
     MeiGrayPopulationReport, MeiGrayTagEntry, MeiGrayScheduleEntry,
     MeiGrayScheduleGameEntry, MeiGrayScheduleSetEntry,
 )
+
+
+class FixtureExportMixin:
+    """Adds an admin action to export selected rows as a loaddata-ready fixture."""
+    actions = ['export_as_fixture']
+
+    @admin.action(description='Export selected as fixture JSON')
+    def export_as_fixture(self, request, queryset):
+        data = serializers.serialize('json', queryset, indent=2)
+        response = HttpResponse(data, content_type='application/json')
+        filename = f'{queryset.model._meta.model_name}s.json'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 class ImageInlineMixin:
@@ -61,7 +76,9 @@ admin.site.register(Collection)
 admin.site.register(SeasonSet)
 admin.site.register(PhotoMatch)
 admin.site.register(WantedItem)
-admin.site.register(ExternalResource)
+@admin.register(ExternalResource)
+class ExternalResourceAdmin(FixtureExportMixin, admin.ModelAdmin):
+    list_display = ('title', 'link')
 admin.site.register(Team)
 admin.site.register(League)
 admin.site.register(GameType)
