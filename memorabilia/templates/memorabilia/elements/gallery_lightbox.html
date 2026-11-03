@@ -11,7 +11,8 @@
       &#8249;
     </button>
     <!-- Image (regular photos) -->
-    <img id="{{ pfx }}-img" src="" alt="Collectible photo" class="max-h-[90vh] max-w-full rounded-lg shadow-xl object-contain">
+    {# w-full: Safari reports a downsampled naturalWidth for images already shown as thumbnails, so don't size from it #}
+    <img id="{{ pfx }}-img" src="" alt="Collectible photo" class="w-full h-auto max-h-[90vh] max-w-full rounded-lg shadow-xl object-contain">
     <!-- Embed frame (Getty and other HTML embeds) -->
     <iframe id="{{ pfx }}-embed-frame" src="about:blank" frameborder="0" allowfullscreen
       class="hidden rounded-lg shadow-xl bg-black"
