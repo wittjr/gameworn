@@ -633,6 +633,14 @@ class CollectibleDetailContextTests(BaseTestCase):
         ))
         self.assertNotIn('league', response.context)
 
+    def test_lightbox_image_has_explicit_width(self):
+        # Regression: Safari sized the lightbox from the thumbnail's downsampled naturalWidth
+        response = self.client.get(reverse(
+            'memorabilia:collectible',
+            kwargs={'collection_id': self.collection.id, 'collectible_type': 'playergear', 'pk': self.player_gear.id},
+        ))
+        self.assertContains(response, 'id="gallery-img" src="" alt="Collectible photo" class="w-full h-auto ')
+
     def test_playeritem_uses_correct_template(self):
         response = self.client.get(reverse(
             'memorabilia:collectible',
